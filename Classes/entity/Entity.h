@@ -1,14 +1,13 @@
-#ifndef __GAME_SCENE_H__
-#define __GAME_SCENE_H__
+#ifndef __ENTITY_H__
+#define __ENTITY_H__
 
 #include "cocos2d.h"
 
-class Game: public cocos2d::Layer
+class Entity : public cocos2d::Ref
 {
 public:
-    static cocos2d::Scene* createScene();
 	virtual bool init();
-    CREATE_FUNC(Game);
+	CREATE_FUNC(Entity);
 };
 
-#endif // __GAME_SCENE_H__
+#endif // __ENTITY_H__

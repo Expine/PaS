@@ -1,4 +1,5 @@
 #include "GameScene.h"
+#include "stage/Stage.h"
 
 USING_NS_CC;
 
@@ -14,6 +15,9 @@ bool Game::init()
 {
     if ( !Layer::init() )
         return false;
+
+	auto stage = Stage::parseStage("stage/test.mps");
+	this->addChild(stage);
         
     return true;
 }
