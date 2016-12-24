@@ -24,6 +24,7 @@ class StageTile : public cocos2d::Ref
 public:
 	CC_SYNTHESIZE(int, _id, Id);
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);
+	CC_SYNTHESIZE(int, _mobility, Mobility);
 	virtual bool init();
 	CREATE_FUNC(StageTile);
 	static StageTile* getTerrainTypeByID(const int id);
@@ -32,7 +33,15 @@ public:
 /*********************************************************/
 class None : public StageTile
 {
-
+public:
+	virtual bool init()
+	{
+		if (!StageTile::init())
+			return false;
+		setMobility(0);
+		return true;
+	};
+	CREATE_FUNC(None);
 };
 
 /*********************************************************/

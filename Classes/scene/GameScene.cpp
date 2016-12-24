@@ -5,7 +5,8 @@ USING_NS_CC;
 
 Scene* Game::createScene()
 {
-    auto scene = Scene::create();
+	CCLOG("GameScene Create");
+	auto scene = Scene::create();
     auto layer = Game::create();
     scene->addChild(layer);
     return scene;
@@ -18,6 +19,6 @@ bool Game::init()
 
 	auto stage = Stage::parseStage("stage/test.mps");
 	this->addChild(stage);
-        
+
     return true;
 }

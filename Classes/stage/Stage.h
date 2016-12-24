@@ -4,7 +4,19 @@
 #include "cocos2d.h"
 #include "Tile.h"
 
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 class Stage;
+
+constexpr float MIN_STAGE_RARIO = 1.0f;
+constexpr float MAX_STAGE_RARIO = 5.0f;
+constexpr float STAGE_RATIO_RATIO = 0.5f;
 
 class StageLayer : public cocos2d::Node
 {
@@ -39,6 +51,16 @@ public:
 	{
 		return dynamic_cast<StageLayer*>(getChildByTag(l))->getTile(x, y);
 	};
+	inline float getWidth() { return _mapSize.x * (_chipSize.x + _gap) + (_chipSize.x - _gap) / 2; };
+	inline float getHeight() { return _mapSize.y * _chipSize.y / 2 + _chipSize.y / 2; };
+	cocos2d::Vec2 adjustArea(cocos2d::Vec2 v) {
+		auto maxWidth = getWidth() * getScale() - cocos2d::Director::getInstance()->getWinSize().width;
+		auto maxHeight = getHeight() * getScale() - cocos2d::Director::getInstance()->getWinSize().height;
+		return cocos2d::Vec2(
+			(maxWidth < 0) ? 0 : max(-maxWidth, min(v.x, 0)),
+			(maxHeight < 0) ? 0 : max(-maxHeight, min(v.y, 0)));
+	};
+	inline float adjustRatio(float ratio) { return max(MIN_STAGE_RARIO, min(MAX_STAGE_RARIO, ratio)); };
 	static Stage* parseStage(const std::string file);
 	void render();
 };
