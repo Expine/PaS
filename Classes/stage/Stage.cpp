@@ -1,4 +1,4 @@
-#include "Stage.h"
+﻿#include "Stage.h"
 
 #include "util/Util.h"
 #include "util/MultiListener.h"
@@ -45,9 +45,31 @@ Stage * Stage::parseStage(const std::string file)
 
 	//Set listener
 	auto listener = MultiTouchListener::create();
-	listener->onTap = [](Vec2 v)
+	listener->onTouchBegan = [stage](Vec2 v)
+	{
+		stage->stopAllActions();
+		stage->setPosition(stage->adjustArea(stage->getPosition()));
+	};
+	listener->onTap = [stage] (Vec2 v)
 	{
 		CCLOG("Tapped (%f, %f)", v.x, v.y);
+		if (stage->onTap)
+		{
+			auto cor = stage->getTileCoordinate(v);
+			CCLOG("TileCor (%f, %f)", cor.x, cor.y);
+			std::vector<StageTile*> tiles;
+			for (int i = 0; i < 3; i++)
+			{
+				auto tile = stage->getTile(i, cor.x, cor.y);
+				if (tile->getId() != 0)
+					tiles.push_back(tile);
+			}
+			stage->onTap(cor, tiles);
+		}
+	};
+	listener->onSwipeCheck = [stage](Vec2 v, Vec2 diff, float time)
+	{
+		return !stage->onSwipeCheck || stage->onSwipeCheck(v, diff, time);
 	};
 	listener->onSwipe = [stage](Vec2 v, Vec2 diff, float time)
 	{
@@ -55,13 +77,61 @@ Stage * Stage::parseStage(const std::string file)
 		stage->setPosition(stage->adjustArea(stage->getPosition() + diff));
 		CCLOG("RESULT (%f, %f)", stage->getPosition().x, stage->getPosition().y);
 	};
-	listener->onLongTapBegan = [](Vec2 v)
+	listener->onFlickCheck = [stage](Vec2 v, Vec2 diff, float time)
+	{
+		return !stage->onFlickCheck || stage->onFlickCheck(v, diff, time);
+	};
+	listener->onFlick = [stage](Vec2 v, Vec2 diff, float time)
+	{
+		CCLOG("Flick (%f, %f) time:%f", diff.x, diff.y, time);
+		stage->runAction(Spawn::create(
+			Sequence::create(
+				MoveBy::create(0.5f, diff / time / 3),
+				DelayTime::create(0.5f),
+				CallFunc::create([stage] {
+					stage->stopAllActions();
+				}),
+			NULL),
+			Repeat::create(Sequence::create(
+				CallFunc::create([stage] {
+					stage->setPosition(stage->adjustArea(stage->getPosition()));
+				}),
+				DelayTime::create(0.005f),
+				NULL)
+			, -1),
+		NULL));
+	};
+	listener->onLongTapBegan = [stage](Vec2 v)
 	{
 		CCLOG("LongTapBegan (%f, %f)", v.x, v.y);
+		if (stage->onLongTapBegan)
+		{
+			auto cor = stage->getTileCoordinate(v);
+			std::vector<StageTile*> tiles;
+			for (int i = 0; i < 3; i++)
+			{
+				auto tile = stage->getTile(i, cor.x, cor.y);
+				if (tile->getId() != 0)
+					tiles.push_back(tile);
+			}
+			stage->onLongTapBegan(cor, tiles);
+		}
 	};
-	listener->onLongTapEnd = [](Vec2 v)
+	listener->onLongTapEnd = [stage](Vec2 v)
 	{
 		CCLOG("LongTapEnd (%f, %f)", v.x, v.y);
+		if (stage->onLongTapEnd)
+		{
+			auto cor = stage->getTileCoordinate(v);
+			std::vector<StageTile*> tiles;
+			for (int i = 0; i < 3; i++)
+			{
+				auto tile = stage->getTile(i, cor.x, cor.y);
+				if (tile->getId() != 0)
+					tiles.push_back(tile);
+			}
+			stage->onLongTapEnd(cor, tiles);
+		}
 	};
 	listener->pinchIn = [stage] (Vec2 v, float ratio)
 	{
@@ -116,6 +186,7 @@ void StageLayer::render()
 {
 	auto parent = dynamic_cast<Stage*>(getParent());
 	auto batch = SpriteBatchNode::create("TileSet/" + parent->getTileFile());
+	batch->setTag(0);
 //	batch->getTexture()->setAliasTexParameters();
 	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / parent->getChipSize().x);
 	auto gap = parent->getGap();
@@ -125,13 +196,25 @@ void StageLayer::render()
 
 	for (int x = 0; x < _mapSize.x; x++)
 	{
-		for (int y = _mapSize.y - 1; y >= 0; y--)
+		for (int y = 0; y < _mapSize.y; y++)
 		{
+			auto fix_y = (int)(_mapSize.y - 1 - y);
 			auto id = getTile(x, y)->getId();
 			auto tile = Sprite::createWithTexture(batch->getTexture(), Rect((id % wnum) * chipSize.x, (int)(id / wnum) * chipSize.y, chipSize.x, chipSize.y));
-			tile->setPosition(x * (chipSize.x + gap) + (y % 2) * (chipSize.x + gap) / 2, y * chipSize.y / 2);
+			tile->setPosition(x * (chipSize.x + gap) + (y % 2) * (chipSize.x + gap) / 2, fix_y * chipSize.y / 2);
 			tile->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+			tile->setTag(x * _mapSize.y + y);
 			batch->addChild(tile);
 		}
 	}
 }
+
+Vec2 Stage::getTileCoordinate(Vec2 cor)
+{
+	auto fix = (cor - getPosition()) / getScale();
+	fix.y = getHeight() - fix.y;
+	auto even = (int)fix.x % (int)(_chipSize.x + _gap) <= (_chipSize.x + _gap) / 2;
+	auto x = (int)(fix.x / (_chipSize.x + _gap));
+	auto y = (int)((fix.y - (even ? 0 : _chipSize.y / 2)) / _chipSize.y) * 2 + (even ? 0 : 1);
+	return Vec2(x, y);
+}	

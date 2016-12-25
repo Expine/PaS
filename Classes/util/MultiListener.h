@@ -1,14 +1,14 @@
-#ifndef __MULTI_LISTENER_H__
+ï»¿#ifndef __MULTI_LISTENER_H__
 #define __MULTI_LISTENER_H__
 
 #include "cocos2d.h"
 
-#include <time.h>
+USING_NS_CC;
 
 constexpr float DefaultLongTapThreshold = 0.1f;
 constexpr float DefaultDoubleTapThreshold = 0.1f;
-constexpr float DefaultSwipeThresholdDistance = 10.0f;
-constexpr float DefaultAllowableRange = 5.0f;
+constexpr float DefaultSwipeThresholdDistance = 5.0f;
+constexpr float DefaultFlickThreshold = 0.1f;
 
 constexpr float DefaultScrollMagnification = 1.2f;
 
@@ -21,19 +21,19 @@ public:
 	};
 
 private:
-	using EventListenerTouchAllAtOnce::LISTENER_ID;
-	using EventListenerTouchAllAtOnce::onTouchesBegan;
-	using EventListenerTouchAllAtOnce::onTouchesMoved;
-	using EventListenerTouchAllAtOnce::onTouchesEnded;
-	using EventListenerTouchAllAtOnce::onTouchesCancelled;
+	using cocos2d::EventListenerTouchAllAtOnce::LISTENER_ID;
+	using cocos2d::EventListenerTouchAllAtOnce::onTouchesBegan;
+	using cocos2d::EventListenerTouchAllAtOnce::onTouchesMoved;
+	using cocos2d::EventListenerTouchAllAtOnce::onTouchesEnded;
+	using cocos2d::EventListenerTouchAllAtOnce::onTouchesCancelled;
 
 	int _numberOfTouch;
 	std::vector<cocos2d::Vec2> _startPos;
-	std::vector<timeval> _startTime;
+	std::vector<struct timeval> _startTime;
 	std::vector<cocos2d::Vec2> _movePos;
-	std::vector<timeval> _moveTime;
-	timeval _multiTime;
-	Vec2 _multiPos;
+	std::vector<struct timeval> _moveTime;
+	struct timeval _multiTime;
+	cocos2d::Vec2 _multiPos;
 	float _multiDiff;
 	std::vector<State> _state;
 
@@ -43,7 +43,7 @@ protected:
 		, _longTapThreshold(DefaultLongTapThreshold)
 		, _doubleTapThreshold(DefaultDoubleTapThreshold)
 		, _swipeThreshold(DefaultSwipeThresholdDistance)
-		, _allowableRange(DefaultAllowableRange)
+		, _flickThreshold(DefaultFlickThreshold)
 		, onTap(nullptr)
 		, onLongTapBegan(nullptr)
 		, onLongTapEnd(nullptr)
@@ -51,6 +51,8 @@ protected:
 		, onSwipe(nullptr)
 		, pinchIn(nullptr)
 		, pinchOut(nullptr)
+		, onSwipeCheck(nullptr)
+		, onFlickCheck(nullptr)
 	{
 		_startPos.resize(5);
 		_startTime.resize(5);
@@ -67,14 +69,14 @@ protected:
 
 		onTouchesBegan = [this](const std::vector<cocos2d::Touch*> &touches, cocos2d::Event* event)
 		{
-			//ƒJƒEƒ“ƒgƒAƒbƒv
+			//ã‚«ã‚¦ãƒ³ãƒˆã‚¢ãƒƒãƒ—
 			_numberOfTouch += touches.size();
 			for (cocos2d::Touch* t : touches)
 			{
-				// ŽO–{–ÚˆÈ~‚Í–¢‘Î‰ž
+				// ä¸‰æœ¬ç›®ä»¥é™ã¯æœªå¯¾å¿œ
 				if (t->getID() > 1)
 					return;
-				// ‰Šú‰»
+				// åˆæœŸåŒ–
 				_startPos[t->getID()] = t->getLocation();
 				gettimeofday(&_startTime[t->getID()], NULL);
 				_movePos[t->getID()] = t->getLocation();
@@ -83,9 +85,9 @@ protected:
 //				CCLOG("start (%f, %f)", t->getLocation().x, t->getLocation().y);
 //				CCLOG("start %d is num : %d", _numberOfTouch, t->getID());
 //				CCLOG("Time is %ld - %ld", _startTime[t->getID()].tv_sec, _startTime[t->getID()].tv_usec);
-				Director::getInstance()->getScheduler()->schedule(schedule_selector(MultiTouchListener::update), this, 0.05f, false);
+				cocos2d::Director::getInstance()->getScheduler()->schedule(schedule_selector(MultiTouchListener::update), this, 0.05f, false);
 			}
-			// ƒ}ƒ‹ƒ`ƒ^ƒbƒ`‚Ìê‡
+			// ãƒžãƒ«ãƒã‚¿ãƒƒãƒã®å ´åˆ
 			if (_numberOfTouch > 1)
 			{
 				for (int i = 0; i < _numberOfTouch; i++)
@@ -94,13 +96,14 @@ protected:
 				_multiPos = (_movePos[0] + _movePos[1]) / 2;
 				_multiDiff = (_movePos[0] - _movePos[1]).lengthSquared();
 			}
+			if (onTouchBegan) onTouchBegan(touches[0]->getLocation());
 
 		};
 		onTouchesMoved = [this](const std::vector<cocos2d::Touch*> &touches, cocos2d::Event* event)
 		{
 			for (cocos2d::Touch* t : touches)
 			{
-				// ŽO–{–ÚˆÈ~‚Í–¢‘Î‰ž
+				// ä¸‰æœ¬ç›®ä»¥é™ã¯æœªå¯¾å¿œ
 				if (t->getID() > 1)
 					return;
 				// Move check
@@ -111,7 +114,7 @@ protected:
 //					CCLOG("now (%f, %f)", t->getLocation().x, t->getLocation().y);
 					auto diff = (t->getLocation() - _movePos[t->getID()]).lengthSquared();
 //					CCLOG("check diff %f : %d", diff, t->getID());
-					if (diff > _allowableRange)
+					if (diff > _swipeThreshold)
 						_state[t->getID()] = MultiTouchListener::State::swipe;
 					else
 						_state[t->getID()] = MultiTouchListener::State::tap;
@@ -120,27 +123,29 @@ protected:
 				// Move process
 				if (_state[t->getID()] == MultiTouchListener::State::swipe)
 				{
-					timeval time;
+					struct timeval time;
 					gettimeofday(&time, NULL);
 					auto diff = (t->getLocation() - _movePos[t->getID()]);
 					auto diff_time = (float)(time.tv_sec - _moveTime[t->getID()].tv_sec) + (float)(time.tv_usec - _moveTime[t->getID()].tv_usec) / 1000000;
-					if (onSwipe) onSwipe(t->getLocation(), diff, diff_time);
+					if (onSwipe && (!onSwipeCheck || onSwipeCheck(t->getLocation(), diff, diff_time))) 
+						onSwipe(t->getLocation(), diff, diff_time);
 //					CCLOG("move diff %f : %d", diff.lengthSquared(), t->getID());
 				}
 				_movePos[t->getID()] = t->getLocation();
-				gettimeofday(&_startTime[t->getID()], NULL);
+				gettimeofday(&_moveTime[t->getID()], NULL);
 			}
 
 			// Multi process
 			if (_state[0] == MultiTouchListener::State::multi)
 			{
-				timeval time;
+				struct timeval time;
 				gettimeofday(&time, NULL);
 				auto diff = (_movePos[0] + _movePos[1]) / 2 - _multiPos;
 				auto diff_time = (float)(time.tv_sec - _multiTime.tv_sec) + (float)(time.tv_usec - _multiTime.tv_usec) / 1000000;
 				_multiPos = (_movePos[0] + _movePos[1]) / 2;
 				_multiTime = time;
-				if (onSwipe) onSwipe(_multiPos, diff, diff_time);
+				if (onSwipe && (!onSwipeCheck || onSwipeCheck(_multiPos, diff, diff_time)))
+					onSwipe(_multiPos, diff, diff_time);
 				auto diff_multi = (_movePos[0] - _movePos[1]).lengthSquared();
 				if (diff_multi > _multiDiff && pinchOut)
 					pinchOut(_multiPos, diff_multi / _multiDiff);
@@ -152,17 +157,23 @@ protected:
 		onTouchesCancelled = [this](const std::vector<cocos2d::Touch*> &touches, cocos2d::Event* event)
 		{
 			_numberOfTouch -= touches.size();
+			if (_numberOfTouch == 0)
+				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
 		};
 		onTouchesEnded = [this](const std::vector<cocos2d::Touch*> &touches, cocos2d::Event* event)
 		{
-			//ƒJƒEƒ“ƒg‚ðŒ¸‚ç‚·
+			//ã‚«ã‚¦ãƒ³ãƒˆã‚’æ¸›ã‚‰ã™
 			_numberOfTouch -= touches.size();
 			for (cocos2d::Touch* t : touches)
 			{
-				// ŽO–{–ÚˆÈ~‚Í–¢‘Î‰ž
+				// ä¸‰æœ¬ç›®ä»¥é™ã¯æœªå¯¾å¿œ
 				if (t->getID() > 1)
 					return;
 				CCLOG("end %d is num : %d", _numberOfTouch, t->getID());
+				struct timeval time;
+				gettimeofday(&time, NULL);
+				auto diff_time = (float)(time.tv_sec - _startTime[0].tv_sec) + (float)(time.tv_usec - _startTime[0].tv_usec) / 1000000;
+				//
 				switch (_state[t->getID()])
 				{
 				case MultiTouchListener::State::check:
@@ -173,18 +184,23 @@ protected:
 					if (onLongTapEnd) onLongTapEnd(t->getLocation());
 					break;
 				case MultiTouchListener::State::swipe:
+					CCLOG("Time %f", diff_time);
+					if (diff_time < _flickThreshold)
+						if (onFlick && (!onFlickCheck || onFlickCheck(t->getLocation(), t->getLocation() - _startPos[t->getID()], diff_time)))
+							onFlick(t->getLocation(), t->getLocation() - _startPos[t->getID()], diff_time);
+					break;
 				case MultiTouchListener::State::multi:
 					break;
 				}
 			}
 			if (_numberOfTouch == 0)
-				Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
+				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
 		};
 		return true;
 	};
 	void update(float)
 	{
-		timeval time;
+		struct timeval time;
 		gettimeofday(&time, NULL);
 		auto diff_time = (float)(time.tv_sec - _startTime[0].tv_sec) + (float)(time.tv_usec - _startTime[0].tv_usec) / 1000000;
 		switch (_state[0])
@@ -195,12 +211,12 @@ protected:
 			{
 				if (onLongTapBegan) onLongTapBegan(_startPos[0]);
 				_state[0] = MultiTouchListener::State::longtap;
-				Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
+				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
 			}
 			break;
 		case MultiTouchListener::State::swipe:
 		case MultiTouchListener::State::multi:
-			Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
+			cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
 			break;
 		}
 	};
@@ -209,17 +225,166 @@ public:
 	CC_SYNTHESIZE(float, _longTapThreshold, LongTapThreshold);
 	CC_SYNTHESIZE(float, _doubleTapThreshold, DoubleTapThreshold);
 	CC_SYNTHESIZE(float, _swipeThreshold, SwipeThreshold);
-	CC_SYNTHESIZE(float, _allowableRange, AllowableRange);
+	CC_SYNTHESIZE(float, _flickThreshold, FlickThreshold);
 
+	std::function<void(cocos2d::Vec2)> onTouchBegan;
 	std::function<void(cocos2d::Vec2)> onTap;
 	std::function<void(cocos2d::Vec2)> onLongTapBegan;
 	std::function<void(cocos2d::Vec2)> onLongTapEnd;
 	std::function<void(cocos2d::Vec2)> onDoubleTap;
 	std::function<void(cocos2d::Vec2, cocos2d::Vec2, float)> onSwipe;
+	std::function<void(cocos2d::Vec2, cocos2d::Vec2, float)> onFlick;
 	std::function<void(cocos2d::Vec2, float)> pinchIn;
 	std::function<void(cocos2d::Vec2, float)> pinchOut;
+	std::function<bool(cocos2d::Vec2, cocos2d::Vec2, float)> onSwipeCheck;
+	std::function<bool(cocos2d::Vec2, cocos2d::Vec2, float)> onFlickCheck;
 };
 
+class SingleTouchListener : public cocos2d::EventListenerTouchOneByOne
+{
+public:
+	enum class State
+	{
+		check, tap, swipe, longtap
+	};
+private:
+	using cocos2d::EventListenerTouchOneByOne::onTouchBegan;
+	using cocos2d::EventListenerTouchOneByOne::onTouchMoved;
+	using cocos2d::EventListenerTouchOneByOne::onTouchEnded;
+	using cocos2d::EventListenerTouchOneByOne::onTouchCancelled;
+
+	cocos2d::Vec2 _startPos;
+	struct timeval _startTime;
+	cocos2d::Vec2 _movePos;
+	struct timeval _moveTime;
+	State _state;
+protected:
+	SingleTouchListener()
+		: _longTapThreshold(DefaultLongTapThreshold)
+		, _doubleTapThreshold(DefaultDoubleTapThreshold)
+		, _swipeThreshold(DefaultSwipeThresholdDistance)
+		, _flickThreshold(DefaultFlickThreshold)
+		, onTap(nullptr)
+		, onLongTapBegan(nullptr)
+		, onLongTapEnd(nullptr)
+		, onDoubleTap(nullptr)
+		, onSwipe(nullptr)
+		, onTouchBeganChecking(nullptr)
+		, onTouchEndedChecking(nullptr)
+	{
+	};
+	~SingleTouchListener() {};
+	virtual bool init()
+	{
+		if (!EventListenerTouchOneByOne::init())
+			return false;
+
+		onTouchBegan = [this](cocos2d::Touch *touch, cocos2d::Event *event)
+		{
+			// ãƒã‚§ãƒƒã‚¯
+			if (onTouchBeganChecking && !onTouchBeganChecking(touch, event))
+				return false;
+
+			// åˆæœŸåŒ–
+			_startPos = touch->getLocation();
+			gettimeofday(&_startTime, NULL);
+			_movePos = touch->getLocation();
+			gettimeofday(&_moveTime, NULL);
+			_state = SingleTouchListener::State::check;
+			cocos2d::Director::getInstance()->getScheduler()->schedule(schedule_selector(SingleTouchListener::update), this, 0.05f, false);
+			return true;
+		};
+		onTouchMoved = [this](cocos2d::Touch *touch, cocos2d::Event *event)
+		{
+			// Move check
+			if (_state != SingleTouchListener::State::swipe &&
+				_state != SingleTouchListener::State::longtap)
+			{
+				auto diff = (touch->getLocation() - _movePos).lengthSquared();
+				if (diff > _swipeThreshold)
+					_state = SingleTouchListener::State::swipe;
+				else
+					_state = SingleTouchListener::State::tap;
+			}
+			// Move process
+			if (_state == SingleTouchListener::State::swipe)
+			{
+				struct timeval time;
+				gettimeofday(&time, NULL);
+				auto diff = (touch->getLocation() - _movePos);
+				auto diff_time = (float)(time.tv_sec - _moveTime.tv_sec) + (float)(time.tv_usec - _moveTime.tv_usec) / 1000000;
+				if (onSwipe) onSwipe(touch->getLocation(), diff, diff_time);
+			}
+			_movePos = touch->getLocation();
+			gettimeofday(&_moveTime, NULL);
+		};
+		onTouchCancelled = [this](cocos2d::Touch *touch, cocos2d::Event *event)
+		{
+			cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(SingleTouchListener::update), this);
+		};
+		onTouchEnded = [this](cocos2d::Touch *touch, cocos2d::Event *event)
+		{
+			struct timeval time;
+			gettimeofday(&time, NULL);
+			auto diff_time = (float)(time.tv_sec - _startTime.tv_sec) + (float)(time.tv_usec - _startTime.tv_usec) / 1000000;
+			//
+			switch (_state)
+			{
+			case SingleTouchListener::State::check:
+			case SingleTouchListener::State::tap:
+				if (onTap) onTap(touch, event);
+				break;
+			case SingleTouchListener::State::longtap:
+				if (onLongTapEnd) onLongTapEnd(touch, event);
+				break;
+			case SingleTouchListener::State::swipe:
+				if (diff_time < _flickThreshold)
+					if (onFlick) onFlick(touch->getLocation(), touch->getLocation() - _startPos, diff_time);
+				break;
+			}
+			cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(SingleTouchListener::update), this);
+
+			if (onTouchEndedChecking) onTouchEndedChecking(touch, event);
+		};
+		return true;
+	};
+	void update(float)
+	{
+		struct timeval time;
+		gettimeofday(&time, NULL);
+		auto diff_time = (float)(time.tv_sec - _startTime.tv_sec) + (float)(time.tv_usec - _startTime.tv_usec) / 1000000;
+		switch (_state)
+		{
+		case SingleTouchListener::State::check:
+		case SingleTouchListener::State::tap:
+			if (diff_time > _longTapThreshold)
+			{
+				if (onLongTapBegan) onLongTapBegan(_startPos);
+				_state = SingleTouchListener::State::longtap;
+				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(SingleTouchListener::update), this);
+			}
+			break;
+		case SingleTouchListener::State::swipe:
+			cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(SingleTouchListener::update), this);
+			break;
+		}
+	};
+public:
+	CREATE_FUNC(SingleTouchListener);
+	CC_SYNTHESIZE(float, _longTapThreshold, LongTapThreshold);
+	CC_SYNTHESIZE(float, _doubleTapThreshold, DoubleTapThreshold);
+	CC_SYNTHESIZE(float, _swipeThreshold, SwipeThreshold);
+	CC_SYNTHESIZE(float, _flickThreshold, FlickThreshold);
+
+	std::function<bool(cocos2d::Touch*, cocos2d::Event*)> onTouchBeganChecking;
+	std::function<void(cocos2d::Touch*, cocos2d::Event*)> onTap;
+	std::function<void(cocos2d::Vec2)> onLongTapBegan;
+	std::function<void(cocos2d::Touch*, cocos2d::Event*)> onLongTapEnd;
+	std::function<void(cocos2d::Touch*, cocos2d::Event*)> onDoubleTap;
+	std::function<void(cocos2d::Vec2, cocos2d::Vec2, float)> onSwipe;
+	std::function<void(cocos2d::Vec2, cocos2d::Vec2, float)> onFlick;
+	std::function<void(cocos2d::Touch*, cocos2d::Event*)> onTouchEndedChecking;
+};
 
 class MultiMouseListener : public cocos2d::EventListenerMouse
 {
@@ -266,19 +431,17 @@ public:
 			scroll *= (scroll < 0) ? -1 : 1;
 //			auto scroll = cocos2d::Vec2(event->getScrollX(), event->getScrollY()).length() * getScrollMagnification();
 			if (scroll < 1.0)
-				return true;
+				return;
 
 			if (event->getScrollY() > 0)
 			{
-				if (getTouchListener()->pinchIn)	getTouchListener()->pinchIn(Vec2(event->getCursorX(), event->getCursorY()), scroll);
+				if (getTouchListener()->pinchIn)	getTouchListener()->pinchIn(cocos2d::Vec2(event->getCursorX(), event->getCursorY()), scroll);
 			}
 			else
 			{
-				if(getTouchListener()->pinchOut)	getTouchListener()->pinchOut(Vec2(event->getCursorX(), event->getCursorY()), 1.0f / scroll);
+				if(getTouchListener()->pinchOut)	getTouchListener()->pinchOut(cocos2d::Vec2(event->getCursorX(), event->getCursorY()), 1.0f / scroll);
 			}
 		};
-
-	
 		return true;
 	};
 };

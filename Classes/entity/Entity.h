@@ -1,4 +1,4 @@
-#ifndef __ENTITY_H__
+﻿#ifndef __ENTITY_H__
 #define __ENTITY_H__
 
 #include "cocos2d.h"
@@ -25,7 +25,9 @@ enum class EntityType
 	relief,
 	guardian,
 	dark,
-	light
+	light,
+
+	COUNT
 };
 
 /*********************************************************/
@@ -38,5 +40,10 @@ public:
 };
 
 /*********************************************************/
+
+class Infantry : public Entity
+{
+
+};
 
 #endif // __ENTITY_H__

@@ -1,4 +1,4 @@
-#ifndef __STAGE_H__
+﻿#ifndef __STAGE_H__
 #define __STAGE_H__
 
 #include "cocos2d.h"
@@ -15,13 +15,23 @@
 class Stage;
 
 constexpr float MIN_STAGE_RARIO = 1.0f;
-constexpr float MAX_STAGE_RARIO = 5.0f;
+constexpr float MAX_STAGE_RARIO = 7.0f;
 constexpr float STAGE_RATIO_RATIO = 0.5f;
 
 class StageLayer : public cocos2d::Node
 {
 private:
 	cocos2d::Vector<StageTile*> _tiles;
+protected:
+	StageLayer()
+	{
+
+	};
+	~StageLayer()
+	{
+		_tiles.clear();
+		_tiles.shrinkToFit();
+	}
 public:
 	CREATE_FUNC(StageLayer);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
@@ -37,6 +47,23 @@ public:
 
 class Stage : public cocos2d::Node
 {
+private:
+	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
+public:
+	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
+	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapBegan;
+	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapEnd;
+	std::function<bool(cocos2d::Vec2, cocos2d::Vec2, float)> onSwipeCheck;
+	std::function<bool(cocos2d::Vec2, cocos2d::Vec2, float)> onFlickCheck;
+protected:
+	Stage()
+		: _gap(0)
+		, onTap(nullptr)
+		, onLongTapBegan(nullptr)
+		, onLongTapEnd(nullptr)
+	{
+
+	};
 public:
 	virtual bool init();
 	CREATE_FUNC(Stage);
@@ -50,6 +77,18 @@ public:
 	inline StageTile* getTile(int l, int x, int y)
 	{
 		return dynamic_cast<StageLayer*>(getChildByTag(l))->getTile(x, y);
+	};
+	std::vector<cocos2d::Sprite*> getTileSprite(int x, int y)
+	{
+		std::vector<cocos2d::Sprite*> tiles;
+		for (int i = 0; i < 3; i++)
+		{
+			auto tile = dynamic_cast<cocos2d::Sprite*>(getChildByTag(i)->getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+			if (!tile)
+				continue;
+			tiles.push_back(tile);
+		}
+		return tiles;
 	};
 	inline float getWidth() { return _mapSize.x * (_chipSize.x + _gap) + (_chipSize.x - _gap) / 2; };
 	inline float getHeight() { return _mapSize.y * _chipSize.y / 2 + _chipSize.y / 2; };
