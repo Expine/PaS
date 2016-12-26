@@ -13,17 +13,23 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-class Stage;
-
 constexpr float MIN_STAGE_RARIO = 1.0f;
 constexpr float MAX_STAGE_RARIO = 7.0f;
 constexpr float STAGE_RATIO_RATIO = 0.5f;
 
 class StageLayer : public cocos2d::Node
 {
+protected:
+	StageLayer()
+		: _batch(nullptr)
+	{
+
+	};
 public:
 	CREATE_FUNC(StageLayer);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
+	CC_SYNTHESIZE(cocos2d::SpriteBatchNode*, _batch, Batch);
+	void setTile(int x, int y, int id);
 	inline StageTile* getTile(int x, int y)
 	{
 		return dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
@@ -33,13 +39,21 @@ public:
 
 class UnitLayer : public cocos2d::Node
 {
-private:
-	cocos2d::Vector<Entity*> _units;
 protected:
+	UnitLayer()
+		: _batch(nullptr)
+	{
+
+	};
 public:
 	CREATE_FUNC(UnitLayer);
-	void addUnit(Entity* unit) { _units.pushBack(unit); };
-	void removeUnit(Entity* unit) { _units.eraseObject(unit); };
+	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
+	CC_SYNTHESIZE(cocos2d::SpriteBatchNode*, _batch, Batch);
+	void setUnit(int x, int y, EntityType type);
+	Entity* getUnit(int x, int y)
+	{
+		return dynamic_cast<Entity*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+	}
 };
 
 /*********************************************************/
@@ -47,7 +61,6 @@ public:
 class Stage : public cocos2d::Node
 {
 private:
-	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
 public:
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapBegan;
@@ -88,6 +101,10 @@ public:
 		}
 		return tiles;
 	};
+	inline Entity* getUnit(int x, int y)
+	{
+		return dynamic_cast<UnitLayer*>(getChildByTag(3))->getUnit(x, y);
+	};
 	inline float getWidth() { return _mapSize.x * (_chipSize.x + _gap) + (_chipSize.x - _gap) / 2; };
 	inline float getHeight() { return _mapSize.y * _chipSize.y / 2 + _chipSize.y / 2; };
 	cocos2d::Vec2 adjustArea(cocos2d::Vec2 v) {
@@ -99,6 +116,12 @@ public:
 	};
 	inline float adjustRatio(float ratio) { return max(MIN_STAGE_RARIO, min(MAX_STAGE_RARIO, ratio)); };
 	static Stage* parseStage(const std::string file);
+
+	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
+	inline cocos2d::Vec2 getCoordinateByTile(int x, int y)
+	{
+		return cocos2d::Vec2(x * (_chipSize.x + _gap) + (y % 2) * (_chipSize.x + _gap) / 2, (_mapSize.y - 1 - y) * _chipSize.y / 2);
+	};
 };
 
 #endif // __STAGE_H__

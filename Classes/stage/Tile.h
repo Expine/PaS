@@ -49,6 +49,7 @@ protected:
 	{
 		if (!StageTile::init())
 			return false;
+		setTerrainType(TerrainType::none);
 		setExplanation("NO DATA");
 		return true;
 	};
@@ -64,6 +65,7 @@ protected:
 	{
 		if (!StageTile::init())
 			return false;
+		setTerrainType(TerrainType::prairie);
 		setExplanation(u8"開けた草原。\n移動しやすい。");
 		return true;
 	};
@@ -71,13 +73,14 @@ public:
 	CREATE_FUNC(Prairie);
 };
 
-class Woods : public Prairie
+class Woods : public StageTile
 {
 protected:
 	virtual bool init()
 	{
 		if (!StageTile::init())
 			return false;
+		setTerrainType(TerrainType::woods);
 		setExplanation(u8"茂った森林。\n見通しが悪い。\n火の魔法が有効。");
 		return true;
 	};
@@ -94,6 +97,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::mountain);
 		setExplanation(u8"険しい山。\n移動しづらい。\n土の魔法が有効。");
 		return true;
 	};
@@ -110,6 +114,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::ocean);
 		setExplanation(u8"深い海。\n一部移動可能。\n水の魔法が有効。");
 		return true;
 	};
@@ -117,7 +122,7 @@ public:
 	CREATE_FUNC(Ocean);
 };
 
-class River : public Ocean
+class River : public StageTile
 {
 protected:
 	virtual bool init()
@@ -125,6 +130,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::river);
 		setExplanation(u8"歩ける浅瀬。\n移動しにくい。\n水の魔法が有効。");
 		return true;
 	};
@@ -141,6 +147,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::road);
 		setExplanation(u8"整備された道。\n移動しやすい。\n土の魔法が有効。");
 		return true;
 	};
@@ -156,6 +163,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::bridge);
 		setExplanation(u8"建設された橋。\n移動しやすい。");
 		return true;
 	};
@@ -171,6 +179,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::city);
 		setExplanation(u8"拠点となる都市。\n兵士を駐在できる。\n");
 		return true;
 	};
@@ -178,7 +187,7 @@ public:
 	CREATE_FUNC(City);
 };
 
-class Capital : public City
+class Capital : public StageTile
 {
 protected:
 	virtual bool init()
@@ -186,6 +195,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::capital);
 		setExplanation(u8"重要な首都。\n兵士を配備できる。\n");
 		return true;
 	};
@@ -202,6 +212,7 @@ protected:
 		if (!StageTile::init())
 			return false;
 
+		setTerrainType(TerrainType::territory);
 		setExplanation(u8"自然の龍脈。\n魔法使いが補給\nできる。\n");
 		return true;
 	};

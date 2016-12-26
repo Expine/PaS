@@ -8,20 +8,20 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	StageTile* tile;
 	switch (id)
 	{
-	case 0: tile = None::create();		tile->setTerrainType(TerrainType::none);		break;
-	case 1: tile = Ocean::create();		tile->setTerrainType(TerrainType::ocean);		break;
-	case 2: tile = River::create();		tile->setTerrainType(TerrainType::river);		break;
-	case 4: tile = Territory::create();	tile->setTerrainType(TerrainType::territory);	break;
-	case 5: tile = Prairie::create();	tile->setTerrainType(TerrainType::prairie);		break;
-	case 6: tile = Prairie::create();	tile->setTerrainType(TerrainType::prairie);		break;
-	case 8: tile = Road::create();		tile->setTerrainType(TerrainType::road);		break;
-	case 11:tile = Woods::create();		tile->setTerrainType(TerrainType::woods);		break;
-	case 12:tile = Mountain::create();	tile->setTerrainType(TerrainType::mountain);	break;
-	case 13:tile = Bridge::create();	tile->setTerrainType(TerrainType::bridge);		break;
-	case 14:tile = Bridge::create();	tile->setTerrainType(TerrainType::bridge);		break;
-	case 16:tile = Capital::create();	tile->setTerrainType(TerrainType::capital);		break;
-	case 17:tile = City::create();		tile->setTerrainType(TerrainType::city);		break;
-	default:tile = None::create();		tile->setTerrainType(TerrainType::none);		break;
+	case 0: tile = None::create();		break;
+	case 1: tile = Ocean::create();		break;
+	case 2: tile = River::create();		break;
+	case 4: tile = Territory::create();	break;
+	case 5: tile = Prairie::create();	break;
+	case 6: tile = Prairie::create();	break;
+	case 8: tile = Road::create();		break;
+	case 11:tile = Woods::create();		break;
+	case 12:tile = Mountain::create();	break;
+	case 13:tile = Bridge::create();	break;
+	case 14:tile = Bridge::create();	break;
+	case 16:tile = Capital::create();	break;
+	case 17:tile = City::create();		break;
+	default:tile = None::create();		break;
 	}
 
 	//Set ID
@@ -34,7 +34,7 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 
 	auto fix_y = (int)(stage->getMapSize().y - 1 - y);
 	tile->initWithTexture(batch->getTexture(), Rect((id % wnum) * chipSize.x, (int)(id / wnum) * chipSize.y, chipSize.x, chipSize.y));
-	tile->setPosition(x * (chipSize.x + gap) + (y % 2) * (chipSize.x + gap) / 2, fix_y * chipSize.y / 2);
+	tile->setPosition(stage->getCoordinateByTile(x, y));
 	tile->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	tile->setTag(x * stage->getMapSize().y + y);
 
@@ -43,6 +43,9 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 
 bool StageTile::init()
 {
+	if (!Sprite::init())
+		return false;
+
 	return true;
 }
 

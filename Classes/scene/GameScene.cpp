@@ -53,6 +53,11 @@ bool Game::init()
 			sprite->addChild(white);
 			_preTiles.pushBack(sprite);
 		}
+		auto unit = stage->getUnit(v.x, v.y);
+		if (unit)
+		{
+			menu->setUnit(unit);
+		}
 
 	};
 	stage->onSwipeCheck = [menu] (Vec2 v, Vec2 diff, float time)

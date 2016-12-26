@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "stage/Tile.h"
+#include "entity/Entity.h"
 
 class MenuLayer : public cocos2d::Node
 {
@@ -28,6 +29,7 @@ public:
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
 	void setUnit();
 	void setTile(StageTile *tile);
+	void setUnit(Entity *unit);
 	void setInfo(int x, int y);
 	void resetOnFrame() { _onUnitFrame = _onMapFrame = _onMenuFrame = false; };
 	bool checkUnitAction(cocos2d::Vec2 diff)

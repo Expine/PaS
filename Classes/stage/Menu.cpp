@@ -143,6 +143,7 @@ void MenuLayer::setTile(StageTile * tile)
 	tileImage->setTag(0);
 	_map->addChild(tileImage);
 
+	CCLOG("Tile %s", tile->getExplanation().c_str());
 	auto exp = Label::createWithSystemFont(tile->getExplanation(), "MS ゴシック", 20);
 	exp->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 	exp->setPosition(75, 120);
@@ -150,6 +151,29 @@ void MenuLayer::setTile(StageTile * tile)
 	exp->setWidth(_map->getTextureRect().getMaxX() - 75 - MODIFY);
 	exp->setTag(1);
 	_map->addChild(exp);
+}
+
+void MenuLayer::setUnit(Entity* unit)
+{
+	_unit->removeChildByTag(0);
+	_unit->removeChildByTag(1);
+
+	auto id = static_cast<int>(unit->getType());
+	auto unitImage = Sprite::create("image/unit.png", Rect(0, id * 32, 32, 32));
+	unitImage->setAnchorPoint(Vec2::ANCHOR_MIDDLE_LEFT);
+	unitImage->setPosition(10, _unit->getTextureRect().getMidY());
+	unitImage->setScale(2.0f);
+	unitImage->setTag(0);
+	_unit->addChild(unitImage);
+
+	CCLOG("Unit %s", unit->getExplanation().c_str());
+	auto exp = Label::createWithSystemFont(unit->getExplanation(), "MS ゴシック", 20);
+	exp->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	exp->setPosition(75, 160);
+	exp->setColor(Color3B::BLACK);
+	exp->setWidth(_map->getTextureRect().getMaxX() - 75 - MODIFY);
+	exp->setTag(1);
+	_unit->addChild(exp);
 }
 
 void MenuLayer::setInfo(int x, int y)
