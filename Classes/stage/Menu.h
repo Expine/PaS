@@ -20,12 +20,12 @@ private:
 protected:
 	MenuLayer();
 	~MenuLayer();
+	virtual bool init();
 public:
 	CREATE_FUNC(MenuLayer);
 	CC_SYNTHESIZE(bool, _onUnitFrame, OnUnitFrame);
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
-	virtual bool init();
 	void setUnit();
 	void setTile(StageTile *tile);
 	void setInfo(int x, int y);

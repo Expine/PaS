@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "Tile.h"
+#include "entity/Entity.h"
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -20,27 +21,25 @@ constexpr float STAGE_RATIO_RATIO = 0.5f;
 
 class StageLayer : public cocos2d::Node
 {
-private:
-	cocos2d::Vector<StageTile*> _tiles;
-protected:
-	StageLayer()
-	{
-
-	};
-	~StageLayer()
-	{
-		_tiles.clear();
-		_tiles.shrinkToFit();
-	}
 public:
 	CREATE_FUNC(StageLayer);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
-	inline void addTile(StageTile* tile) { _tiles.pushBack(tile); };
 	inline StageTile* getTile(int x, int y)
 	{
-		return _tiles.at(x * _mapSize.y + y);
+		return dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
 	};
-	void render();
+};
+/*********************************************************/
+
+class UnitLayer : public cocos2d::Node
+{
+private:
+	cocos2d::Vector<Entity*> _units;
+protected:
+public:
+	CREATE_FUNC(UnitLayer);
+	void addUnit(Entity* unit) { _units.pushBack(unit); };
+	void removeUnit(Entity* unit) { _units.eraseObject(unit); };
 };
 
 /*********************************************************/
@@ -64,8 +63,8 @@ protected:
 	{
 
 	};
-public:
 	virtual bool init();
+public:
 	CREATE_FUNC(Stage);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
 	CC_SYNTHESIZE(cocos2d::Vec2, _chipSize, ChipSize);
@@ -73,17 +72,16 @@ public:
 	CC_SYNTHESIZE(std::string, _background, BackGround);
 	CC_SYNTHESIZE(std::string, _bgm, BGM);
 	CC_SYNTHESIZE(std::string, _tileFile, TileFile);
-	inline void addTile(int l, StageTile* tile) { if(l<3) dynamic_cast<StageLayer*>(getChildByTag(l))->addTile(tile); };
 	inline StageTile* getTile(int l, int x, int y)
 	{
 		return dynamic_cast<StageLayer*>(getChildByTag(l))->getTile(x, y);
 	};
-	std::vector<cocos2d::Sprite*> getTileSprite(int x, int y)
+	std::vector<StageTile*> getTiles(int x, int y)
 	{
-		std::vector<cocos2d::Sprite*> tiles;
+		std::vector<StageTile*> tiles;
 		for (int i = 0; i < 3; i++)
 		{
-			auto tile = dynamic_cast<cocos2d::Sprite*>(getChildByTag(i)->getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+			auto tile = getTile(i, x, y);
 			if (!tile)
 				continue;
 			tiles.push_back(tile);
@@ -101,7 +99,6 @@ public:
 	};
 	inline float adjustRatio(float ratio) { return max(MIN_STAGE_RARIO, min(MAX_STAGE_RARIO, ratio)); };
 	static Stage* parseStage(const std::string file);
-	void render();
 };
 
 #endif // __STAGE_H__

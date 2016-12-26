@@ -30,18 +30,27 @@ Stage * Stage::parseStage(const std::string file)
 		stage->addChild(layer);
 	}
 
-	//Set chip data
-	int l = -1;
-	int count = 0;
-	for (std::string id : sLine)
-	{
-		if (count % (int)(stage->getMapSize().x * stage->getMapSize().y) == 0)
-			l++;
-		stage->addTile(l, StageTile::getTerrainTypeByID(std::atoi(id.c_str())));
-		count++;
-	}
+	auto layer = UnitLayer::create();
+	layer->setTag(3);
+	stage->addChild(layer);
 
-	stage->render();
+	//Set chip data
+	int count = 0;
+	for (int l = 0; l < 3; l++)
+	{
+		auto batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
+		batch->setTag(0);
+		for (int x = 0; x < stage->getMapSize().x; x++)
+		{
+			for (int y = 0; y < stage->getMapSize().y; y++)
+			{
+				if (sLine.size() == count)
+					break;
+				batch->addChild(StageTile::create(std::atoi(sLine[count++].c_str()), x, y, batch, stage));
+			}
+		}
+		stage->getChildByTag(l)->addChild(batch);
+	}
 
 	//Set listener
 	auto listener = MultiTouchListener::create();
@@ -170,43 +179,6 @@ bool Stage::init()
 		return false;
 
 	return true;
-}
-
-void Stage::render()
-{
-	for (int l = 0; l < 3; l++)
-	{
-		dynamic_cast<StageLayer*>(getChildByTag(l))->render();
-	}
-}
-
-/*********************************************************/
-
-void StageLayer::render()
-{
-	auto parent = dynamic_cast<Stage*>(getParent());
-	auto batch = SpriteBatchNode::create("TileSet/" + parent->getTileFile());
-	batch->setTag(0);
-//	batch->getTexture()->setAliasTexParameters();
-	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / parent->getChipSize().x);
-	auto gap = parent->getGap();
-	auto chipSize = parent->getChipSize();
-
-	this->addChild(batch);
-
-	for (int x = 0; x < _mapSize.x; x++)
-	{
-		for (int y = 0; y < _mapSize.y; y++)
-		{
-			auto fix_y = (int)(_mapSize.y - 1 - y);
-			auto id = getTile(x, y)->getId();
-			auto tile = Sprite::createWithTexture(batch->getTexture(), Rect((id % wnum) * chipSize.x, (int)(id / wnum) * chipSize.y, chipSize.x, chipSize.y));
-			tile->setPosition(x * (chipSize.x + gap) + (y % 2) * (chipSize.x + gap) / 2, fix_y * chipSize.y / 2);
-			tile->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-			tile->setTag(x * _mapSize.y + y);
-			batch->addChild(tile);
-		}
-	}
 }
 
 Vec2 Stage::getTileCoordinate(Vec2 cor)

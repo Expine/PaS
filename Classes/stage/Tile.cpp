@@ -1,8 +1,9 @@
 ﻿#include "Tile.h"
+#include "Stage.h"
 
 USING_NS_CC;
 
-StageTile * StageTile::getTerrainTypeByID(const int id)
+StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatchNode* batch, Stage* stage)
 {
 	StageTile* tile;
 	switch (id)
@@ -25,6 +26,18 @@ StageTile * StageTile::getTerrainTypeByID(const int id)
 
 	//Set ID
 	tile->setId(id);
+
+	//Set batch
+	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / stage->getChipSize().x);
+	auto gap = stage->getGap();
+	auto chipSize = stage->getChipSize();
+
+	auto fix_y = (int)(stage->getMapSize().y - 1 - y);
+	tile->initWithTexture(batch->getTexture(), Rect((id % wnum) * chipSize.x, (int)(id / wnum) * chipSize.y, chipSize.x, chipSize.y));
+	tile->setPosition(x * (chipSize.x + gap) + (y % 2) * (chipSize.x + gap) / 2, fix_y * chipSize.y / 2);
+	tile->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	tile->setTag(x * stage->getMapSize().y + y);
+
 	return tile;
 }
 
