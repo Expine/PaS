@@ -1,11 +1,17 @@
 #include "Util.h"
 
+/*
+ * Load text file
+ */
 std::string util::loadText(const std::string &file)
 {
 	return FileUtils::getInstance()->getStringFromFile(file);
 }
 
 
+/*
+* Input is splited by delimiter
+*/
 std::vector<std::string> util::splitString(const std::string& input, char delim)
 {
 	std::string item;
@@ -26,6 +32,10 @@ std::vector<std::string> util::splitString(const std::string& input, char delim)
 	return result;
 }
 
+/*
+ * File is splited by \n and \r
+ * It is compatible for BOM
+ */
 std::vector<std::string> util::splitFile(const std::string &file)
 {
 	// Result

@@ -4,6 +4,10 @@
 
 USING_NS_CC;
 
+/*
+ * Create entity instance.
+ * And set image.
+ */
 Entity* Entity::create(EntityType type, const int x, const int y, SpriteBatchNode * batch, Stage * stage)
 {
 	Entity* unit;
@@ -32,15 +36,8 @@ Entity* Entity::create(EntityType type, const int x, const int y, SpriteBatchNod
 	unit->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
 	unit->setScale(0.5f);
 	unit->setTag(x * stage->getMapSize().y + y);
+	//Set unlock antialias
 	unit->getTexture()->setAliasTexParameters();
 
 	return unit;
-}
-
-bool Entity::init()
-{
-	if (!Sprite::init())
-		return false;
-
-	return true;
 }

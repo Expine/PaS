@@ -3,6 +3,10 @@
 #include "Entity.h"
 #include "stage/Tile.h"
 
+/*
+ * This class is singleton.
+ * So the constructor is initializing information.
+ */
 EntityToTile::EntityToTile()
 {
 	// Set default value

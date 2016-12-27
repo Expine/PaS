@@ -5,26 +5,24 @@
 
 class Entity;
 
+/*
+ * SLG Game scene
+ * For player turn
+ */
 class Game: public cocos2d::Layer
 {
 private:
 	cocos2d::Vector<cocos2d::Sprite*> _preTiles;
 	Entity* _preUnit;
-	std::vector<std::string> _players;
-	int turn;
 protected:
-	Game() 
-		: turn(0)
-	{
-		addPlayer("My");
-		addPlayer("Enemy");
-		addPlayer("Friend");
-	};
+	Game()
+		: _preUnit(nullptr)
+	{};
 	virtual bool init();
 public:
-    static cocos2d::Scene* createScene();
-	inline void addPlayer(const std::string &player) { _players.push_back(player); };
-    CREATE_FUNC(Game);
+	CREATE_FUNC(Game);
+	CC_SYNTHESIZE(std::function<void()>, _endFunction, EndFunction);
+	static cocos2d::Scene* createScene();
 };
 
 #endif // __GAME_SCENE_H__

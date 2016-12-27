@@ -6,6 +6,11 @@
 enum class TerrainType;
 enum class EntityType;
 
+/*
+ * Entity to tile information.
+ * Search cost
+ * Terrain effect
+ */
 class EntityToTile
 {
 private:
@@ -19,14 +24,8 @@ public:
 		static EntityToTile instance;
 		return &instance; 
 	};
-	inline int getSearchCost(TerrainType terrain, EntityType entity)
-	{
-		return _search_cost[terrain][entity];
-	};
-	inline int getEffect(TerrainType terrain, EntityType entity)
-	{
-		return _effect[terrain][entity];
-	};
+	inline int getSearchCost(TerrainType terrain, EntityType entity) { return _search_cost[terrain][entity]; };
+	inline int getEffect(TerrainType terrain, EntityType entity) { return _effect[terrain][entity]; };
 };
 
 #endif // __ENTITY_TO_TILE_H__

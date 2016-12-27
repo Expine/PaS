@@ -6,34 +6,35 @@
 class Stage;
 
 /*********************************************************/
+
+/*
+ * Terrain type
+ */
 enum class TerrainType
 {
 	none, 
-	prairie,
-	woods,
-	mountain,
-	river,
-	ocean,
-	road,
-	bridge,
-	capital,
-	city,
-	territory,
+	prairie, woods, mountain, river, ocean,
+	road, bridge, capital, city, territory,
 
 	COUNT
 };
+
 /*********************************************************/
+
+/*
+ * Tile class
+ * Inheritance is substance
+ */
 class StageTile : public cocos2d::Sprite
 {
 protected:
 	StageTile()
-		: _id(0)
-		, _terrain(TerrainType::none)
-		, _explanation("")
+		: _id(0), _terrain(TerrainType::none), _explanation("")
+	{};
+	~StageTile()
 	{
-
-	};
-	virtual bool init();
+		_id = 0;
+	}
 public:
 	CC_SYNTHESIZE(int, _id, Id);
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);

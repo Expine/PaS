@@ -1,10 +1,59 @@
 ﻿#include "Stage.h"
+#include "Tile.h"
 
+#include "entity/Entity.h"
 #include "util/Util.h"
 #include "util/MultiListener.h"
 
 USING_NS_CC;
 
+/*
+ * Set tile data
+ * And return this tile data
+ */
+StageTile* StageLayer::setTile(int x, int y, int id)
+{
+	auto tile = StageTile::create(id, x, y, _batch, dynamic_cast<Stage*>(getParent()));
+	_batch->addChild(tile);
+	return tile;
+}
+
+/*
+ * Get tile data
+ */
+StageTile * StageLayer::getTile(int x, int y)
+{
+	return dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+};
+
+/*********************************************************/
+
+/*
+ * Set unit data
+ * And return this unit data
+ */
+Entity* UnitLayer::setUnit(int x, int y, EntityType type)
+{
+	auto entity = Entity::create(type, x, y, _batch, dynamic_cast<Stage*>(getParent()));
+	_batch->addChild(entity);
+	return entity;
+}
+
+/*
+ * Get unit data
+ */
+Entity * UnitLayer::getUnit(int x, int y)
+{
+	return dynamic_cast<Entity*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+}
+
+/*********************************************************/
+
+/*
+ * Static Method
+ * Parse file to stage.
+ * Set stage base data and layer, chip data
+ */
 Stage * Stage::parseStage(const std::string file)
 {
 	auto stage = Stage::create();
@@ -38,7 +87,7 @@ Stage * Stage::parseStage(const std::string file)
 	batch->setTag(0);
 	layer->setBatch(batch);
 	layer->addChild(batch);
-	stage->addChild(layer, 10);
+	stage->addChild(layer);
 
 	//Set chip data
 	int count = 0;
@@ -46,7 +95,7 @@ Stage * Stage::parseStage(const std::string file)
 	{
 		auto batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
 		batch->setTag(0);
-		auto layer = dynamic_cast<StageLayer*>(stage->getChildByTag(l));
+		auto layer = stage->getStageLayer(l);
 		layer->setBatch(batch);
 		layer->addChild(batch);
 		for (int x = 0; x < stage->getMapSize().x; x++)
@@ -55,11 +104,15 @@ Stage * Stage::parseStage(const std::string file)
 			{
 				if (sLine.size() == count)
 					break;
-				layer->setTile(x, y, std::atoi(sLine[count++].c_str()));
+				auto tile = layer->setTile(x, y, std::atoi(sLine[count++].c_str()));
+				// Add city
+				if (util::instanceof<City>(tile))
+					stage->_cities.push_back(util::instance<City>(tile));
 			}
 		}
 	}
 
+	// for debug 
 	std::string names[] = { "My", "Enemy", "Friend" };
 	std::vector<Vec2> poses;
 	bool check = true;
@@ -87,6 +140,10 @@ Stage * Stage::parseStage(const std::string file)
 	return stage;
 }
 
+/*
+ * Initialize information.
+ * Mainly set listener.
+ */
 bool Stage::init()
 {
 	if (!Node::init())
@@ -94,57 +151,52 @@ bool Stage::init()
 
 	//Set listener
 	auto listener = MultiTouchListener::create();
+	//Stop all action and adjust position. 
 	listener->onTouchBegan = [this](Vec2 v)
 	{
 		stopAllActions();
 		setPosition(adjustArea(getPosition()));
 	};
+	//When tapping, call onTap
 	listener->onTap = [this](Vec2 v)
 	{
 		if (onTap)
 		{
 			auto cor = getTileCoordinate(v);
 			std::vector<StageTile*> tiles;
-			for (int i = 0; i < 3; i++)
-			{
-				auto tile = getTile(i, cor.x, cor.y);
+			for (auto tile : getTiles(cor.x, cor.y))
 				if (tile->getId() != 0)
 					tiles.push_back(tile);
-			}
 			onTap(cor, tiles);
 		}
 	};
-	listener->onSwipeCheck = [this](Vec2 v, Vec2 diff, float time)
-	{
-		return !onSwipeCheck || onSwipeCheck(v, diff, time);
+	//if has on-Check, call it
+	listener->onSwipeCheck = [this](Vec2 v, Vec2 diff, float time)	{ return !onSwipeCheck || onSwipeCheck(v, diff, time); };
+	listener->onFlickCheck = [this](Vec2 v, Vec2 diff, float time) { return !onFlickCheck || onFlickCheck(v, diff, time); };
+	// When swiping, move position
+	listener->onSwipe = [this](Vec2 v, Vec2 diff, float time) 
+	{ 
+		setPosition(adjustArea(getPosition() + diff)); 
 	};
-	listener->onSwipe = [this](Vec2 v, Vec2 diff, float time)
-	{
-		setPosition(adjustArea(getPosition() + diff));
-	};
-	listener->onFlickCheck = [this](Vec2 v, Vec2 diff, float time)
-	{
-		return !onFlickCheck || onFlickCheck(v, diff, time);
-	};
+	// When flicking, move position by inertia
 	listener->onFlick = [this](Vec2 v, Vec2 diff, float time)
 	{
 		runAction(Spawn::create(
 			Sequence::create(
-				MoveBy::create(0.5f, diff / time / 3),
-				DelayTime::create(0.5f),
+				EaseSineIn::create(MoveBy::create(0.5f, diff / time / 3)),
 				CallFunc::create([this] {
-			stopAllActions();
-		}),
-				NULL),
+					stopAllActions();
+				}),
+			NULL),
 			Repeat::create(Sequence::create(
 				CallFunc::create([this] {
-			setPosition(adjustArea(getPosition()));
-		}),
+					setPosition(adjustArea(getPosition()));
+				}),
 				DelayTime::create(0.005f),
-			NULL)
-				, -1),
-			NULL));
+			NULL), -1),
+		NULL));
 	};
+	//When onLongtapBegan, call onLongTapBegan
 	listener->onLongTapBegan = [this](Vec2 v)
 	{
 		if (onLongTapBegan)
@@ -160,6 +212,7 @@ bool Stage::init()
 			onLongTapBegan(cor, tiles);
 		}
 	};
+	//When onLongtapEnd, call onLongTapEnd
 	listener->onLongTapEnd = [this](Vec2 v)
 	{
 		if (onLongTapEnd)
@@ -175,6 +228,7 @@ bool Stage::init()
 			onLongTapEnd(cor, tiles);
 		}
 	};
+	// Pinch in equals zoom in
 	listener->pinchIn = [this](Vec2 v, float ratio)
 	{
 		ratio = ratio / (1 + ratio) / STAGE_RATIO_RATIO;
@@ -186,6 +240,7 @@ bool Stage::init()
 		auto pos = (getPosition() + Vec2(diff_x, diff_y));
 		setPosition(adjustArea(getPosition()  * diff_ratio + Vec2(diff_x, diff_y)));
 	};
+	// Pinch out equals zoom out
 	listener->pinchOut = [this](Vec2 v, float ratio)
 	{
 		ratio = ratio / (1 + ratio) / STAGE_RATIO_RATIO;
@@ -197,13 +252,18 @@ bool Stage::init()
 		auto pos = (getPosition() + Vec2(diff_x, diff_y));
 		setPosition(adjustArea(getPosition()  * diff_ratio + Vec2(diff_x, diff_y)));
 	};
-	getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, this);
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, this);
+
+	// Set mouse listener(for Windows)
 	auto mouseListener = MultiMouseListener::create(listener);
-	getEventDispatcher()->addEventListenerWithSceneGraphPriority(mouseListener, this);
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(mouseListener, this);
 
 	return true;
 }
 
+/*
+ * Get coordinate on tile
+ */
 Vec2 Stage::getTileCoordinate(Vec2 cor)
 {
 	auto fix = (cor - getPosition()) / getScale();
@@ -214,14 +274,39 @@ Vec2 Stage::getTileCoordinate(Vec2 cor)
 	return Vec2(x, y);
 }
 
-void StageLayer::setTile(int x, int y, int id)
+/*
+* Get coordinate by tile coordinate
+*/
+Vec2 Stage::getCoordinateByTile(int x, int y)
 {
-	_batch->addChild(StageTile::create(id, x, y, _batch, dynamic_cast<Stage*>(getParent())));
+	return Vec2(x * (_chipSize.x + _gap) + (y % 2) * (_chipSize.x + _gap) / 2, (_mapSize.y - 1 - y) * _chipSize.y / 2);
 }
 
-Entity* UnitLayer::setUnit(int x, int y, EntityType type)
+/*
+ * Get tiles by x, y
+ */
+std::vector<StageTile*> Stage::getTiles(int x, int y)
 {
-	auto entity = Entity::create(type, x, y, _batch, dynamic_cast<Stage*>(getParent()));
-	_batch->addChild(entity);
-	return entity;
-}
+	std::vector<StageTile*> tiles;
+	for (int i = 0; i < 3; i++)
+	{
+		auto tile = getTile(i, x, y);
+		if (!tile)
+			continue;
+		tiles.push_back(tile);
+	}
+	return tiles;
+};
+
+/*
+ * Adjust position
+ */
+cocos2d::Vec2 Stage::adjustArea(cocos2d::Vec2 v)
+{
+	auto maxWidth = getWidth() * getScale() - cocos2d::Director::getInstance()->getWinSize().width;
+	auto maxHeight = getHeight() * getScale() - cocos2d::Director::getInstance()->getWinSize().height;
+	return cocos2d::Vec2(
+		(maxWidth < 0) ? 0 : max(-maxWidth, min(v.x, 0)),
+		(maxHeight < 0) ? 0 : max(-maxHeight, min(v.y, 0)));
+};
+

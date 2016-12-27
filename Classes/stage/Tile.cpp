@@ -3,6 +3,9 @@
 
 USING_NS_CC;
 
+/*
+ * Create tile data
+ */
 StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatchNode* batch, Stage* stage)
 {
 	StageTile* tile;
@@ -40,12 +43,3 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 
 	return tile;
 }
-
-bool StageTile::init()
-{
-	if (!Sprite::init())
-		return false;
-
-	return true;
-}
-

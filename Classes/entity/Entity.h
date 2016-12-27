@@ -4,53 +4,58 @@
 #include "cocos2d.h"
 
 class Stage;
+class Weapon;
 
 /*********************************************************/
 
+/** Military department */
 enum class Department
 {
-	soldier,
-	wizard
+	soldier, wizard
 };
 
+/** Entity type */
 enum class EntityType
 {
-	infantry,
-	heavy,
-	spy,
-	
-	fire,
-	ice,
-	thunder,
-	ground,
-	king,
-	weapon,
-	relief,
-	guardian,
-	dark,
-	light,
-
+	infantry, heavy, spy,
+	fire, ice, thunder, ground, king, weapon, relief, guardian, dark, light,
 	COUNT
 };
 
+/** Unit state*/
+enum class EntityState
+{
+	none, supplied, moved, end
+};
 /*********************************************************/
 
+/*
+ * Unit on stage and sprite.
+ */
 class Entity : public cocos2d::Sprite
 {
 protected:
+	cocos2d::Vector<Weapon*> weapons;
 	Entity()
-		: _department(Department::soldier)
-		, _type(EntityType::infantry)
-		, _explanation("")
+		: _department(Department::soldier), _type(EntityType::infantry), _explanation(""), _state(EntityState::none)
+		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0)
+	{};
+	~Entity()
 	{
-
+		_usingWeapon = _mobility = _material = _maxMaterial = _searchingAbility = _defence = 0;
 	};
-	virtual bool init();
 public:
 	CREATE_FUNC(Entity);
-	CC_SYNTHESIZE(Department, _department, Department);
-	CC_SYNTHESIZE(EntityType, _type, Type);
-	CC_SYNTHESIZE(std::string, _explanation, Explanation);
+	CC_SYNTHESIZE(EntityState, _state, State);
+	CC_SYNTHESIZE(int, _usingWeapon, UsingWeapon);
+	CC_SYNTHESIZE(int, _material, Material);
+	CC_SYNTHESIZE_READONLY(Department, _department, Department);
+	CC_SYNTHESIZE_READONLY(EntityType, _type, Type);
+	CC_SYNTHESIZE_READONLY(std::string, _explanation, Explanation);
+	CC_SYNTHESIZE_READONLY(int, _mobility, Mobility);
+	CC_SYNTHESIZE_READONLY(int, _maxMaterial, MaxMaterial);
+	CC_SYNTHESIZE_READONLY(int, _searchingAbility, SearchingAbility);
+	CC_SYNTHESIZE_READONLY(int, _defence, Defence);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 };
 
