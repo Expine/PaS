@@ -39,10 +39,6 @@ Stage * Stage::parseStage(const std::string file)
 	layer->setBatch(batch);
 	layer->addChild(batch);
 	stage->addChild(layer, 10);
-	for (int i = 0; i < static_cast<int>(EntityType::COUNT); i++)
-	{
-		layer->setUnit(10 + i, 10 + i, static_cast<EntityType>(i));
-	}
 
 	//Set chip data
 	int count = 0;
@@ -62,6 +58,30 @@ Stage * Stage::parseStage(const std::string file)
 				layer->setTile(x, y, std::atoi(sLine[count++].c_str()));
 			}
 		}
+	}
+
+	std::string names[] = { "My", "Enemy", "Friend" };
+	std::vector<Vec2> poses;
+	bool check = true;
+	for (int i = 0; i < 100; i++)
+	{
+		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
+		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
+		if (type == TerrainType::ocean)
+			continue;
+		if (type == TerrainType::river)
+			continue;
+		for (auto p : poses)
+			if (p.x == pos.x && p.y == pos.y)
+			{
+				check = false;
+			}
+		if (check)
+		{
+			stage->setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 3]);
+			poses.push_back(pos);
+		}
+		check = true;
 	}
 
 	return stage;
@@ -199,7 +219,9 @@ void StageLayer::setTile(int x, int y, int id)
 	_batch->addChild(StageTile::create(id, x, y, _batch, dynamic_cast<Stage*>(getParent())));
 }
 
-void UnitLayer::setUnit(int x, int y, EntityType type)
+Entity* UnitLayer::setUnit(int x, int y, EntityType type)
 {
-	_batch->addChild(Entity::create(type, x, y, _batch, dynamic_cast<Stage*>(getParent())));
+	auto entity = Entity::create(type, x, y, _batch, dynamic_cast<Stage*>(getParent()));
+	_batch->addChild(entity);
+	return entity;
 }

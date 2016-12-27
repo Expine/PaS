@@ -1,5 +1,7 @@
 ﻿#include "Menu.h"
 
+#include "entity/EntityToTile.h"
+
 #include "util/MultiListener.h"
 #include "util/Util.h"
 
@@ -130,10 +132,15 @@ void MenuLayer::setUnit()
 {
 }
 
-void MenuLayer::setTile(StageTile * tile)
+void MenuLayer::setTile(StageTile * tile, Entity* unit)
 {
 	_map->removeChildByTag(0);
 	_map->removeChildByTag(1);
+	_map->removeChildByTag(2);
+	_map->removeChildByTag(3);
+
+	if (!tile)
+		return;
 
 	auto id = tile->getId();
 	auto tileImage = Sprite::create("image/tileExp.png", Rect((id % 8) * 18, id / 8 * 18, 18, 18));
@@ -143,7 +150,6 @@ void MenuLayer::setTile(StageTile * tile)
 	tileImage->setTag(0);
 	_map->addChild(tileImage);
 
-	CCLOG("Tile %s", tile->getExplanation().c_str());
 	auto exp = Label::createWithSystemFont(tile->getExplanation(), "MS ゴシック", 20);
 	exp->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 	exp->setPosition(75, 120);
@@ -151,12 +157,32 @@ void MenuLayer::setTile(StageTile * tile)
 	exp->setWidth(_map->getTextureRect().getMaxX() - 75 - MODIFY);
 	exp->setTag(1);
 	_map->addChild(exp);
+
+	if (!unit)
+		return;
+
+	auto cost = Label::createWithSystemFont(StringUtils::format("Move cost : %d", EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), unit->getType())), "Arial", 18);
+	cost->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	cost->setPosition(90, 25);
+	cost->setColor(Color3B::BLACK);
+	cost->setTag(2);
+	_map->addChild(cost);
+
+	auto effect = Label::createWithSystemFont(StringUtils::format("Effect : %d%%", EntityToTile::getInstance()->getEffect(tile->getTerrainType(), unit->getType())), "Arial", 18);
+	effect->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	effect->setPosition(90, 5);
+	effect->setColor(Color3B::BLACK);
+	effect->setTag(3);
+	_map->addChild(effect);
 }
 
 void MenuLayer::setUnit(Entity* unit)
 {
 	_unit->removeChildByTag(0);
 	_unit->removeChildByTag(1);
+
+	if (!unit)
+		return;
 
 	auto id = static_cast<int>(unit->getType());
 	auto unitImage = Sprite::create("image/unit.png", Rect(0, id * 32, 32, 32));
@@ -166,7 +192,6 @@ void MenuLayer::setUnit(Entity* unit)
 	unitImage->setTag(0);
 	_unit->addChild(unitImage);
 
-	CCLOG("Unit %s", unit->getExplanation().c_str());
 	auto exp = Label::createWithSystemFont(unit->getExplanation(), "MS ゴシック", 20);
 	exp->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 	exp->setPosition(75, 160);

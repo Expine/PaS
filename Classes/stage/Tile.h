@@ -187,7 +187,7 @@ public:
 	CREATE_FUNC(City);
 };
 
-class Capital : public StageTile
+class Capital : public City
 {
 protected:
 	virtual bool init()

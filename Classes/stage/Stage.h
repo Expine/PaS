@@ -49,7 +49,7 @@ public:
 	CREATE_FUNC(UnitLayer);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
 	CC_SYNTHESIZE(cocos2d::SpriteBatchNode*, _batch, Batch);
-	void setUnit(int x, int y, EntityType type);
+	Entity* setUnit(int x, int y, EntityType type);
 	Entity* getUnit(int x, int y)
 	{
 		return dynamic_cast<Entity*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
@@ -61,6 +61,8 @@ public:
 class Stage : public cocos2d::Node
 {
 private:
+	std::vector<City*> _cities;
+	std::map<std::string, std::vector<Entity*>> _units;
 public:
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapBegan;
@@ -100,6 +102,10 @@ public:
 			tiles.push_back(tile);
 		}
 		return tiles;
+	};
+	inline void setUnit(int x, int y, EntityType type, const std::string &name)
+	{
+		_units[name].push_back(dynamic_cast<UnitLayer*>(getChildByTag(3))->setUnit(x, y, type));
 	};
 	inline Entity* getUnit(int x, int y)
 	{

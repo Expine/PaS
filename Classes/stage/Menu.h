@@ -28,7 +28,7 @@ public:
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
 	void setUnit();
-	void setTile(StageTile *tile);
+	void setTile(StageTile *tile, Entity* entity);
 	void setUnit(Entity *unit);
 	void setInfo(int x, int y);
 	void resetOnFrame() { _onUnitFrame = _onMapFrame = _onMenuFrame = false; };

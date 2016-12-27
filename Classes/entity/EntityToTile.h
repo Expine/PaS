@@ -3,8 +3,8 @@
 
 #include "cocos2d.h"
 
-extern enum class TerrainType;
-extern enum class EntityType;
+enum class TerrainType;
+enum class EntityType;
 
 class EntityToTile
 {
@@ -14,10 +14,18 @@ private:
 protected:
 	EntityToTile();
 public:
-	EntityToTile* getInstance() 
+	static EntityToTile* getInstance() 
 	{ 
 		static EntityToTile instance;
 		return &instance; 
+	};
+	inline int getSearchCost(TerrainType terrain, EntityType entity)
+	{
+		return _search_cost[terrain][entity];
+	};
+	inline int getEffect(TerrainType terrain, EntityType entity)
+	{
+		return _effect[terrain][entity];
 	};
 };
 
