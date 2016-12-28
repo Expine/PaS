@@ -3,6 +3,8 @@
 
 #include "cocos2d.h"
 
+#include "ai/Owner.h"
+
 class StageTile;
 class City;
 class Entity;
@@ -41,6 +43,7 @@ public:
 	CC_SYNTHESIZE(cocos2d::SpriteBatchNode*, _batch, Batch);
 	StageTile* setTile(int x, int y, int id);
 	StageTile* getTile(int x, int y);
+	StageTile* removeTile(int x, int y);
 };
 
 /*********************************************************/
@@ -75,8 +78,8 @@ class Stage : public cocos2d::Node
 {
 private:
 	/** city and unit vector */
-	std::vector<City*> _cities;
-	std::map<std::string, std::vector<Entity*>> _units;
+	std::map<Owner, std::vector<City*>> _cities;
+	std::map<Owner, std::vector<Entity*>> _units;
 public:
 	/** listener action */
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
@@ -109,13 +112,15 @@ public:
 	inline StageLayer* getStageLayer(int l) { return dynamic_cast<StageLayer*>(getChildByTag(l)); };
 	/** Get unit layer*/
 	inline UnitLayer* getUnitLayer() { return dynamic_cast<UnitLayer*>(getChildByTag(3)); };
+	/** Get shadow layer*/
+	inline StageLayer* getShadowLayer() { return dynamic_cast<StageLayer*>(getChildByTag(4)); };
 
 	/** Get tile by x, y, layer number*/
 	inline StageTile* getTile(int l, int x, int y) { return getStageLayer(l)->getTile(x, y); };
 	std::vector<StageTile*> getTiles(int x, int y);
 
 	/** Set unit*/
-	inline void setUnit(int x, int y, EntityType type, const std::string &name) { _units[name].push_back(getUnitLayer()->setUnit(x, y, type)); };
+	void setUnit(int x, int y, EntityType type, const Owner owner);
 	/** Get unit*/
 	inline Entity* getUnit(int x, int y) { return getUnitLayer()->getUnit(x, y); };
 
@@ -128,9 +133,15 @@ public:
 	inline float adjustRatio(float ratio) { return max(MIN_STAGE_RARIO, min(MAX_STAGE_RARIO, ratio)); };
 	cocos2d::Vec2 adjustArea(cocos2d::Vec2 v);
 
-
 	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
 	cocos2d::Vec2 getCoordinateByTile(int x, int y);
+	void movePosition(int x, int y);
+
+	void initTileSearched(Owner owner);
+	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost);
+
+	cocos2d::Vec2 nextCity(Owner owner, StageTile* nowTile);
+	cocos2d::Vec2 nextUnit(Owner owner, Entity* nowUnit);
 };
 
 #endif // __STAGE_H__

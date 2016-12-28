@@ -4,6 +4,9 @@
 #include "cocos2d.h"
 
 class Entity;
+class StageTile;
+class Stage;
+class MenuLayer;
 
 /*
  * SLG Game scene
@@ -14,15 +17,31 @@ class Game: public cocos2d::Layer
 private:
 	cocos2d::Vector<cocos2d::Sprite*> _preTiles;
 	Entity* _preUnit;
+	void setPreTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
+	void setPreUnit(Stage* stage, MenuLayer* menu, Entity* unit);
 protected:
 	Game()
 		: _preUnit(nullptr)
 	{};
-	virtual bool init();
+	virtual bool init(Stage* stage);
 public:
-	CREATE_FUNC(Game);
+	static cocos2d::Scene* createScene(Stage* stage);
+	static Game* create(Stage* stage)
+	{
+		Game *pRet = new(std::nothrow) Game();
+		if (pRet && pRet->init(stage))
+		{
+			pRet->autorelease();
+			return pRet;
+		}
+		else
+		{
+			delete pRet;
+			pRet = nullptr;
+			return nullptr;
+		}
+	}
 	CC_SYNTHESIZE(std::function<void()>, _endFunction, EndFunction);
-	static cocos2d::Scene* createScene();
 };
 
 #endif // __GAME_SCENE_H__

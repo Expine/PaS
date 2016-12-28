@@ -3,8 +3,11 @@
 
 #include "cocos2d.h"
 
+#include "ai/Owner.h"
+
 class Stage;
 class Weapon;
+
 
 /*********************************************************/
 
@@ -38,7 +41,7 @@ protected:
 	cocos2d::Vector<Weapon*> weapons;
 	Entity()
 		: _department(Department::soldier), _type(EntityType::infantry), _explanation(""), _state(EntityState::none)
-		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0)
+		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(3), _defence(0)
 	{};
 	~Entity()
 	{
@@ -46,6 +49,8 @@ protected:
 	};
 public:
 	CREATE_FUNC(Entity);
+	CC_SYNTHESIZE(Owner, _affiliation, Affiliation);
+	inline Entity* setAffiliationRetThis(Owner owner) { _affiliation = owner; return this; };
 	CC_SYNTHESIZE(EntityState, _state, State);
 	CC_SYNTHESIZE(int, _usingWeapon, UsingWeapon);
 	CC_SYNTHESIZE(int, _material, Material);
@@ -57,6 +62,7 @@ public:
 	CC_SYNTHESIZE_READONLY(int, _searchingAbility, SearchingAbility);
 	CC_SYNTHESIZE_READONLY(int, _defence, Defence);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
+	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 };
 
 /*********************************************************/

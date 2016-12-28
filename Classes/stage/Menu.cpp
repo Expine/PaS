@@ -125,13 +125,13 @@ bool MenuLayer::init()
 	setFrameListener(_map, _mapLabels, FrameType::map, 250 - MODIFY);
 	setFrameListener(_menu, _menuLabels, FrameType::menu, -200 + MODIFY);
 
-	setMenuListener(_menu->getChildByTag(10), [this] {endPhase(); });
-	setMenuListener(_menu->getChildByTag(11), [this] {});
-	setMenuListener(_menu->getChildByTag(12), [this] {});
-	setMenuListener(_menu->getChildByTag(13), [this] {});
-	setMenuListener(_menu->getChildByTag(14), [this] {});
-	setMenuListener(_menu->getChildByTag(15), [this] {});
-	setMenuListener(_menu->getChildByTag(16), [this] {});
+	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase) endPhase(); });
+	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity) nextCity(); });
+	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit) nextUnit(); });
+	setMenuListener(_menu->getChildByTag(13), [this] { if (talkStaff) talkStaff(); });
+	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	save(); });
+	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	load(); });
+	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	option(); });
 
 	return true;
 }
@@ -347,9 +347,14 @@ void MenuLayer::setFrameListener(Sprite *target, const std::vector<Label*>& targ
 void MenuLayer::setMenuListener(cocos2d::Node * target, std::function<void()> func)
 {
 	auto listener = SingleTouchListener::create();
+	listener->setSwallowTouches(true);
+	listener->onTouchBeganChecking = [](Touch* touch, Event* event)
+	{
+		return util::isTouchInEvent(touch, event);
+	};
 	listener->onTap = [func](Touch* touch, Event* event)
 	{
-		if (util::isTouchInEvent(touch, event))
+		if(func)
 			func();
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, target);

@@ -3,6 +3,8 @@
 
 #include "cocos2d.h"
 
+#include "ai/Owner.h"
+
 class Stage;
 
 /*********************************************************/
@@ -29,7 +31,7 @@ class StageTile : public cocos2d::Sprite
 {
 protected:
 	StageTile()
-		: _id(0), _terrain(TerrainType::none), _explanation("")
+		: _id(0), _terrain(TerrainType::none), _explanation(""), _searched(false)
 	{};
 	~StageTile()
 	{
@@ -39,6 +41,8 @@ public:
 	CC_SYNTHESIZE(int, _id, Id);
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);
 	CC_SYNTHESIZE(std::string, _explanation, Explanation);
+	CC_SYNTHESIZE(bool, _searched, Searched);
+	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 	static StageTile* create(const int id, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 };
 
@@ -186,6 +190,7 @@ protected:
 	};
 public:
 	CREATE_FUNC(City);
+	CC_SYNTHESIZE(Owner, _owner, Owner);
 };
 
 class Capital : public City

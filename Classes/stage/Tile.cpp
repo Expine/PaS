@@ -1,6 +1,9 @@
 ﻿#include "Tile.h"
 #include "Stage.h"
 
+#include "ai/Owner.h"
+#include "util/Util.h"
+
 USING_NS_CC;
 
 /*
@@ -22,8 +25,10 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	case 12:tile = Mountain::create();	break;
 	case 13:tile = Bridge::create();	break;
 	case 14:tile = Bridge::create();	break;
-	case 16:tile = Capital::create();	break;
-	case 17:tile = City::create();		break;
+	case 16:tile = Capital::create();	util::instance<Capital>(tile)->setOwner(Owner::player); break;
+	case 17:tile = City::create();		util::instance<City>(tile)->setOwner(Owner::player);	break;
+	case 24:tile = Capital::create();	util::instance<Capital>(tile)->setOwner(Owner::enemy);	break;
+	case 25:tile = City::create();		util::instance<City>(tile)->setOwner(Owner::enemy);		break;
 	default:tile = None::create();		break;
 	}
 

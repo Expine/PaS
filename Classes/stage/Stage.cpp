@@ -19,11 +19,21 @@ StageTile* StageLayer::setTile(int x, int y, int id)
 }
 
 /*
- * Get tile data
- */
+* Get tile data
+*/
 StageTile * StageLayer::getTile(int x, int y)
 {
 	return dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+};
+
+/*
+ * Remove tile data
+ */
+StageTile * StageLayer::removeTile(int x, int y)
+{
+	auto remove = dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+	getChildByTag(0)->removeChildByTag(x * _mapSize.y + y);
+	return remove;
 };
 
 /*********************************************************/
@@ -79,11 +89,21 @@ Stage * Stage::parseStage(const std::string file)
 		stage->addChild(layer);
 	}
 
+	// Set shadow layer
+	auto shadow = StageLayer::create();
+	shadow->setTag(4);
+	shadow->setMapSize(stage->getMapSize());
+	auto batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
+	batch->setTag(0);
+	shadow->setBatch(batch);
+	shadow->addChild(batch);
+	stage->addChild(shadow);
+
 	// Set unit layer
 	auto layer = UnitLayer::create();
 	layer->setTag(3);
 	layer->setMapSize(stage->getMapSize());
-	auto batch = SpriteBatchNode::create("image/unit.png");
+	batch = SpriteBatchNode::create("image/unit.png");
 	batch->setTag(0);
 	layer->setBatch(batch);
 	layer->addChild(batch);
@@ -107,13 +127,13 @@ Stage * Stage::parseStage(const std::string file)
 				auto tile = layer->setTile(x, y, std::atoi(sLine[count++].c_str()));
 				// Add city
 				if (util::instanceof<City>(tile))
-					stage->_cities.push_back(util::instance<City>(tile));
+					stage->_cities[util::instance<City>(tile)->getOwner()].push_back(util::instance<City>(tile));
 			}
 		}
 	}
 
 	// for debug 
-	std::string names[] = { "My", "Enemy", "Friend" };
+	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
 	for (int i = 0; i < 100; i++)
@@ -131,7 +151,9 @@ Stage * Stage::parseStage(const std::string file)
 			}
 		if (check)
 		{
-			stage->setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 3]);
+			stage->setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 2]);
+			if (i % 2)
+				stage->getUnit(pos.x, pos.y)->setColor(Color3B::RED);
 			poses.push_back(pos);
 		}
 		check = true;
@@ -283,6 +305,113 @@ Vec2 Stage::getCoordinateByTile(int x, int y)
 }
 
 /*
+ * Move for centering specify tile
+ */
+void Stage::movePosition(int x, int y)
+{
+	// Stop pre move
+	if (this->getActionByTag(0))
+		this->stopActionByTag(0);
+
+	auto winSize = Director::getInstance()->getWinSize();
+	auto action = MoveTo::create(0.1f, adjustArea(Vec2(winSize.width / 2 - (getChipSize().x + getGap()) / 2, winSize.height / 2 - getChipSize().y / 2) - Vec2(x, y) * getScale()));
+	action->setTag(0);
+	this->runAction(action);
+}
+
+/*
+ * Initialize searched property
+ */
+void Stage::initTileSearched(Owner owner)
+{
+	// All black out
+	// All enemy hided
+	auto shadow = getShadowLayer();
+	for (int x = 0; x < _mapSize.x; x++)
+	{
+		for (int y = 0; y < _mapSize.y; y++)
+		{
+			for (auto tile : getTiles(x, y))
+				tile->setSearched(false);
+			if (shadow->getTile(x, y) == nullptr)
+				shadow->setTile(x, y, 22);
+			auto unit = getUnit(x, y);
+			if (unit && unit->getAffiliation() != owner)
+				unit->setOpacity(0);
+		}
+	}
+
+
+	for (auto city : _cities[owner])
+	{
+		for (auto tile : recursiveTileSearch(Vec2(0, 0), city->getTileCoordinate(_mapSize.y), 1))
+		{
+			auto cor = tile->getTileCoordinate(_mapSize.y);
+			tile->setSearched(true);
+			if (shadow->getTile(cor.x, cor.y) != nullptr)
+				shadow->removeTile(cor.x, cor.y);
+			auto unit = getUnit(cor.x, cor.y);
+			if (unit && unit->getAffiliation() != owner)
+				unit->setOpacity(255);
+		}
+	}
+
+	for (auto unit : _units[owner])
+	{
+		for (auto tile : recursiveTileSearch(Vec2(0, 0), unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility()))
+		{
+			auto cor = tile->getTileCoordinate(_mapSize.y);
+			tile->setSearched(true);
+			if (shadow->getTile(cor.x, cor.y) != nullptr)
+				shadow->removeTile(cor.x, cor.y);
+			auto unit = getUnit(cor.x, cor.y);
+			if (unit && unit->getAffiliation() != owner)
+				unit->setOpacity(255);
+		}
+	}
+}
+/*
+ * Recursive search
+ */
+std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost)
+{
+	std::vector<StageTile*> tiles;
+	for (auto tile : getTiles(point.x, point.y))
+		tiles.push_back(tile);
+
+	// If consume all cost, process end
+	if (remainCost-- == 0)
+		return tiles;
+
+	//Up
+	if (intrusion.y >= 0)
+		for (auto tile : recursiveTileSearch(Vec2(0, 1), point + Vec2(0, -2), remainCost))
+			tiles.push_back(tile);
+	//Up right
+	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
+		for (auto tile : recursiveTileSearch(Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost))
+			tiles.push_back(tile);
+	//Up left
+	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
+		for (auto tile : recursiveTileSearch(Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost))
+			tiles.push_back(tile);
+	//Down
+	if(intrusion.y <= 0)
+		for (auto tile : recursiveTileSearch(Vec2(0, -1), point + Vec2(0, 2), remainCost))
+			tiles.push_back(tile);
+	//Down right
+	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
+		for (auto tile : recursiveTileSearch(Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost))
+			tiles.push_back(tile);
+	//Down left
+	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
+		for (auto tile : recursiveTileSearch(Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost))
+			tiles.push_back(tile);
+
+	return tiles;
+}
+
+/*
  * Get tiles by x, y
  */
 std::vector<StageTile*> Stage::getTiles(int x, int y)
@@ -296,7 +425,12 @@ std::vector<StageTile*> Stage::getTiles(int x, int y)
 		tiles.push_back(tile);
 	}
 	return tiles;
-};
+}
+void Stage::setUnit(int x, int y, EntityType type, const Owner owner)
+{
+	_units[owner].push_back(getUnitLayer()->setUnit(x, y, type)->setAffiliationRetThis(owner));
+}
+;
 
 /*
  * Adjust position
@@ -309,4 +443,50 @@ cocos2d::Vec2 Stage::adjustArea(cocos2d::Vec2 v)
 		(maxWidth < 0) ? 0 : max(-maxWidth, min(v.x, 0)),
 		(maxHeight < 0) ? 0 : max(-maxHeight, min(v.y, 0)));
 };
+
+/*
+ * Move next city
+ */
+Vec2 Stage::nextCity(Owner owner, StageTile* nowTile)
+{
+	auto cities = _cities[owner];
+	if (!nowTile || !util::instanceof<City>(nowTile))
+		nowTile = cities.back();
+	bool discovered = false;
+	for (auto city : cities)
+	{
+		if (discovered)
+		{
+			movePosition(city->getPosition().x, city->getPosition().y);
+			return city->getTileCoordinate(getMapSize().y);
+		}
+		if (city == nowTile)
+			discovered = true;
+	}
+	movePosition(cities.front()->getPosition().x, cities.front()->getPosition().y);
+	return cities.front()->getTileCoordinate(getMapSize().y);
+}
+
+/*
+ * Move next unit
+ */
+Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
+{
+	auto units = _units[owner];
+	if (!nowUnit)
+		nowUnit = units.back();
+	bool discovered = false;
+	for (auto unit : units)
+	{
+		if (discovered)
+		{
+			movePosition(unit->getPosition().x, unit->getPosition().y);
+			return Vec2(unit->getTag() / (int)(getMapSize().y), unit->getTag() % (int)(getMapSize().y));
+		}
+		if (unit == nowUnit)
+			discovered = true;
+	}
+	movePosition(units.front()->getPosition().x, units.front()->getPosition().y);
+	return Vec2(units.front()->getTag() / (int)(getMapSize().y), units.front()->getTag() % (int)(getMapSize().y));
+}
 
