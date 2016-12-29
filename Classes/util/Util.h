@@ -8,6 +8,11 @@ USING_NS_CC;
 /*********************************************************/
 namespace util
 {
+	constexpr int CUT_MASK_RIGHT = 1;
+	constexpr int CUT_MASK_LEFT = 2;
+	constexpr int CUT_MASK_UP = 4;
+	constexpr int CUT_MASK_DOWN = 8;
+
 	std::string loadText(const std::string &file);
 	std::vector<std::string> splitString(const std::string& input, char delim);
 	std::vector<std::string> splitFile(const std::string &file);
@@ -17,6 +22,8 @@ namespace util
 	bool isTouchInEvent(Vec2 point, Node* t);
 	bool isTouchInEvent(Vec2 point, Event* event);
 	bool isTouchInEvent(Touch* touch, Event* event);
+
+	Vec2 getCoordinateInScreen(Vec2 pos, Node* target);
 
 	/*
 	* Instanceof
@@ -29,6 +36,8 @@ namespace util
 	*/
 	template <typename Of, typename What>
 	Of* instance(const What w) { return dynamic_cast<Of*>(w); };
+
+	Node* createCutSkin(const std::string &file, int w, int h, int cut_mask, int opacity = 255);
 }
 
 #endif // __UTIL_H__

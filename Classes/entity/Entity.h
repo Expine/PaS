@@ -32,6 +32,38 @@ enum class EntityState
 };
 /*********************************************************/
 
+class EntityInformation
+{
+private:
+	std::map<EntityType, std::string> _name;
+protected:
+	EntityInformation()
+	{
+		_name[EntityType::infantry] = u8"軽歩兵";
+		_name[EntityType::heavy] = u8"重装兵";
+		_name[EntityType::spy] = u8"諜報員";
+		_name[EntityType::fire] = u8"炎峰魔士";
+		_name[EntityType::ice] = u8"雹牢魔士";
+		_name[EntityType::thunder] = u8"雷翔魔士";
+		_name[EntityType::ground] = u8"大地魔士";
+		_name[EntityType::king] = u8"王藤魔士";
+		_name[EntityType::weapon] = u8"双霊魔士";
+		_name[EntityType::relief] = u8"愛貴魔士";
+		_name[EntityType::guardian] = u8"樹奏魔士";
+		_name[EntityType::dark] = u8"真影魔士";
+		_name[EntityType::light] = u8"光琴魔士";
+	};
+public:
+	static EntityInformation* getInstance()
+	{
+		static EntityInformation info;
+		return &info;
+	};
+	const std::string& getName(EntityType type) { return _name[type]; };
+};
+
+/*********************************************************/
+
 /*
  * Unit on stage and sprite.
  */
@@ -41,11 +73,11 @@ protected:
 	cocos2d::Vector<Weapon*> weapons;
 	Entity()
 		: _department(Department::soldier), _type(EntityType::infantry), _explanation(""), _state(EntityState::none)
-		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(3), _defence(0)
+		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(3), _defence(0), _durability(0), _maxDurability(0)
 	{};
 	~Entity()
 	{
-		_usingWeapon = _mobility = _material = _maxMaterial = _searchingAbility = _defence = 0;
+		_usingWeapon = _mobility = _material = _maxMaterial = _searchingAbility = _defence = _durability = _maxDurability = 0;
 	};
 public:
 	CREATE_FUNC(Entity);
@@ -54,6 +86,7 @@ public:
 	CC_SYNTHESIZE(EntityState, _state, State);
 	CC_SYNTHESIZE(int, _usingWeapon, UsingWeapon);
 	CC_SYNTHESIZE(int, _material, Material);
+	CC_SYNTHESIZE(int, _durability, Durability);
 	CC_SYNTHESIZE_READONLY(Department, _department, Department);
 	CC_SYNTHESIZE_READONLY(EntityType, _type, Type);
 	CC_SYNTHESIZE_READONLY(std::string, _explanation, Explanation);
@@ -61,6 +94,7 @@ public:
 	CC_SYNTHESIZE_READONLY(int, _maxMaterial, MaxMaterial);
 	CC_SYNTHESIZE_READONLY(int, _searchingAbility, SearchingAbility);
 	CC_SYNTHESIZE_READONLY(int, _defence, Defence);
+	CC_SYNTHESIZE_READONLY(int, _maxDurability, MaxDurability);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 };

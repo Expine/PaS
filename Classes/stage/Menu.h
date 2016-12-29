@@ -6,6 +6,7 @@
 class Stage;
 class Entity;
 class StageTile;
+class City;
 
 /*
  * Menu layer
@@ -17,28 +18,35 @@ public:
 	/** Frame type*/
 	enum class FrameType { unit, map, menu, info };
 private:
-	cocos2d::Sprite* _unit;
-	cocos2d::Sprite* _map;
-	cocos2d::Sprite* _menu;
+	cocos2d::Node* _unit;
+	cocos2d::Node* _map;
+	cocos2d::Node* _menu;
 	cocos2d::Sprite* _info;
 	std::vector<cocos2d::Label*> _unitLabels;
 	std::vector<cocos2d::Label*> _mapLabels;
 	std::vector<cocos2d::Label*> _menuLabels;
+	cocos2d::Vector<cocos2d::Node*> _unit_command;
+	cocos2d::Vector<cocos2d::Node*> _city_command;
+	bool _isShowedCityCommand;
+	bool _isShowedUnitCommand;
 
-	void setFrameListener(cocos2d::Sprite *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
+	void setFrameListener(cocos2d::Node *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
 	void setMenuListener(cocos2d::Node* target, std::function<void()> func);
 protected:
 	MenuLayer()
 		: _unit(nullptr), _map(nullptr), _menu(nullptr), _info(nullptr)
 		, _onUnitFrame(false), _onMapFrame(false), _onMenuFrame(false)
 		, _stage(nullptr)
+		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
 		, endPhase(nullptr), nextCity(nullptr), nextUnit(nullptr), talkStaff(nullptr), save(nullptr), load(nullptr), option(nullptr)
 	{};
 	~MenuLayer()
 	{
-		_unit = _map = _menu = _info = nullptr;
+		_unit = _map = _menu = nullptr;
+		_info = nullptr;
 		_onUnitFrame = _onMapFrame = _onMenuFrame = false;
 		_stage = nullptr;
+		_isShowedCityCommand = _isShowedUnitCommand = false;
 		endPhase = nextCity = nextUnit = talkStaff = save = load = option = nullptr;
 	};
 	virtual bool init();
@@ -48,16 +56,28 @@ public:
 	CC_SYNTHESIZE(bool, _onUnitFrame, OnUnitFrame);
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
-	void setTile(StageTile *tile, Entity* entity);
-	void setUnit(Entity *unit);
+	void setTile(std::vector<StageTile*> tiles, Entity *unit);
+	void setUnit(std::vector<StageTile*> tiles, Entity *unit);
 	void setInfo(int x, int y);
+	void setUnitToTile(std::vector<StageTile*> tiles, Entity *unit);
+	void showUnitCommand(Entity* entity);
+	void moveUnitCommand();
+	void hideUnitCommand();
+	void showCityCommand(City* city);
+	void moveCityCommand();
+	void hideCityCommand();
+
 	void resetOnFrame() { _onUnitFrame = _onMapFrame = _onMenuFrame = false; };
-	bool checkAction(cocos2d::Vec2 diff, FrameType type, cocos2d::Sprite* target, bool *onTarget, bool isMenu);
+	bool checkAction(cocos2d::Vec2 diff, FrameType type, cocos2d::Node* target, bool *onTarget, bool isMenu);
 	inline bool checkAllAction(cocos2d::Vec2 diff)
 	{
 		return checkAction(diff, FrameType::unit, _unit, &_onUnitFrame, false)
 			&& checkAction(diff, FrameType::map,  _map,  &_onMapFrame,  false)
 			&& checkAction(diff, FrameType::menu, _menu, &_onMenuFrame, false);
+	};
+	inline bool isRunningAction()
+	{
+		return _unit->getNumberOfRunningActions() != 0 | _map->getNumberOfRunningActions() != 0 | _menu->getNumberOfRunningActions() != 0;
 	};
 	bool isHided(FrameType type);
 	bool isHidableBySwipe(FrameType type, cocos2d::Vec2 diff);

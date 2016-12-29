@@ -136,4 +136,146 @@ bool util::isTouchInEvent(Vec2 point, Event* event)
 bool util::isTouchInEvent(Touch* touch, Event* event)
 {
 	return isTouchInEvent(touch->getLocation(), event->getCurrentTarget());
-};
+}
+
+/*
+ * Get coodinate in screen by target
+ */
+Vec2 util::getCoordinateInScreen(Vec2 pos, Node * target)
+{
+	auto result = target->convertToWorldSpace(pos);
+	CCLOG("CONVERT (%f, %f) -> (%f, %f)", pos.x, pos.y, result.x, result.y);
+	return result;
+}
+
+/*
+* create frame by skin data.
+*/
+Node* util::createCutSkin(const std::string &file, int w, int h, int cut_mask, int opacity)
+{
+	auto origine = Sprite::create(file);
+
+	auto ori_w = origine->getContentSize().width;
+	auto ori_h = origine->getContentSize().height;
+
+	int top = ori_h / 3;
+	int under = ori_h / 3;
+	int right = ori_w / 3;
+	int left = ori_w / 3;
+
+	//create base node.
+	auto node = Node::create();
+	node->setContentSize(Size(w, h));
+
+	//convert skin type to integer.
+	if (!(cut_mask & CUT_MASK_UP))
+	{
+		//Upper left (not cut up and left)
+		if (!(cut_mask & CUT_MASK_LEFT))
+		{
+			auto addSkin = Sprite::create(file, Rect(0, 0, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(ori_w / 6, h - ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+		}
+		//Upper right (not cut up and right)
+		if (!(cut_mask & CUT_MASK_RIGHT))
+		{
+			auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, 0, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(w - ori_w / 6, h - ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+		}
+	}
+	else
+	{
+		//top is zero for cut up.
+		top = 0;
+	}
+
+	if (!(cut_mask & CUT_MASK_DOWN))
+	{
+		//Lower left (not cut down and left)
+		if (!(cut_mask & CUT_MASK_LEFT))
+		{
+			auto addSkin = Sprite::create(file, Rect(0, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(ori_w / 6, ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+		}
+		//Lower right (not cut down and right)
+		if (!(cut_mask & CUT_MASK_RIGHT))
+		{
+			auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(w - ori_w / 6, ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+		}
+	}
+	else
+	{
+		//under is zero for cut down.
+		under = 0;
+	}
+
+	//In the following, scaling in some cases.
+
+	//Left (not cut left)
+	if (!(cut_mask & CUT_MASK_LEFT))
+	{
+		auto addSkin = Sprite::create(file, Rect(0, ori_h / 3, ori_w / 3, ori_h / 3));
+		addSkin->setScaleY((h - top - under) / (ori_h / 3));
+		addSkin->setPosition(Vec2(ori_w / 6, (h - top + under) / 2));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+	}
+	else
+	{
+		//left is zero for cut left.
+		left = 0;
+	}
+	//Right (not cut right)
+	if (!(cut_mask & CUT_MASK_RIGHT))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, 0 + ori_h / 3, ori_w / 3, ori_h / 3));
+		addSkin->setScaleY((h - top - under) / (ori_h / 3));
+		addSkin->setPosition(Vec2(w - ori_w / 6, (h - top + under) / 2));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+	}
+	else
+	{
+		//right is zero for cut right.
+		right = 0;
+	}
+
+	//Upper (not cut up)
+	if (!(cut_mask & CUT_MASK_UP))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3, 0, ori_w / 3, ori_h / 3));
+		addSkin->setScaleX((w - left - right) / (ori_w / 3));
+		addSkin->setPosition(Vec2((w + left - right) / 2, h - ori_h / 6));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+	}
+	//Lower (not cut down)
+	if (!(cut_mask & CUT_MASK_DOWN))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+		addSkin->setScaleX((w - left - right) / (ori_w / 3));
+		addSkin->setPosition(Vec2((w + left - right) / 2, ori_h / 6));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+	}
+
+	//main skin(center)
+	auto skin = Sprite::create(file, Rect(ori_w / 3, ori_h / 3, ori_w / 3, ori_h / 3));
+	skin->setScaleX((w - left - right) / (ori_w / 3));
+	skin->setScaleY((h - top - under) / (ori_h / 3));
+	skin->setPosition(Vec2((w + left - right) / 2, (h - top + under) / 2));
+	skin->setOpacity(opacity);
+	node->addChild(skin);
+
+	//return node
+	return node;
+}

@@ -205,7 +205,7 @@ bool Stage::init()
 	{
 		runAction(Spawn::create(
 			Sequence::create(
-				EaseSineIn::create(MoveBy::create(0.5f, diff / time / 3)),
+				EaseSineOut::create(MoveBy::create(0.5f, diff / time / 3)),
 				CallFunc::create([this] {
 					stopAllActions();
 				}),
@@ -426,11 +426,62 @@ std::vector<StageTile*> Stage::getTiles(int x, int y)
 	}
 	return tiles;
 }
+
+/*
+ * Blink tile
+ */
+void Stage::blinkTile(StageTile* tile)
+{
+	auto tex = tile->getTexture();
+	auto white = Sprite::createWithTexture(tex, Rect(tex->getContentSize().width - _chipSize.x, tex->getContentSize().height - _chipSize.y, _chipSize.x, _chipSize.y));
+	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	white->setOpacity(0);
+	white->runAction(RepeatForever::create(Sequence::create(
+		EaseExponentialIn::create(FadeTo::create(0.5f, 100)),
+		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
+		NULL)));
+	tile->addChild(white);
+}
+
+/*
+ * Stop to blink tile
+ */
+void Stage::blinkOffTile(StageTile* tile)
+{
+	tile->removeAllChildren();
+}
+
+/*
+ * Set unit
+ */
 void Stage::setUnit(int x, int y, EntityType type, const Owner owner)
 {
 	_units[owner].push_back(getUnitLayer()->setUnit(x, y, type)->setAffiliationRetThis(owner));
 }
-;
+
+/*
+ * Blink unit
+ */
+void Stage::blinkUnit(Entity * unit)
+{
+	auto inner = Sprite::createWithTexture(unit->getTexture(), Rect(32, static_cast<int>(unit->getType()) * 32, 32, 32));
+	inner->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	inner->setOpacity(0);
+	inner->runAction(RepeatForever::create(Sequence::create(
+		EaseExponentialIn::create(FadeTo::create(0.5f, 100)),
+		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
+		NULL)));
+	unit->addChild(inner);
+}
+
+/*
+ * Stop to blink unit
+ */
+void Stage::blinkOffUnit(Entity * unit)
+{
+	unit->removeAllChildren();
+}
+
 
 /*
  * Adjust position

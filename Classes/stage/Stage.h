@@ -118,11 +118,15 @@ public:
 	/** Get tile by x, y, layer number*/
 	inline StageTile* getTile(int l, int x, int y) { return getStageLayer(l)->getTile(x, y); };
 	std::vector<StageTile*> getTiles(int x, int y);
+	void blinkTile(StageTile* tile);
+	void blinkOffTile(StageTile* tile);
 
 	/** Set unit*/
 	void setUnit(int x, int y, EntityType type, const Owner owner);
 	/** Get unit*/
 	inline Entity* getUnit(int x, int y) { return getUnitLayer()->getUnit(x, y); };
+	void blinkUnit(Entity* unit);
+	void blinkOffUnit(Entity* unit);
 
 	/** Get map width*/
 	inline float getWidth() { return _mapSize.x * (_chipSize.x + _gap) + (_chipSize.x - _gap) / 2; };
