@@ -4,6 +4,7 @@
 #include "cocos2d.h"
 
 #include "ai/Owner.h"
+#include "stage/Command.h"
 
 class Stage;
 
@@ -26,6 +27,7 @@ class TileInformation
 {
 private:
 	std::map<TerrainType, std::string> _name;
+	std::map<TerrainType, std::map<CityCommand, bool>> _commands;
 protected:
 	TileInformation()
 	{
@@ -41,7 +43,19 @@ protected:
 		_name[TerrainType::city] = u8"都市";
 		_name[TerrainType::territory] = u8"龍脈";
 		_name[TerrainType::COUNT] = u8"ERROR";
-		CCLOG("FINISH");
+
+		for (int i = 0; i < static_cast<int>(TerrainType::COUNT); i++)
+			forCity(j)
+			if (static_cast<TerrainType>(i) == TerrainType::city || static_cast<TerrainType>(i) == TerrainType::capital)
+				if (castCity(j) == CityCommand::dispatch)
+					if (static_cast<TerrainType>(i) == TerrainType::capital)
+						_commands[static_cast<TerrainType>(i)][castCity(j)] = true;
+					else
+						_commands[static_cast<TerrainType>(i)][castCity(j)] = false;
+				else
+					_commands[static_cast<TerrainType>(i)][castCity(j)] = true;
+			else
+				_commands[static_cast<TerrainType>(i)][castCity(j)] = false;
 	}
 public:
 	static TileInformation* getInstance()
@@ -50,6 +64,7 @@ public:
 		return &info;
 	};
 	std::string getName(TerrainType type) { return _name[type]; };
+	bool getCommand(TerrainType type, CityCommand com) { return _commands[type][com]; };
 };
 
 /*********************************************************/

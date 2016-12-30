@@ -2,11 +2,14 @@
 #define __MENU_H__
 
 #include "cocos2d.h"
+#include "Command.h"
 
 class Stage;
 class Entity;
 class StageTile;
 class City;
+
+/*********************************************************/
 
 /*
  * Menu layer
@@ -25,11 +28,17 @@ private:
 	std::vector<cocos2d::Label*> _unitLabels;
 	std::vector<cocos2d::Label*> _mapLabels;
 	std::vector<cocos2d::Label*> _menuLabels;
-	cocos2d::Vector<cocos2d::Node*> _unit_command;
-	cocos2d::Vector<cocos2d::Node*> _city_command;
+	std::map<UnitCommand, cocos2d::Node*> _unit_command;
+	std::map<UnitCommand, std::function<void()>> _unit_function;
+	std::map<CityCommand, cocos2d::Node*> _city_command;
+	std::map<CityCommand, std::function<void()>> _city_function;
+	std::map<MoveCommand, cocos2d::Node*> _move_command;
+	std::map<MoveCommand, std::function<void()>> _move_function;
 	bool _isShowedCityCommand;
 	bool _isShowedUnitCommand;
+	bool _isShowedMoveCommand;
 
+	Node* setCommand(const std::string &name, const int x, const int y, const int width, const int height);
 	void setFrameListener(cocos2d::Node *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
 	void setMenuListener(cocos2d::Node* target, std::function<void()> func);
 protected:
@@ -37,10 +46,8 @@ protected:
 		: _unit(nullptr), _map(nullptr), _menu(nullptr), _info(nullptr)
 		, _onUnitFrame(false), _onMapFrame(false), _onMenuFrame(false)
 		, _stage(nullptr)
-		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
+		, _isShowedCityCommand(false), _isShowedUnitCommand(false), _isShowedMoveCommand(false)
 		, endPhase(nullptr), nextCity(nullptr), nextUnit(nullptr), talkStaff(nullptr), save(nullptr), load(nullptr), option(nullptr)
-		, supplyForUnit(nullptr), move(nullptr), attack(nullptr), occupation(nullptr), spec(nullptr), wait(nullptr)
-		, supplyForCity(nullptr), deployment(nullptr), dispatch(nullptr)
 	{};
 	~MenuLayer()
 	{
@@ -50,8 +57,6 @@ protected:
 		_stage = nullptr;
 		_isShowedCityCommand = _isShowedUnitCommand = false;
 		endPhase = nextCity = nextUnit = talkStaff = save = load = option = nullptr;
-		supplyForUnit = move = attack = occupation = spec = wait = nullptr;
-		supplyForCity = deployment = dispatch = nullptr;
 	};
 	virtual bool init();
 public:
@@ -70,6 +75,9 @@ public:
 	void showCityCommand(City* city);
 	void moveCityCommand();
 	void hideCityCommand();
+	void showMoveCommand(StageTile* tile);
+	void moveMoveCommand();
+	void hideMoveCommand();
 
 	void resetOnFrame() { _onUnitFrame = _onMapFrame = _onMenuFrame = false; };
 	bool checkAction(cocos2d::Vec2 diff, FrameType type, cocos2d::Node* target, bool *onTarget, bool isMenu);
@@ -86,6 +94,13 @@ public:
 	bool isHided(FrameType type);
 	bool isHidableBySwipe(FrameType type, cocos2d::Vec2 diff);
 	bool isUnHidableBySwipe(FrameType type, cocos2d::Vec2 diff);
+	
+	inline std::function<void()> getUnitFunction(UnitCommand com) { return _unit_function[com]; };
+	inline std::function<void()> getCityFunction(CityCommand com) { return _city_function[com]; };
+	inline std::function<void()> getMoveFunction(MoveCommand com) { return _move_function[com]; };
+	inline void setUnitFunction(UnitCommand com, std::function<void()> func) { _unit_function[com] = func; };
+	inline void setCityFunction(CityCommand com, std::function<void()> func) { _city_function[com] = func; };
+	inline void setMoveFunction(MoveCommand com, std::function<void()> func) { _move_function[com] = func; };
 
 	std::function<void()> endPhase;
 	std::function<void()> nextCity;
@@ -94,17 +109,6 @@ public:
 	std::function<void()> save;
 	std::function<void()> load;
 	std::function<void()> option;
-
-	std::function<void()> supplyForCity;
-	std::function<void()> move;
-	std::function<void()> attack;
-	std::function<void()> occupation;
-	std::function<void()> spec;
-	std::function<void()> wait;
-
-	std::function<void()> supplyForUnit;
-	std::function<void()> deployment;
-	std::function<void()> dispatch;
 };
 
 #endif // __MENU_H__

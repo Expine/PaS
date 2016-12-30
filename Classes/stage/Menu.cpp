@@ -28,6 +28,15 @@ bool MenuLayer::init()
 
 	auto winSize = Director::getInstance()->getWinSize();
 
+	// Set Move command
+	forMove(i)
+	{
+		auto name = command::getName(castMove(i));
+		auto command = setCommand(name, 0, 0, 80, 40);
+		command->setOpacity(true);
+		_move_command[castMove(i)] = command;
+	}
+
 	// Set unit frame
 	_unit = Sprite::create();
 	_unit = util::createCutSkin(FRAME, 300, 200, util::CUT_MASK_LEFT, 200);
@@ -63,7 +72,7 @@ bool MenuLayer::init()
 		auto mapLabel = Label::createWithSystemFont(name, EN_FONT, INFO_SIZE);
 		mapLabel->setAnchorPoint(Vec2::ANCHOR_MIDDLE_LEFT);
 		mapLabel->setColor(Color3B::BLACK);
-		if(_mapLabels.size() == 0)
+		if (_mapLabels.size() == 0)
 			mapLabel->setPosition(5, _map->getContentSize().height - 5);
 		else
 			mapLabel->setPosition(_mapLabels.back()->getPosition().x + _mapLabels.back()->getContentSize().width, _map->getContentSize().height - 5);
@@ -85,7 +94,7 @@ bool MenuLayer::init()
 		auto menuLabel = Label::createWithSystemFont(name, EN_FONT, INFO_SIZE);
 		menuLabel->setAnchorPoint(Vec2::ANCHOR_MIDDLE_RIGHT);
 		menuLabel->setColor(Color3B::BLACK);
-		if(_menuLabels.size() == 0)
+		if (_menuLabels.size() == 0)
 			menuLabel->setPosition(5, _menu->getContentSize().height - 5);
 		else
 			menuLabel->setPosition(_menuLabels.back()->getPosition().x + _menuLabels.back()->getContentSize().width, _menu->getContentSize().height - 5);
@@ -117,43 +126,21 @@ bool MenuLayer::init()
 	this->addChild(_info);
 
 	// Unit command
-	auto unit_num = 0;
-	for (auto name : { u8"補給", u8"移動", u8"攻撃", u8"占領", u8"性能", u8"待機" })
+	forUnit(i)
 	{
-		auto command_frame = util::createCutSkin(COMMAND_FRAME, 80, 40, 0);
-		command_frame->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
-		command_frame->setPosition(Vec2(-command_frame->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height - unit_num / 3 * (command_frame->getContentSize().height + 15)));
-		command_frame->setCascadeColorEnabled(true);
-		command_frame->setCascadeOpacityEnabled(true);
-		this->addChild(command_frame);
-
-		auto command = Label::createWithSystemFont(name, JP_FONT, MENU_SIZE);
-		command->setPosition(command_frame->getContentSize() / 2);
-		command_frame->addChild(command);
-
-		_unit_command.pushBack(command_frame);
-		++unit_num;
+		auto name = command::getName(castUnit(i));
+		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
+		_unit_command[castUnit(i)] = command;
 	}
 
 	// City command
-	auto city_num = 0;
-	for (auto name : { u8"補給", u8"配備", u8"派遣" })
+	forCity(i)
 	{
-		auto command_frame = util::createCutSkin(COMMAND_FRAME, 80, 40, 0);
-		command_frame->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-		command_frame->setPosition(Vec2(-command_frame->getContentSize().width, city_num / 3 * (command_frame->getContentSize().height + 15) + _map->getContentSize().height));
-		command_frame->setCascadeColorEnabled(true);
-		command_frame->setCascadeOpacityEnabled(true);
-		this->addChild(command_frame);
-
-		auto command = Label::createWithSystemFont(name, JP_FONT, MENU_SIZE);
-		command->setPosition(command_frame->getContentSize() / 2);
-		command_frame->addChild(command);
-
-		_city_command.pushBack(command_frame);
-		++city_num;
+		auto name = command::getName(castCity(i));
+		auto command = setCommand(name, -80, _map->getContentSize().height, 80, 40);
+		command->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+		_city_command[castCity(i)] = command;
 	}
-
 
 	// Set listener
 	setFrameListener(_unit, _unitLabels, FrameType::unit, 300 - MODIFY);
@@ -168,28 +155,14 @@ bool MenuLayer::init()
 	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	  load(); });
 	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	  option(); });
 
-	unit_num = 0;
-	std::vector<std::function<void()>*> unit_commands = { &supplyForUnit, &move, &attack, &occupation, &spec, &wait };
-	for (auto unit : _unit_command)
-	{
-		auto command = unit_commands[unit_num++];
-		auto listener = SingleTouchListener::create();
-		listener->setSwallowTouches(true);
-		listener->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
-		listener->onTap = [command](Touch *touch, Event *event) { if (*command) (*command)(); };
-		this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, unit);
-	}
-	city_num = 0;
-	std::vector<std::function<void()>> city_commands = { supplyForCity, deployment, dispatch };
-	for (auto city : _city_command)
-	{
-		auto command = city_commands[city_num++];
-		auto listener = SingleTouchListener::create();
-		listener->setSwallowTouches(true);
-		listener->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
-		listener->onTap = [command](Touch *touch, Event *event) { if (command) command(); };
-		this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, city);
-	}
+	forUnit(i)
+		setMenuListener(_unit_command[castUnit(i)], [this, i] {if (_unit_function[castUnit(i)]) _unit_function[castUnit(i)](); });
+
+	forCity(i)
+		setMenuListener(_city_command[castCity(i)], [this, i] {if (_city_function[castCity(i)]) _city_function[castCity(i)](); });
+
+	forMove(i)
+		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
 
 	return true;
 }
@@ -391,15 +364,11 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
  */
 void MenuLayer::showUnitCommand(Entity* entity)
 {
-	auto unit_num = 0;
-	for (auto unit : _unit_command)
-	{
-		if (EntityInformation::getInstance()->getCommand(entity->getType(), unit_num))
-			unit->setColor(Color3B(255, 255, 255));
+	forUnit(i)
+		if (EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
+			_unit_command[castUnit(i)]->setColor(Color3B::WHITE);
 		else
-			unit->setColor(Color3B(128, 128, 128));
-		unit_num++;
-	}
+			_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
 
 	if (_isShowedUnitCommand)
 		return;
@@ -415,21 +384,20 @@ void MenuLayer::showUnitCommand(Entity* entity)
  */
 void MenuLayer::moveUnitCommand()
 {
-	auto unit_num = 0;
-	for (auto unit : _unit_command)
+	forUnit(i)
 	{
+		auto unit = _unit_command[castUnit(i)];
 		unit->stopAllActions();
 		if (isHided(FrameType::unit))
 			unit->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (unit_num / 3) * (unit->getContentSize().width + 20), -20 + _unit->getPosition().y - (unit_num % 3) * (unit->getContentSize().height + 15)))),
-			NULL));
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 3) * (unit->getContentSize().width + 20), -20 + _unit->getPosition().y - (i % 3) * (unit->getContentSize().height + 15)))),
+				NULL));
 		else
 			unit->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10 + (unit_num % 3) * (unit->getContentSize().width + 20), -unit_num / 3 * (unit->getContentSize().height + 15) - _unit->getContentSize().height))),
-			NULL));
-		unit_num++;
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10 + (i % 3) * (unit->getContentSize().width + 20), -i / 3 * (unit->getContentSize().height + 15) - _unit->getContentSize().height))),
+				NULL));
 	}
 }
 
@@ -442,22 +410,21 @@ void MenuLayer::hideUnitCommand()
 	if (!_isShowedUnitCommand)
 		return;
 
-	auto unit_num = 0;
-	for (auto unit : _unit_command)
+	forUnit(i)
 	{
+		auto unit = _unit_command[castUnit(i)];
 		unit->stopAllActions();
 		if (isHided(FrameType::unit))
 			unit->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height - unit_num / 3 * (unit->getContentSize().height + 15)))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
 			NULL));
 		else
 			unit->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height - unit_num / 3 * (unit->getContentSize().height + 15)))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
 			NULL));
 
-		unit_num++;
 	}
 	_isShowedUnitCommand = false;
 }
@@ -468,14 +435,12 @@ void MenuLayer::hideUnitCommand()
  */
 void MenuLayer::showCityCommand(City* city)
 {
-	auto city_num = 0;
-	for (auto com : _city_command)
+	forCity(i)
 	{
-		if (city_num != 2 || util::instanceof<Capital>(city))
-			com->setColor(Color3B(255, 255, 255));
+		if(TileInformation::getInstance()->getCommand(city->getTerrainType(), castCity(i)))
+			_city_command[castCity(i)]->setColor(Color3B(255, 255, 255));
 		else
-			com->setColor(Color3B(128, 128, 128));
-		city_num++;
+			_city_command[castCity(i)]->setColor(Color3B(128, 128, 128));
 	}
 
 	if (_isShowedCityCommand)
@@ -492,21 +457,20 @@ void MenuLayer::showCityCommand(City* city)
  */
 void MenuLayer::moveCityCommand()
 {
-	auto city_num = 0;
-	for (auto com : _city_command)
+	forCity(i)
 	{
+		auto com = _city_command[castCity(i)];
 		com->stopAllActions();
 		if (isHided(FrameType::map))
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (city_num / 2) * (com->getContentSize().width + 20), _map->getPosition().y + _map->getContentSize().height - (com->getContentSize().height + 10) - (city_num % 2) * (com->getContentSize().height + 15)))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 2) * (com->getContentSize().width + 20), _map->getPosition().y + _map->getContentSize().height - (com->getContentSize().height + 10) - (i % 2) * (com->getContentSize().height + 15)))),
 			NULL));
 		else
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _map->getPosition().y) + Vec2(10 + (city_num % 3) * (com->getContentSize().width + 20), city_num / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _map->getPosition().y) + Vec2(10 + (i % 3) * (com->getContentSize().width + 20), i / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
 			NULL));
-		city_num++;
 	}
 }
 
@@ -519,23 +483,57 @@ void MenuLayer::hideCityCommand()
 	if (!_isShowedCityCommand)
 		return;
 
-	auto city_num = 0;
-	for (auto com : _city_command)
+	forCity(i)
 	{
+		auto com = _city_command[castCity(i)];
 		com->stopAllActions();
 		if(isHided(FrameType::map))
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, city_num / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
 			NULL));
 		else
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, city_num / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
+				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
 			NULL));
-		city_num++;
 	}
 	_isShowedCityCommand = false;
+}
+
+/*
+* Show move command
+* If already showed, do nothing
+*/
+void MenuLayer::showMoveCommand(StageTile * tile)
+{
+}
+
+void MenuLayer::moveMoveCommand()
+{
+}
+
+void MenuLayer::hideMoveCommand()
+{
+}
+
+/*
+ * Set command frame and command
+ */
+Node* MenuLayer::setCommand(const std::string & name, const int x, const int y, const int width, const int height)
+{
+	auto command_frame = util::createCutSkin(COMMAND_FRAME, width, height, 0);
+	command_frame->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	command_frame->setPosition(Vec2(x, y));
+	command_frame->setCascadeColorEnabled(true);
+	command_frame->setCascadeOpacityEnabled(true);
+	this->addChild(command_frame);
+
+	auto command = Label::createWithSystemFont(name, JP_FONT, MENU_SIZE);
+	command->setPosition(command_frame->getContentSize() / 2);
+	command_frame->addChild(command);
+
+	return command_frame;
 }
 
 /*

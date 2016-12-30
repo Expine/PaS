@@ -1,44 +1,35 @@
 #include "Command.h"
 
-bool Command::init()
+const std::string command::getName(UnitCommand com)
 {
-	if (!Node::init())
-		return false;
-
-	// Unit command
-	_unit_command = Sprite::create();
-	_unit_command->setTextureRect(Rect(0, 0, 100, 400));
-	_unit_command->setColor(Color3B::MAGENTA);
-	_unit_command->setOpacity(0);
-	this->addChild(_unit_command);
-	for (auto name : { u8"•â‹‹", u8"ˆÚ“®", u8"UŒ‚", u8"è—Ì", u8"«”\", u8"‘Ò‹@" })
+	switch (com)
 	{
-		static Label* preItem = nullptr;
-		auto item = Label::createWithSystemFont(name, JP_FONT, INFO_SIZE + 10);
-		item->setAnchorPoint(Vec2::ANCHOR_TOP_RIGHT);
-		item->setColor(Color3B::BLACK);
-		item->setPosition(_unit_command->getTextureRect().getMaxX() - 10, preItem ? preItem->getPosition().y - 60 : _unit_command->getTextureRect().getMaxY() - 50);
-		item->setTag(preItem ? preItem->getTag() + 1 : 10);
-		_unit_command->addChild(item);
-		preItem = item;
+	case UnitCommand::supply: return u8"•â‹‹";
+	case UnitCommand::move: return u8"ˆÚ“®";
+	case UnitCommand::attack: return u8"UŒ‚";
+	case UnitCommand::occupation: return u8"è—Ì";
+	case UnitCommand::spec: return u8"«”\";
+	case UnitCommand::wait: return u8"‘Ò‹@";
+	default: return "ERROR";
 	}
-
-	// City command
-	_city_command = Sprite::create();
-	_city_command->setTextureRect(Rect(0, 0, 100, 150));
-	_city_command->setColor(Color3B::MAGENTA);
-	_city_command->setOpacity(0);
-	this->addChild(_city_command);
-	for (auto name : { u8"•â‹‹", u8"”z”õ" })
+};
+const std::string command::getName(CityCommand com)
+{
+	switch (com)
 	{
-		static Label* preItem = nullptr;
-		auto item = Label::createWithSystemFont(name, JP_FONT, INFO_SIZE + 10);
-		item->setAnchorPoint(Vec2::ANCHOR_TOP_RIGHT);
-		item->setColor(Color3B::BLACK);
-		item->setPosition(_unit_command->getTextureRect().getMaxX() - 10, preItem ? preItem->getPosition().y - 60 : _unit_command->getTextureRect().getMaxY() - 50);
-		item->setTag(preItem ? preItem->getTag() + 1 : 10);
-		_unit_command->addChild(item);
-		preItem = item;
+	case CityCommand::supply: return u8"•â‹‹";
+	case CityCommand::deployment: return u8"”z”õ";
+	case CityCommand::dispatch: return u8"”hŒ­";
+	default: return "ERROR";
 	}
-	return false;
+}
+const std::string command::getName(MoveCommand com)
+{
+	switch (com)
+	{
+	case MoveCommand::start: return u8"Šm’è";
+	case MoveCommand::cancel: return u8"“P‰ñ";
+	case MoveCommand::end: return u8"’†Ž~";
+	default: return "ERROR";
+	}
 }

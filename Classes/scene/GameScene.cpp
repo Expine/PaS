@@ -42,6 +42,13 @@ bool Game::init(Stage* stage)
 	{
 		if (menu->isRunningAction())
 			return;
+
+		if (util::find(_moveTiles, tiles.back()))
+			menu->showMoveCommand(tiles.back());
+		else
+			menu->hideMoveCommand();
+
+
 		//Set unit information
 		auto unit = stage->getUnit(v.x, v.y);
 		if (unit)
@@ -87,10 +94,31 @@ bool Game::init(Stage* stage)
 		menu->setInfo(pos.x, pos.y);
 	};
 
-	menu->move = [this, stage, menu]
-	{
-		stage->moveCheck(_preUnit);
-	};
+	menu->setUnitFunction(UnitCommand::move, [this, stage, menu] {
+		if (_moveTiles.empty())
+		{
+			_moveTiles = stage->moveCheck(_preUnit);
+			for (auto tile : _moveTiles)
+				stage->blinkTile(tile, Color3B::BLUE);
+		}
+		else
+		{
+			for (auto tile : _moveTiles)
+				stage->blinkOffTile(tile);
+			if (!_preTiles.empty())
+				stage->blinkTile(_preTiles.back());
+			_moveTiles.clear();
+			menu->hideMoveCommand();
+		}
+	});
+	menu->setMoveFunction(MoveCommand::start, [] {
+	});
+	menu->setMoveFunction(MoveCommand::cancel, [menu] {
+		menu->hideMoveCommand();
+	});
+	menu->setMoveFunction(MoveCommand::end, [menu] {
+		menu->getUnitFunction(UnitCommand::move)();
+	});
 
 	stage->initTileSearched(Owner::player);
 
@@ -104,13 +132,18 @@ bool Game::init(Stage* stage)
 void Game::setPreTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*> tiles)
 {
 	//Reset tile information
-	if(_preTiles.size() > 0)
+	if (_preTiles.size() > 0 && !util::find(_moveTiles, _preTiles.back()))
 		stage->blinkOffTile(_preTiles.back());
+	else if (!_preTiles.empty())
+		stage->blinkChange(_preTiles.back(), Color3B::BLUE);
 
 	_preTiles.clear();
 	//Set tile information
 	menu->setTile(tiles, _preUnit);
-	stage->blinkTile(tiles.back());
+	if (!util::find(_moveTiles, tiles.back()))
+		stage->blinkTile(tiles.back());
+	else
+		stage->blinkChange(tiles.back(), Color3B::WHITE);
 	for (auto tile : tiles)
 		_preTiles.push_back(tile);
 }

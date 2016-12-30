@@ -16,6 +16,7 @@ class Game: public cocos2d::Layer
 {
 private:
 	std::vector<StageTile*> _preTiles;
+	std::vector<StageTile*> _moveTiles;
 	Entity* _preUnit;
 	void setPreTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
 	void setPreUnit(Stage* stage, MenuLayer* menu, Entity* unit);

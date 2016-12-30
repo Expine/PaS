@@ -119,7 +119,8 @@ public:
 	/** Get tile by x, y, layer number*/
 	inline StageTile* getTile(int l, int x, int y) { return getStageLayer(l)->getTile(x, y); };
 	std::vector<StageTile*> getTiles(int x, int y);
-	void blinkTile(StageTile* tile);
+	void blinkTile(StageTile* tile, cocos2d::Color3B color = cocos2d::Color3B::WHITE);
+	void blinkChange(StageTile* tile, cocos2d::Color3B color);
 	void blinkOffTile(StageTile* tile);
 
 	/** Set unit*/
@@ -149,7 +150,7 @@ public:
 	cocos2d::Vec2 nextCity(Owner owner, StageTile* nowTile);
 	cocos2d::Vec2 nextUnit(Owner owner, Entity* nowUnit);
 
-	void moveCheck(Entity* entity);
+	std::vector<StageTile*> moveCheck(Entity* entity);
 };
 
 #endif // __STAGE_H__

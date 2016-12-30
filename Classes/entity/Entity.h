@@ -4,6 +4,7 @@
 #include "cocos2d.h"
 
 #include "ai/Owner.h"
+#include "stage/Command.h"
 
 class Stage;
 class Weapon;
@@ -38,7 +39,7 @@ class EntityInformation
 {
 private:
 	std::map<EntityType, std::string> _name;
-	std::map<EntityType, std::vector<bool>> _commands;
+	std::map<EntityType, std::map<UnitCommand, bool>> _unit_commands;
 protected:
 	EntityInformation()
 	{
@@ -57,14 +58,13 @@ protected:
 		_name[EntityType::light] = u8"光琴魔士";
 		
 		for (int i = 0; i < static_cast<int>(EntityType::COUNT); i++)
-			for (int j = 0; j < 6; j++)
-				if (j == 3 && i > static_cast<int>(EntityType::heavy))
-					_commands[static_cast<EntityType>(i)].push_back(false);
-				else if(j == 0)
-					_commands[static_cast<EntityType>(i)].push_back(false);
+			forUnit(j)
+				if (j == static_cast<int>(UnitCommand::occupation) && i > static_cast<int>(EntityType::heavy))
+					_unit_commands[static_cast<EntityType>(i)][static_cast<UnitCommand>(j)] = false;
+				else if (j == static_cast<int>(UnitCommand::supply))
+					_unit_commands[static_cast<EntityType>(i)][static_cast<UnitCommand>(j)] = false;
 				else
-					_commands[static_cast<EntityType>(i)].push_back(true);
-			
+					_unit_commands[static_cast<EntityType>(i)][static_cast<UnitCommand>(j)] = true;
 	};
 public:
 	static EntityInformation* getInstance()
@@ -73,7 +73,7 @@ public:
 		return &info;
 	};
 	inline const std::string& getName(EntityType type) { return _name[type]; };
-	inline bool getCommand(EntityType type, int command) { return _commands[type][command]; };
+	inline bool getCommand(EntityType type, UnitCommand command) { return _unit_commands[type][command]; };
 };
 
 /*********************************************************/
