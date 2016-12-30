@@ -8,6 +8,11 @@ class StageTile;
 class Stage;
 class MenuLayer;
 
+enum class GameMode
+{
+	normal, move
+};
+
 /*
  * SLG Game scene
  * For player turn
@@ -15,6 +20,7 @@ class MenuLayer;
 class Game: public cocos2d::Layer
 {
 private:
+	GameMode _mode;
 	std::vector<StageTile*> _preTiles;
 	std::vector<StageTile*> _moveTiles;
 	Entity* _preUnit;
@@ -22,8 +28,12 @@ private:
 	void setPreUnit(Stage* stage, MenuLayer* menu, Entity* unit);
 protected:
 	Game()
-		: _preUnit(nullptr)
+		: _mode(GameMode::normal), _preUnit(nullptr)
 	{};
+	~Game()
+	{
+		_preUnit = nullptr;
+	}
 	virtual bool init(Stage* stage);
 public:
 	static cocos2d::Scene* createScene(Stage* stage);

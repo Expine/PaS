@@ -2,12 +2,19 @@
 #define __MENU_H__
 
 #include "cocos2d.h"
-#include "Command.h"
 
 class Stage;
 class Entity;
 class StageTile;
 class City;
+enum class UnitCommand;
+enum class CityCommand;
+enum class MoveCommand;
+
+enum class MenuMode
+{
+	unit, move
+};
 
 /*********************************************************/
 
@@ -36,7 +43,7 @@ private:
 	std::map<MoveCommand, std::function<void()>> _move_function;
 	bool _isShowedCityCommand;
 	bool _isShowedUnitCommand;
-	bool _isShowedMoveCommand;
+	MenuMode _mode;
 
 	Node* setCommand(const std::string &name, const int x, const int y, const int width, const int height);
 	void setFrameListener(cocos2d::Node *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
@@ -46,7 +53,8 @@ protected:
 		: _unit(nullptr), _map(nullptr), _menu(nullptr), _info(nullptr)
 		, _onUnitFrame(false), _onMapFrame(false), _onMenuFrame(false)
 		, _stage(nullptr)
-		, _isShowedCityCommand(false), _isShowedUnitCommand(false), _isShowedMoveCommand(false)
+		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
+		, _mode(MenuMode::unit)
 		, endPhase(nullptr), nextCity(nullptr), nextUnit(nullptr), talkStaff(nullptr), save(nullptr), load(nullptr), option(nullptr)
 	{};
 	~MenuLayer()
@@ -75,9 +83,6 @@ public:
 	void showCityCommand(City* city);
 	void moveCityCommand();
 	void hideCityCommand();
-	void showMoveCommand(StageTile* tile);
-	void moveMoveCommand();
-	void hideMoveCommand();
 
 	void resetOnFrame() { _onUnitFrame = _onMapFrame = _onMenuFrame = false; };
 	bool checkAction(cocos2d::Vec2 diff, FrameType type, cocos2d::Node* target, bool *onTarget, bool isMenu);
@@ -101,6 +106,9 @@ public:
 	inline void setUnitFunction(UnitCommand com, std::function<void()> func) { _unit_function[com] = func; };
 	inline void setCityFunction(CityCommand com, std::function<void()> func) { _city_function[com] = func; };
 	inline void setMoveFunction(MoveCommand com, std::function<void()> func) { _move_function[com] = func; };
+
+	inline MenuMode getMenuMode() { return _mode; };
+	void setMenuMode(MenuMode mode);
 
 	std::function<void()> endPhase;
 	std::function<void()> nextCity;
