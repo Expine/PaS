@@ -87,6 +87,11 @@ bool Game::init(Stage* stage)
 		menu->setInfo(pos.x, pos.y);
 	};
 
+	menu->move = [this, stage, menu]
+	{
+		stage->moveCheck(_preUnit);
+	};
+
 	stage->initTileSearched(Owner::player);
 
     return true;

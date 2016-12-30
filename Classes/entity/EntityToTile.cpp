@@ -10,7 +10,7 @@
 EntityToTile::EntityToTile()
 {
 	// Set default value
-	int defaultCost[] = { 0, 3, 4, 20, 10, 99, 2, 3, 0, 0, 0 };
+	int defaultCost[] = { 0, 3, 1, 17, 10, 99, -1, -7, 0, 0, 3 };
 	for (int j = 0; j < static_cast<int>(TerrainType::COUNT); j++)
 	{
 		for (int i = 0; i < static_cast<int>(EntityType::COUNT); i++)
@@ -21,14 +21,15 @@ EntityToTile::EntityToTile()
 	}
 
 	// Set unique search cost
-	_search_cost[TerrainType::woods][EntityType::guardian] = 2;
-	_search_cost[TerrainType::woods][EntityType::dark] = 3;
-	_search_cost[TerrainType::mountain][EntityType::ground] = 5;
+	_search_cost[TerrainType::woods][EntityType::guardian] = -1;
+	_search_cost[TerrainType::woods][EntityType::dark] = 0;
+	_search_cost[TerrainType::mountain][EntityType::ground] = 2;
 	_search_cost[TerrainType::river][EntityType::ice] = 5;
+	_search_cost[TerrainType::bridge][EntityType::ice] = 0;
 	_search_cost[TerrainType::ocean][EntityType::ice] = 10;
 	_search_cost[TerrainType::ocean][EntityType::king] = 20;
 	_search_cost[TerrainType::ocean][EntityType::light] = 30;
-	_search_cost[TerrainType::road][EntityType::thunder] = 1;
+	_search_cost[TerrainType::road][EntityType::thunder] = -2;
 
 	// Set unique effect
 	_effect[TerrainType::woods][EntityType::fire] = 50;
@@ -39,4 +40,16 @@ EntityToTile::EntityToTile()
 	_effect[TerrainType::ocean][EntityType::ice] = 50;
 	_effect[TerrainType::city][EntityType::weapon] = 50;
 	_effect[TerrainType::capital][EntityType::weapon] = 50;
+
+	// Set sight cost
+	_search_cost[TerrainType::prairie][EntityType::sight] = 1;
+	_search_cost[TerrainType::woods][EntityType::sight] = 0;
+	_search_cost[TerrainType::mountain][EntityType::sight] = 0;
+	_search_cost[TerrainType::river][EntityType::sight] = 1;
+	_search_cost[TerrainType::ocean][EntityType::sight] = 1;
+	_search_cost[TerrainType::road][EntityType::sight] = 1;
+	_search_cost[TerrainType::bridge][EntityType::sight] = 0;
+	_search_cost[TerrainType::capital][EntityType::sight] = 0;
+	_search_cost[TerrainType::city][EntityType::sight] = 0;
+	_search_cost[TerrainType::territory][EntityType::sight] = 1;
 }

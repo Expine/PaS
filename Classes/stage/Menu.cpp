@@ -160,13 +160,36 @@ bool MenuLayer::init()
 	setFrameListener(_map, _mapLabels, FrameType::map, 300 - MODIFY);
 	setFrameListener(_menu, _menuLabels, FrameType::menu, -220 + MODIFY);
 
-	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase) endPhase(); });
-	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity) nextCity(); });
-	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit) nextUnit(); });
+	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase)  endPhase(); });
+	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity)  nextCity(); });
+	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit)  nextUnit(); });
 	setMenuListener(_menu->getChildByTag(13), [this] { if (talkStaff) talkStaff(); });
-	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	save(); });
-	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	load(); });
-	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	option(); });
+	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	  save(); });
+	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	  load(); });
+	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	  option(); });
+
+	unit_num = 0;
+	std::vector<std::function<void()>*> unit_commands = { &supplyForUnit, &move, &attack, &occupation, &spec, &wait };
+	for (auto unit : _unit_command)
+	{
+		auto command = unit_commands[unit_num++];
+		auto listener = SingleTouchListener::create();
+		listener->setSwallowTouches(true);
+		listener->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
+		listener->onTap = [command](Touch *touch, Event *event) { if (*command) (*command)(); };
+		this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, unit);
+	}
+	city_num = 0;
+	std::vector<std::function<void()>> city_commands = { supplyForCity, deployment, dispatch };
+	for (auto city : _city_command)
+	{
+		auto command = city_commands[city_num++];
+		auto listener = SingleTouchListener::create();
+		listener->setSwallowTouches(true);
+		listener->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
+		listener->onTap = [command](Touch *touch, Event *event) { if (command) command(); };
+		this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, city);
+	}
 
 	return true;
 }
@@ -368,20 +391,21 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
  */
 void MenuLayer::showUnitCommand(Entity* entity)
 {
-	if (_isShowedUnitCommand)
-		return;
-
-	moveUnitCommand();
-
 	auto unit_num = 0;
 	for (auto unit : _unit_command)
 	{
-		if (unit_num != 3 || util::instanceof<Soldier>(entity))
+		if (EntityInformation::getInstance()->getCommand(entity->getType(), unit_num))
 			unit->setColor(Color3B(255, 255, 255));
 		else
 			unit->setColor(Color3B(128, 128, 128));
 		unit_num++;
 	}
+
+	if (_isShowedUnitCommand)
+		return;
+
+	moveUnitCommand();
+
 	_isShowedUnitCommand = true;
 }
 
@@ -444,11 +468,6 @@ void MenuLayer::hideUnitCommand()
  */
 void MenuLayer::showCityCommand(City* city)
 {
-	if (_isShowedCityCommand)
-		return;
-
-	moveCityCommand();
-
 	auto city_num = 0;
 	for (auto com : _city_command)
 	{
@@ -458,6 +477,12 @@ void MenuLayer::showCityCommand(City* city)
 			com->setColor(Color3B(128, 128, 128));
 		city_num++;
 	}
+
+	if (_isShowedCityCommand)
+		return;
+
+	moveCityCommand();
+
 	_isShowedCityCommand = true;
 }
 
@@ -648,10 +673,10 @@ bool MenuLayer::isHided(FrameType type)
 {
 	switch (type)
 	{
-	case FrameType::unit:	return _unit->getPosition().x < 0 ^ _unit->getNumberOfRunningActions();
-	case FrameType::map:	return _map->getPosition().x < 0 ^ _map->getNumberOfRunningActions();
-	case FrameType::menu:	return _menu->getPosition().x > cocos2d::Director::getInstance()->getWinSize().width ^ _menu->getNumberOfRunningActions();
-	case FrameType::info:	return _info->getPosition().x > cocos2d::Director::getInstance()->getWinSize().width ^ _info->getNumberOfRunningActions();
+	case FrameType::unit:	return (_unit->getPosition().x < 0) ^ (_unit->getNumberOfRunningActions() != 0);
+	case FrameType::map:	return (_map->getPosition().x < 0) ^ (_map->getNumberOfRunningActions() != 0);
+	case FrameType::menu:	return (_menu->getPosition().x > cocos2d::Director::getInstance()->getWinSize().width) ^ (_menu->getNumberOfRunningActions() != 0);
+	case FrameType::info:	return (_info->getPosition().x > cocos2d::Director::getInstance()->getWinSize().width) ^ (_info->getNumberOfRunningActions() != 0);
 	}
 	return false;
 }

@@ -22,7 +22,8 @@ enum class EntityType
 {
 	infantry, heavy, spy,
 	fire, ice, thunder, ground, king, weapon, relief, guardian, dark, light,
-	COUNT
+	COUNT,
+	sight
 };
 
 /** Unit state*/
@@ -30,12 +31,14 @@ enum class EntityState
 {
 	none, supplied, moved, end
 };
+
 /*********************************************************/
 
 class EntityInformation
 {
 private:
 	std::map<EntityType, std::string> _name;
+	std::map<EntityType, std::vector<bool>> _commands;
 protected:
 	EntityInformation()
 	{
@@ -52,6 +55,16 @@ protected:
 		_name[EntityType::guardian] = u8"樹奏魔士";
 		_name[EntityType::dark] = u8"真影魔士";
 		_name[EntityType::light] = u8"光琴魔士";
+		
+		for (int i = 0; i < static_cast<int>(EntityType::COUNT); i++)
+			for (int j = 0; j < 6; j++)
+				if (j == 3 && i > static_cast<int>(EntityType::heavy))
+					_commands[static_cast<EntityType>(i)].push_back(false);
+				else if(j == 0)
+					_commands[static_cast<EntityType>(i)].push_back(false);
+				else
+					_commands[static_cast<EntityType>(i)].push_back(true);
+			
 	};
 public:
 	static EntityInformation* getInstance()
@@ -59,7 +72,8 @@ public:
 		static EntityInformation info;
 		return &info;
 	};
-	const std::string& getName(EntityType type) { return _name[type]; };
+	inline const std::string& getName(EntityType type) { return _name[type]; };
+	inline bool getCommand(EntityType type, int command) { return _commands[type][command]; };
 };
 
 /*********************************************************/
@@ -73,7 +87,7 @@ protected:
 	cocos2d::Vector<Weapon*> weapons;
 	Entity()
 		: _department(Department::soldier), _type(EntityType::infantry), _explanation(""), _state(EntityState::none)
-		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(3), _defence(0), _durability(0), _maxDurability(0)
+		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0), _durability(0), _maxDurability(0)
 	{};
 	~Entity()
 	{
@@ -143,6 +157,11 @@ protected:
 
 		_type = EntityType::infantry;
 		_explanation = u8"一般人による兵隊。\n都市の占領、統治が可能。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 2;
+		_defence = 10;
+		_durability = _maxDurability = 100;
 		return true;
 	}
 public:
@@ -159,6 +178,11 @@ protected:
 
 		_type = EntityType::heavy;
 		_explanation = u8"訓練された兵隊。\n都市の占領、統治が可能。\nそれなりに戦える。";
+		_mobility = 8;
+		_material = _maxMaterial = 80;
+		_searchingAbility = 1;
+		_defence = 30;
+		_durability = _maxDurability = 200;
 		return true;
 	}
 public:
@@ -175,6 +199,11 @@ protected:
 
 		_type = EntityType::spy;
 		_explanation = u8"諜報部隊。\n少数のため移動力が高い。";
+		_mobility = 16;
+		_material = _maxMaterial = 10;
+		_searchingAbility = 5;
+		_defence = 2;
+		_durability = _maxDurability = 50;
 		return true;
 	}
 public:
@@ -192,6 +221,11 @@ protected:
 
 		_type = EntityType::fire;
 		_explanation = u8"炎峰一族の魔法使い。\n一対多に長ける。\n森林戦が得意。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -208,6 +242,11 @@ protected:
 
 		_type = EntityType::ice;
 		_explanation = u8"雹牢一族の魔法使い。\n一対一に長ける。\n水を凍らせて渡れる。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -224,6 +263,11 @@ protected:
 
 		_type = EntityType::thunder;
 		_explanation = u8"雷翔一族の魔法使い。\n移動力が極めて高い。\n人工物上での戦闘に強い。";
+		_mobility = 20;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -240,6 +284,11 @@ protected:
 
 		_type = EntityType::ground;
 		_explanation = u8"大地一族の魔法使い。\n山脈をやすやすと上る。\n山での戦闘に長ける。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -256,6 +305,11 @@ protected:
 
 		_type = EntityType::king;
 		_explanation = u8"王藤一族の魔法使い。\n燃費は悪いが強力。\n場所を選ばず戦える。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -272,6 +326,11 @@ protected:
 
 		_type = EntityType::weapon;
 		_explanation = u8"双霊一族の魔法使い。\n一戦闘ごとに補給必須。\n都市戦を得意とする。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -288,6 +347,11 @@ protected:
 
 		_type = EntityType::relief;
 		_explanation = u8"愛貴一族の魔法使い。\n後方支援に長ける。\n戦闘能力は低い。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -304,6 +368,11 @@ protected:
 
 		_type = EntityType::guardian;
 		_explanation = u8"樹奏一族の魔法使い。\n防衛能力に長ける。\n森林戦で本来の実力を発揮する。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -320,6 +389,11 @@ protected:
 
 		_type = EntityType::dark;
 		_explanation = u8"真影一族の魔法使い。\n移動力と攻撃力に長ける。\n防御力に欠ける";
+		_mobility = 18;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:
@@ -336,6 +410,11 @@ protected:
 
 		_type = EntityType::light;
 		_explanation = u8"光琴一族の魔法使い。\n支援能力に長ける。\n戦闘向きではない。";
+		_mobility = 12;
+		_material = _maxMaterial = 100;
+		_searchingAbility = 1;
+		_defence = 100;
+		_durability = _maxDurability = 300;
 		return true;
 	}
 public:

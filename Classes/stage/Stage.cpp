@@ -2,6 +2,7 @@
 #include "Tile.h"
 
 #include "entity/Entity.h"
+#include "entity/EntityToTile.h"
 #include "util/Util.h"
 #include "util/MultiListener.h"
 
@@ -124,6 +125,9 @@ Stage * Stage::parseStage(const std::string file)
 			{
 				if (sLine.size() == count)
 					break;
+				if (std::atoi(sLine[count].c_str()) == 0)
+					continue;
+
 				auto tile = layer->setTile(x, y, std::atoi(sLine[count++].c_str()));
 				// Add city
 				if (util::instanceof<City>(tile))
@@ -344,7 +348,7 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto city : _cities[owner])
 	{
-		for (auto tile : recursiveTileSearch(Vec2(0, 0), city->getTileCoordinate(_mapSize.y), 1))
+		for (auto tile : recursiveTileSearch(Vec2(0, 0), city->getTileCoordinate(_mapSize.y), 1, EntityType::sight))
 		{
 			auto cor = tile->getTileCoordinate(_mapSize.y);
 			tile->setSearched(true);
@@ -358,7 +362,7 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto unit : _units[owner])
 	{
-		for (auto tile : recursiveTileSearch(Vec2(0, 0), unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility()))
+		for (auto tile : recursiveTileSearch(Vec2(0, 0), unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility(), EntityType::sight))
 		{
 			auto cor = tile->getTileCoordinate(_mapSize.y);
 			tile->setSearched(true);
@@ -371,41 +375,44 @@ void Stage::initTileSearched(Owner owner)
 	}
 }
 /*
- * Recursive search
- */
-std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost)
+* Recursive search
+*/
+std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type)
 {
-	std::vector<StageTile*> tiles;
-	for (auto tile : getTiles(point.x, point.y))
-		tiles.push_back(tile);
+	auto cost = 0;
+	auto tiles = getTiles(point.x, point.y);
+	for (auto tile : tiles)
+		cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), type);
+
+	CCLOG("Cost %d", cost);
 
 	// If consume all cost, process end
-	if (remainCost-- == 0)
-		return tiles;
+	if (intrusion != Vec2(0, 0) && (remainCost -= cost) < 0)
+		return std::vector<StageTile*>();
 
 	//Up
 	if (intrusion.y >= 0)
-		for (auto tile : recursiveTileSearch(Vec2(0, 1), point + Vec2(0, -2), remainCost))
+		for (auto tile : recursiveTileSearch(Vec2(0, 1), point + Vec2(0, -2), remainCost, type))
 			tiles.push_back(tile);
 	//Up right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
-		for (auto tile : recursiveTileSearch(Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost))
+		for (auto tile : recursiveTileSearch(Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type))
 			tiles.push_back(tile);
 	//Up left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
-		for (auto tile : recursiveTileSearch(Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost))
+		for (auto tile : recursiveTileSearch(Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type))
 			tiles.push_back(tile);
 	//Down
-	if(intrusion.y <= 0)
-		for (auto tile : recursiveTileSearch(Vec2(0, -1), point + Vec2(0, 2), remainCost))
+	if (intrusion.y <= 0)
+		for (auto tile : recursiveTileSearch(Vec2(0, -1), point + Vec2(0, 2), remainCost, type))
 			tiles.push_back(tile);
 	//Down right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
-		for (auto tile : recursiveTileSearch(Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost))
+		for (auto tile : recursiveTileSearch(Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type))
 			tiles.push_back(tile);
 	//Down left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
-		for (auto tile : recursiveTileSearch(Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost))
+		for (auto tile : recursiveTileSearch(Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type))
 			tiles.push_back(tile);
 
 	return tiles;
@@ -432,15 +439,27 @@ std::vector<StageTile*> Stage::getTiles(int x, int y)
  */
 void Stage::blinkTile(StageTile* tile)
 {
-	auto tex = tile->getTexture();
-	auto white = Sprite::createWithTexture(tex, Rect(tex->getContentSize().width - _chipSize.x, tex->getContentSize().height - _chipSize.y, _chipSize.x, _chipSize.y));
+	Sprite* white;
+	auto cor = tile->getTileCoordinate(_mapSize.y);
+	auto shadow = getShadowLayer();
+	auto shadow_tile = shadow->getTile(cor.x, cor.y);
+	if (shadow_tile)
+	{
+		auto tex = tile->getTexture();
+		white = Sprite::createWithTexture(tex, Rect(tex->getContentSize().width - _chipSize.x, tex->getContentSize().height - _chipSize.y, _chipSize.x, _chipSize.y));
+		shadow_tile->addChild(white);
+	}
+	else
+	{
+		white = shadow->setTile(cor.x, cor.y, 23);
+	}
+
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	white->setOpacity(0);
 	white->runAction(RepeatForever::create(Sequence::create(
-		EaseExponentialIn::create(FadeTo::create(0.5f, 100)),
+		EaseExponentialIn::create(FadeTo::create(0.5f, 200)),
 		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
 		NULL)));
-	tile->addChild(white);
 }
 
 /*
@@ -448,7 +467,14 @@ void Stage::blinkTile(StageTile* tile)
  */
 void Stage::blinkOffTile(StageTile* tile)
 {
-	tile->removeAllChildren();
+	auto cor = tile->getTileCoordinate(_mapSize.y);
+	auto shadow = getShadowLayer();
+	auto shadow_tile = shadow->getTile(cor.x, cor.y);
+	if (shadow_tile)
+		if (shadow_tile->getId() == 23)
+			shadow_tile->removeFromParent();
+		else
+			shadow_tile->removeAllChildren();
 }
 
 /*
@@ -541,3 +567,17 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 	return Vec2(units.front()->getTag() / (int)(getMapSize().y), units.front()->getTag() % (int)(getMapSize().y));
 }
 
+void Stage::moveCheck(Entity * entity)
+{
+	CCLOG("MoveCheck");
+	auto cor = entity->getTileCoordinate(_mapSize.y);
+	movePosition(cor.x, cor.y);
+
+	auto tiles = recursiveTileSearch(Vec2(0, 0), cor, entity->getMobility(), entity->getType());
+	for (auto tile : tiles)
+	{
+		if (tile->getId() == 0)
+			continue;
+		blinkTile(tile);
+	}
+}

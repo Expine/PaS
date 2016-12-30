@@ -39,6 +39,8 @@ protected:
 		, _stage(nullptr)
 		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
 		, endPhase(nullptr), nextCity(nullptr), nextUnit(nullptr), talkStaff(nullptr), save(nullptr), load(nullptr), option(nullptr)
+		, supplyForUnit(nullptr), move(nullptr), attack(nullptr), occupation(nullptr), spec(nullptr), wait(nullptr)
+		, supplyForCity(nullptr), deployment(nullptr), dispatch(nullptr)
 	{};
 	~MenuLayer()
 	{
@@ -48,6 +50,8 @@ protected:
 		_stage = nullptr;
 		_isShowedCityCommand = _isShowedUnitCommand = false;
 		endPhase = nextCity = nextUnit = talkStaff = save = load = option = nullptr;
+		supplyForUnit = move = attack = occupation = spec = wait = nullptr;
+		supplyForCity = deployment = dispatch = nullptr;
 	};
 	virtual bool init();
 public:
@@ -77,7 +81,7 @@ public:
 	};
 	inline bool isRunningAction()
 	{
-		return _unit->getNumberOfRunningActions() != 0 | _map->getNumberOfRunningActions() != 0 | _menu->getNumberOfRunningActions() != 0;
+		return _unit->getNumberOfRunningActions() != 0 || _map->getNumberOfRunningActions() != 0 || _menu->getNumberOfRunningActions() != 0;
 	};
 	bool isHided(FrameType type);
 	bool isHidableBySwipe(FrameType type, cocos2d::Vec2 diff);
@@ -90,6 +94,17 @@ public:
 	std::function<void()> save;
 	std::function<void()> load;
 	std::function<void()> option;
+
+	std::function<void()> supplyForCity;
+	std::function<void()> move;
+	std::function<void()> attack;
+	std::function<void()> occupation;
+	std::function<void()> spec;
+	std::function<void()> wait;
+
+	std::function<void()> supplyForUnit;
+	std::function<void()> deployment;
+	std::function<void()> dispatch;
 };
 
 #endif // __MENU_H__

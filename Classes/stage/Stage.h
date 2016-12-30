@@ -142,10 +142,12 @@ public:
 	void movePosition(int x, int y);
 
 	void initTileSearched(Owner owner);
-	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost);
+	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type);
 
 	cocos2d::Vec2 nextCity(Owner owner, StageTile* nowTile);
 	cocos2d::Vec2 nextUnit(Owner owner, Entity* nowUnit);
+
+	void moveCheck(Entity* entity);
 };
 
 #endif // __STAGE_H__
