@@ -242,7 +242,7 @@ protected:
 
 		_type = EntityType::ice;
 		_explanation = u8"雹牢一族の魔法使い。\n一対一に長ける。\n水を凍らせて渡れる。";
-		_mobility = 12;
+		_mobility = 120;
 		_material = _maxMaterial = 100;
 		_searchingAbility = 1;
 		_defence = 100;

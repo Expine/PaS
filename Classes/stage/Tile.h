@@ -62,7 +62,7 @@ class StageTile : public cocos2d::Sprite
 {
 protected:
 	StageTile()
-		: _id(0), _terrain(TerrainType::none), _explanation(""), _searched(false)
+		: _id(0), _terrain(TerrainType::none), _explanation(""), _searched(false), _remainCost(-1)
 	{};
 	~StageTile()
 	{
@@ -73,6 +73,7 @@ public:
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);
 	CC_SYNTHESIZE(std::string, _explanation, Explanation);
 	CC_SYNTHESIZE(bool, _searched, Searched);
+	CC_SYNTHESIZE(int, _remainCost, RemainCost);
 	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 	static StageTile* create(const int id, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 };

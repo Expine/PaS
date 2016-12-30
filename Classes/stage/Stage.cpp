@@ -348,7 +348,7 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto city : _cities[owner])
 	{
-		for (auto tile : recursiveTileSearch(Vec2(0, 0), city->getTileCoordinate(_mapSize.y), 1, EntityType::sight))
+		for (auto tile : startRecursiveTileSearch(city->getTileCoordinate(_mapSize.y), 1, EntityType::sight))
 		{
 			auto cor = tile->getTileCoordinate(_mapSize.y);
 			tile->setSearched(true);
@@ -362,7 +362,7 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto unit : _units[owner])
 	{
-		for (auto tile : recursiveTileSearch(Vec2(0, 0), unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility(), EntityType::sight))
+		for (auto tile : startRecursiveTileSearch(unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility(), EntityType::sight))
 		{
 			auto cor = tile->getTileCoordinate(_mapSize.y);
 			tile->setSearched(true);
@@ -374,46 +374,73 @@ void Stage::initTileSearched(Owner owner)
 		}
 	}
 }
+
+/*
+* Recursive search Start
+*/
+std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCost, EntityType type)
+{
+	auto tiles = recursiveTileSearch(Vec2(0, 0), point, remainCost, type);
+	while (!searchQueue.empty())
+	{
+		for (auto tile : searchQueue.front()())
+			tiles.push_back(tile);
+		searchQueue.pop();
+	}
+	for (auto tile : tiles)
+		tile->setRemainCost(-1);
+	return tiles;
+}
+
 /*
 * Recursive search
 */
 std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type)
 {
+	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
+		return std::vector<StageTile*>();
+
 	auto cost = 0;
 	auto tiles = getTiles(point.x, point.y);
 	for (auto tile : tiles)
 		cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), type);
 
-	CCLOG("Cost %d", cost);
-
 	// If consume all cost, process end
 	if (intrusion != Vec2(0, 0) && (remainCost -= cost) < 0)
 		return std::vector<StageTile*>();
 
+	bool clearFlag = false;
+	for (auto tile : tiles)
+		if (tile->getRemainCost() == -1)
+			tile->setRemainCost(remainCost);
+		else if (tile->getRemainCost() < remainCost)
+		{
+			tile->setRemainCost(remainCost);
+			clearFlag = true;
+		}
+		else
+			return std::vector<StageTile*>();
+	if (clearFlag)
+		tiles.clear();
+
 	//Up
 	if (intrusion.y >= 0)
-		for (auto tile : recursiveTileSearch(Vec2(0, 1), point + Vec2(0, -2), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, 1), point + Vec2(0, -2), remainCost, type));
 	//Up right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
-		for (auto tile : recursiveTileSearch(Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type));
 	//Up left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
-		for (auto tile : recursiveTileSearch(Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type));
 	//Down
 	if (intrusion.y <= 0)
-		for (auto tile : recursiveTileSearch(Vec2(0, -1), point + Vec2(0, 2), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, -1), point + Vec2(0, 2), remainCost, type));
 	//Down right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
-		for (auto tile : recursiveTileSearch(Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type));
 	//Down left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
-		for (auto tile : recursiveTileSearch(Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type))
-			tiles.push_back(tile);
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type));
 
 	return tiles;
 }
@@ -569,11 +596,10 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 
 void Stage::moveCheck(Entity * entity)
 {
-	CCLOG("MoveCheck");
 	auto cor = entity->getTileCoordinate(_mapSize.y);
 	movePosition(cor.x, cor.y);
 
-	auto tiles = recursiveTileSearch(Vec2(0, 0), cor, entity->getMobility(), entity->getType());
+	auto tiles = startRecursiveTileSearch(cor, entity->getMobility(), entity->getType());
 	for (auto tile : tiles)
 	{
 		if (tile->getId() == 0)

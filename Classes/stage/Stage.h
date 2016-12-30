@@ -80,6 +80,7 @@ private:
 	/** city and unit vector */
 	std::map<Owner, std::vector<City*>> _cities;
 	std::map<Owner, std::vector<Entity*>> _units;
+	std::queue<std::function<std::vector<StageTile*>()>> searchQueue;
 public:
 	/** listener action */
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
@@ -142,6 +143,7 @@ public:
 	void movePosition(int x, int y);
 
 	void initTileSearched(Owner owner);
+	std::vector<StageTile*> startRecursiveTileSearch(cocos2d::Vec2 point, int remainCost, EntityType type);
 	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type);
 
 	cocos2d::Vec2 nextCity(Owner owner, StageTile* nowTile);
