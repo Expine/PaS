@@ -44,9 +44,9 @@ bool Game::init(Stage* stage)
 			return;
 
 		if (util::find(_moveTiles, tiles.back()))
-			menu->setMenuMode(MenuMode::move);
-		else
-			menu->setMenuMode(MenuMode::unit);
+			menu->setMenuMode(MenuMode::move, _preUnit, true);
+		else if(_mode == GameMode::move)
+			menu->setMenuMode(MenuMode::move, _preUnit, false);
 
 		//Set unit information
 		auto unit = stage->getUnit(v.x, v.y);
@@ -106,6 +106,8 @@ bool Game::init(Stage* stage)
 			for (auto tile : _moveTiles)
 				stage->blinkTile(tile, Color3B::BLUE);
 			_mode = GameMode::move;
+			if(!_preTiles.empty())
+				menu->setMenuMode(MenuMode::move, _preUnit, util::find(_moveTiles, _preTiles.back()));
 		}
 		else
 		{
@@ -115,7 +117,7 @@ bool Game::init(Stage* stage)
 				stage->blinkTile(_preTiles.back());
 			_moveTiles.clear();
 			_mode = GameMode::normal;
-			menu->setMenuMode(MenuMode::unit);
+			menu->setMenuMode(MenuMode::unit, _preUnit, false);
 		}
 	});
 

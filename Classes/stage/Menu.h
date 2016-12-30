@@ -77,7 +77,7 @@ public:
 	void setUnit(std::vector<StageTile*> tiles, Entity *unit);
 	void setInfo(int x, int y);
 	void setUnitToTile(std::vector<StageTile*> tiles, Entity *unit);
-	void showUnitCommand(Entity* entity);
+	void showUnitCommand(Entity* entity, bool movable = nullptr);
 	void moveUnitCommand();
 	void hideUnitCommand();
 	void showCityCommand(City* city);
@@ -108,7 +108,7 @@ public:
 	inline void setMoveFunction(MoveCommand com, std::function<void()> func) { _move_function[com] = func; };
 
 	inline MenuMode getMenuMode() { return _mode; };
-	void setMenuMode(MenuMode mode);
+	void setMenuMode(MenuMode mode, Entity *unit, bool movable);
 
 	std::function<void()> endPhase;
 	std::function<void()> nextCity;

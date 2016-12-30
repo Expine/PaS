@@ -361,13 +361,25 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
  * Show unit command
  * If already showed, do nothing
  */
-void MenuLayer::showUnitCommand(Entity* entity)
+void MenuLayer::showUnitCommand(Entity* entity, bool movable)
 {
-	forUnit(i)
-		if (EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
-			_unit_command[castUnit(i)]->setColor(Color3B::WHITE);
-		else
-			_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
+	if (_mode == MenuMode::unit)
+	{
+		forUnit(i)
+			if (EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
+				_unit_command[castUnit(i)]->setColor(Color3B::WHITE);
+			else
+				_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
+
+	}
+	else if (_mode == MenuMode::move)
+	{
+		forMove(i)
+			if (castMove(i) == MoveCommand::start && !movable)
+				_move_command[castMove(i)]->setColor(Color3B::GRAY);
+			else
+				_move_command[castMove(i)]->setColor(Color3B::WHITE);
+	}
 
 	if (_isShowedUnitCommand)
 		return;
@@ -771,13 +783,17 @@ bool MenuLayer::isUnHidableBySwipe(FrameType type, cocos2d::Vec2 diff)
 /*
  * Set menu mode
  */
-void MenuLayer::setMenuMode(MenuMode mode)
+void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, bool movable)
 {
 	if (_mode != mode)
 	{
 		hideUnitCommand();
 		_mode = mode;
-		moveUnitCommand();
+		showUnitCommand(unit, movable);
 		_isShowedUnitCommand = true;
+	}
+	else
+	{
+		showUnitCommand(unit, movable);
 	}
 }
