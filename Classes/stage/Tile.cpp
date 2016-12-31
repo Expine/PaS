@@ -1,10 +1,39 @@
 ﻿#include "Tile.h"
 #include "Stage.h"
 
+#include "stage/Command.h"
 #include "ai/Owner.h"
 #include "util/Util.h"
 
 USING_NS_CC;
+
+/*
+ * Initialize tile information
+ */
+TileInformation::TileInformation()
+{
+	auto lines = util::splitFile("entity/tile.csv");
+	auto i = -1;
+	for (auto line : lines)
+	{
+		if (++i == 0)
+			continue;
+
+		auto items = util::splitString(line, ',');
+		auto j = -1;
+		for (auto item : items)
+		{
+			if (++j == 0)
+				continue;
+			switch (j)
+			{
+			case 1:	_name[static_cast<TerrainType>(i - 1)] = item;					break;
+			case 2: case 3: case 4:
+				_commands[static_cast<TerrainType>(i - 1)][static_cast<CityCommand>(j - 2)] = item == "TRUE";
+			}
+		}
+	}
+}
 
 /*
  * Create tile data

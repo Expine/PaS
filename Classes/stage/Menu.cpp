@@ -1,9 +1,9 @@
 ﻿#include "Menu.h"
 #include "Tile.h"
+#include "Command.h"
 
 #include "entity/EntityToTile.h"
 #include "entity/Entity.h"
-
 #include "util/MultiListener.h"
 #include "util/Util.h"
 
@@ -253,7 +253,7 @@ void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
 	_unit->addChild(color);
 
 	// Set unit name
-	auto name = Label::createWithSystemFont(EntityInformation::getInstance()->getName(unit->getType()), JP_FONT, INFO_SIZE);
+	auto name = Label::createWithSystemFont(unit->getName(), JP_FONT, INFO_SIZE);
 	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE_LEFT);
 	name->setPosition(110, 165);
 	name->setColor(Color3B::BLACK);

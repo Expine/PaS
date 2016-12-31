@@ -4,6 +4,7 @@
 #include "stage/Menu.h"
 #include "stage/Stage.h"
 #include "stage/Tile.h"
+#include "stage/Command.h"
 #include "entity/Entity.h"
 #include "util/Util.h"
 
@@ -109,26 +110,22 @@ bool Game::init(Stage* stage)
 			if(!_preTiles.empty())
 				menu->setMenuMode(MenuMode::move, _preUnit, util::find(_moveTiles, _preTiles.back()));
 		}
-		else
-		{
-			for (auto tile : _moveTiles)
-				stage->blinkOffTile(tile);
-			if (!_preTiles.empty())
-				stage->blinkTile(_preTiles.back());
-			_moveTiles.clear();
-			_mode = GameMode::normal;
-			menu->setMenuMode(MenuMode::unit, _preUnit, false);
-		}
 	});
 
 	menu->setMoveFunction(MoveCommand::start, [this, stage, menu] {
 		stage->moveUnit(_preUnit, _preTiles.back());
-		menu->getUnitFunction(UnitCommand::move)();
+		menu->getMoveFunction(MoveCommand::end)();
 	});
 	menu->setMoveFunction(MoveCommand::cancel, [menu] {
 	});
-	menu->setMoveFunction(MoveCommand::end, [menu] {
-		menu->getUnitFunction(UnitCommand::move)();
+	menu->setMoveFunction(MoveCommand::end, [this, stage, menu] {
+		for (auto tile : _moveTiles)
+			stage->blinkOffTile(tile);
+		if (!_preTiles.empty())
+			stage->blinkTile(_preTiles.back());
+		_moveTiles.clear();
+		_mode = GameMode::normal;
+		menu->setMenuMode(MenuMode::unit, _preUnit, false);
 	});
 
 	stage->initTileSearched(Owner::player);

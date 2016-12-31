@@ -3,43 +3,39 @@
 #include "Entity.h"
 #include "stage/Tile.h"
 
+#include "util/Util.h"
+
 /*
  * This class is singleton.
  * So the constructor is initializing information.
  */
 EntityToTile::EntityToTile()
 {
-	// Set default value
-	int defaultCost[] = { 0, 3, 1, 17, 10, 99, -1, -7, 0, 0, 3 };
-	for (int j = 0; j < static_cast<int>(TerrainType::COUNT); j++)
+	auto kind = 0;
+	for (auto file : { "entity/search.csv" , "entity/effect.csv" })
 	{
-		for (int i = 0; i < static_cast<int>(EntityType::COUNT); i++)
+		auto lines = util::splitFile(file);
+		auto i = -1;
+		for (auto line : lines)
 		{
-			_search_cost[static_cast<TerrainType>(j)][static_cast<EntityType>(i)] = defaultCost[j];
-			_effect[static_cast<TerrainType>(j)][static_cast<EntityType>(i)] = 0;
+			if (++i == 0)
+				continue;
+
+			auto items = util::splitString(line, ',');
+			auto j = -1;
+			for (auto item : items)
+			{
+				if (++j == 0)
+					continue;
+
+				if(kind == 0)
+					_search_cost[static_cast<TerrainType>(j-1)][static_cast<EntityType>(i-1)] = std::atoi(item.c_str());
+				else
+					_effect[static_cast<TerrainType>(j-1)][static_cast<EntityType>(i-1)] = std::atoi(item.c_str());
+			}
 		}
+		kind++;
 	}
-
-	// Set unique search cost
-	_search_cost[TerrainType::woods][EntityType::guardian] = -1;
-	_search_cost[TerrainType::woods][EntityType::dark] = 0;
-	_search_cost[TerrainType::mountain][EntityType::ground] = 2;
-	_search_cost[TerrainType::river][EntityType::ice] = 5;
-	_search_cost[TerrainType::bridge][EntityType::ice] = 0;
-	_search_cost[TerrainType::ocean][EntityType::ice] = 10;
-	_search_cost[TerrainType::ocean][EntityType::king] = 20;
-	_search_cost[TerrainType::ocean][EntityType::light] = 30;
-	_search_cost[TerrainType::road][EntityType::thunder] = -2;
-
-	// Set unique effect
-	_effect[TerrainType::woods][EntityType::fire] = 50;
-	_effect[TerrainType::woods][EntityType::guardian] = 20;
-	_effect[TerrainType::mountain][EntityType::ground] = 50;
-	_effect[TerrainType::river][EntityType::ice] = 20;
-	_effect[TerrainType::river][EntityType::thunder] = 40;
-	_effect[TerrainType::ocean][EntityType::ice] = 50;
-	_effect[TerrainType::city][EntityType::weapon] = 50;
-	_effect[TerrainType::capital][EntityType::weapon] = 50;
 
 	// Set sight cost
 	_search_cost[TerrainType::prairie][EntityType::sight] = 1;

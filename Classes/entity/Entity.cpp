@@ -1,8 +1,43 @@
 ﻿#include "Entity.h"
 
 #include "stage/Stage.h"
+#include "util/Util.h"
+#include "stage/Command.h"
 
 USING_NS_CC;
+
+/*
+ * Initialize entity information
+ */
+EntityInformation::EntityInformation()
+{
+	auto lines = util::splitFile("entity/entity.csv");
+	auto i = -1;
+	for (auto line : lines)
+	{
+		if (++i == 0)
+			continue;
+
+		auto items = util::splitString(line, ',');
+		auto j = -1;
+		for (auto item : items)
+		{
+			if (++j == 0)
+				continue;
+			switch (j)
+			{
+			case 1:	_name[static_cast<EntityType>(i - 1)] = item;					break;
+			case 2: _mobility[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
+			case 3: _material[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
+			case 4: _search[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
+			case 5: _defence[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
+			case 6: _durability[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
+			case 7: case 8: case 9: case 10: case 11: case 12:
+				_unit_commands[static_cast<EntityType>(i - 1)][static_cast<UnitCommand>(j - 7)] = item == "TRUE";
+			}
+		}
+	}
+}
 
 /*
  * Create entity instance.
@@ -28,6 +63,18 @@ Entity* Entity::create(EntityType type, const int x, const int y, SpriteBatchNod
 	case EntityType::light:		unit = Light::create();		break;
 	default:	unit = Infantry::create();
 	}
+
+	// Set base information
+	auto info = EntityInformation::getInstance();
+	unit->setType(type);
+	unit->setName(info->getName(type));
+	unit->setMobility(info->getMobility(type));
+	unit->setMaterial(info->getMaterial(type));
+	unit->setMaxMaterial(info->getMaterial(type));
+	unit->setSearchingAbility(info->getSearch(type));
+	unit->setDefence(info->getDefence(type));
+	unit->setDurability(info->getDurability(type));
+	unit->setMaxDurability(info->getDurability(type));
 
 	//Set batch
 	auto unitSize = Vec2(32, 32);
