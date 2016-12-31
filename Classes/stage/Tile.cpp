@@ -12,7 +12,7 @@ USING_NS_CC;
  */
 TileInformation::TileInformation()
 {
-	auto lines = util::splitFile("entity/tile.csv");
+	auto lines = util::splitFile("info/tile.csv");
 	auto i = -1;
 	for (auto line : lines)
 	{

@@ -198,6 +198,18 @@ bool Stage::init()
 			onTap(cor, tiles);
 		}
 	};
+	listener->onDoubleTap = [this](Vec2 v)
+	{
+		if (onDoubleTap)
+		{
+			auto cor = getTileCoordinate(v);
+			std::vector<StageTile*> tiles;
+			for (auto tile : getTiles(cor.x, cor.y))
+				if (tile->getId() != 0)
+					tiles.push_back(tile);
+			onDoubleTap(cor, tiles);
+		}
+	};
 	//if has on-Check, call it
 	listener->onSwipeCheck = [this](Vec2 v, Vec2 diff, float time)	{ return !onSwipeCheck || onSwipeCheck(v, diff, time); };
 	listener->onFlickCheck = [this](Vec2 v, Vec2 diff, float time) { return !onFlickCheck || onFlickCheck(v, diff, time); };

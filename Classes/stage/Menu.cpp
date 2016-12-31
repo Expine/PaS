@@ -384,6 +384,7 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
 	}
 	else if (_mode == MenuMode::move)
 	{
+		_unit_command[UnitCommand::move]->setColor(Color3B::GRAY);
 		forMove(i)
 			if (castMove(i) == MoveCommand::start && !movable)
 				_move_command[castMove(i)]->setColor(Color3B::GRAY);

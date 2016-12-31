@@ -6,7 +6,7 @@
 USING_NS_CC;
 
 constexpr float DefaultLongTapThreshold = 0.1f;
-constexpr float DefaultDoubleTapThreshold = 0.1f;
+constexpr float DefaultDoubleTapThreshold = 0.15f;
 constexpr float DefaultSwipeThresholdDistance = 10.0f;
 constexpr float DefaultFlickThreshold = 0.1f;
 
@@ -63,7 +63,6 @@ protected:
 		onSwipe = nullptr;
 		pinchIn = pinchOut = nullptr;
 		onSwipeCheck = onFlickCheck = nullptr;
-
 	};
 	/*
 	 * Initialize
@@ -179,12 +178,30 @@ protected:
 				struct timeval time;
 				gettimeofday(&time, NULL);
 				auto diff_time = (float)(time.tv_sec - _startTime[0].tv_sec) + (float)(time.tv_usec - _startTime[0].tv_usec) / 1000000;
+				auto locale = t->getLocation();
+				Sequence* action;
 				//
 				switch (_state[t->getID()])
 				{
 				case MultiTouchListener::State::check:
 				case MultiTouchListener::State::tap:
-					if (onTap) onTap(t->getLocation());
+					if (Director::getInstance()->getRunningScene()->getActionByTag(1000))
+					{
+						Director::getInstance()->getRunningScene()->stopActionByTag(1000);
+						if (onDoubleTap)
+							onDoubleTap(t->getLocation());
+						break;
+					}
+					CCLOG("LOG");
+					action = Sequence::create(
+						DelayTime::create(getDoubleTapThreshold()),
+						CallFunc::create([this, locale] {
+							if (onTap)
+								onTap(locale);
+						}),
+					NULL);
+					action->setTag(1000);
+					Director::getInstance()->getRunningScene()->runAction(action);
 					break;
 				case MultiTouchListener::State::longtap:
 					if (onLongTapEnd) onLongTapEnd(t->getLocation());
@@ -208,7 +225,7 @@ protected:
 	/*
 	 * Check long tap
 	 */
-	void update(float)
+	void update(float t)
 	{
 		struct timeval time;
 		gettimeofday(&time, NULL);

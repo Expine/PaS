@@ -86,6 +86,7 @@ private:
 public:
 	/** listener action */
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
+	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onDoubleTap;
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapBegan;
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onLongTapEnd;
 	std::function<bool(cocos2d::Vec2, cocos2d::Vec2, float)> onSwipeCheck;
@@ -93,12 +94,12 @@ public:
 protected:
 	Stage()
 		: _gap(0)
-		, onTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onSwipeCheck(nullptr), onFlickCheck(nullptr)
+		, onTap(nullptr), onDoubleTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onSwipeCheck(nullptr), onFlickCheck(nullptr)
 	{};
 	~Stage()
 	{
 		_gap = 0;
-		onTap = onLongTapBegan = onLongTapEnd = nullptr;
+		onTap = onDoubleTap = onLongTapBegan = onLongTapEnd = nullptr;
 		onSwipeCheck = onFlickCheck = nullptr;
 	}
 	virtual bool init();
