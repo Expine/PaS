@@ -3,6 +3,9 @@
 
 #include "cocos2d.h"
 
+class Entity;
+class StageTile;
+
 #define forCommand(counter, command) for(int counter=0;counter<static_cast<int>(command::COUNT);counter++)
 #define forUnit(counter) forCommand(counter, UnitCommand)
 #define forCity(counter) forCommand(counter, CityCommand)
@@ -35,6 +38,10 @@ namespace command
 	const std::string getName(UnitCommand com);
 	const std::string getName(CityCommand com);
 	const std::string getName(MoveCommand com);
+
+	bool isEnable(UnitCommand com, Entity *unit, std::vector<StageTile*> tile);
+	bool isEnable(CityCommand com, Entity *unit, std::vector<StageTile*> tile);
+	bool isEnable(MoveCommand com, Entity *unit, std::vector<StageTile*> tile);
 };
 
 

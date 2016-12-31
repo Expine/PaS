@@ -366,19 +366,22 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
 	if (_mode == MenuMode::unit)
 	{
 		forUnit(i)
-			if (EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
+			if (!EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
+				_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
+			else if(command::isEnable(castUnit(i), entity, tiles))
 				_unit_command[castUnit(i)]->setColor(Color3B::WHITE);
 			else
 				_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
-
 	}
 	else if (_mode == MenuMode::move)
 	{
 		forMove(i)
 			if (castMove(i) == MoveCommand::start && !movable)
 				_move_command[castMove(i)]->setColor(Color3B::GRAY);
-			else
+			else if(command::isEnable(castMove(i), entity, tiles))
 				_move_command[castMove(i)]->setColor(Color3B::WHITE);
+			else
+				_move_command[castMove(i)]->setColor(Color3B::GRAY);
 	}
 
 	if (_isShowedUnitCommand)
@@ -669,10 +672,11 @@ void MenuLayer::setMenuListener(cocos2d::Node * target, std::function<void()> fu
 	{
 		return util::isTouchInEvent(touch, event);
 	};
-	listener->onTap = [func](Touch* touch, Event* event)
+	listener->onTap = [target, func](Touch* touch, Event* event)
 	{
-		if(func)
-			func();
+		if(target->getColor() == Color3B::WHITE)
+			if(func)
+				func();
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(listener, target);
 }

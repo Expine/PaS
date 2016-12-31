@@ -142,7 +142,7 @@ Stage * Stage::parseStage(const std::string file)
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 1000; i++)
 	{
 		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
 		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
@@ -413,7 +413,7 @@ std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, i
 		return std::vector<StageTile*>();
 
 	// Already exist unit
-	if (type != EntityType::sight)
+	if (type != EntityType::sight && type != EntityType::counter)
 	{
 		auto unit = getUnit(point.x, point.y);
 		if (unit)

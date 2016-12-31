@@ -125,6 +125,7 @@ bool Game::init(Stage* stage)
 
 	menu->setMoveFunction(MoveCommand::start, [this, stage, menu] {
 		stage->moveUnit(_preUnit, _preTiles.back());
+		_preUnit->setState(EntityState::moved);
 		menu->getMoveFunction(MoveCommand::end)();
 	});
 	menu->setMoveFunction(MoveCommand::end, [this, stage, menu] {

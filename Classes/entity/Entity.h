@@ -6,7 +6,8 @@
 #include "ai/Owner.h"
 
 class Stage;
-class Weapon;
+class WeaponData;
+class UnitLayer;
 enum class UnitCommand;
 
 
@@ -24,13 +25,13 @@ enum class EntityType
 	infantry, heavy, spy,
 	fire, ice, thunder, ground, king, weapon, relief, guardian, dark, light,
 	COUNT,
-	sight
+	sight, counter
 };
 
 /** Unit state*/
 enum class EntityState
 {
-	none, supplied, moved, end
+	none, supplied, moved, acted
 };
 
 /*********************************************************/
@@ -73,7 +74,7 @@ public:
 class Entity : public cocos2d::Sprite
 {
 protected:
-	cocos2d::Vector<Weapon*> weapons;
+	std::vector<WeaponData*> _weapons;
 	Entity()
 		: _department(Department::soldier), _type(EntityType::infantry), _state(EntityState::none)
 		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0), _durability(0), _maxDurability(0)
@@ -99,6 +100,8 @@ public:
 	CC_SYNTHESIZE(int, _durability, Durability);
 	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
+	UnitLayer* getUnitLayer();
+	Stage* getStage();
 	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 };
 
@@ -143,7 +146,6 @@ protected:
 	{
 		if (!Soldier::init())
 			return false;
-
 		return true;
 	}
 public:

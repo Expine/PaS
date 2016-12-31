@@ -12,7 +12,7 @@
 EntityToTile::EntityToTile()
 {
 	auto kind = 0;
-	for (auto file : { "entity/search.csv" , "entity/effect.csv" })
+	for (auto file : { "info/search.csv" , "info/effect.csv" })
 	{
 		auto lines = util::splitFile(file);
 		auto i = -1;
@@ -48,4 +48,16 @@ EntityToTile::EntityToTile()
 	_search_cost[TerrainType::capital][EntityType::sight] = 0;
 	_search_cost[TerrainType::city][EntityType::sight] = 0;
 	_search_cost[TerrainType::territory][EntityType::sight] = 1;
+
+	//Set counter cost
+	_search_cost[TerrainType::prairie][EntityType::counter] = 1;
+	_search_cost[TerrainType::woods][EntityType::counter] = 0;
+	_search_cost[TerrainType::mountain][EntityType::counter] = 0;
+	_search_cost[TerrainType::river][EntityType::counter] = 1;
+	_search_cost[TerrainType::ocean][EntityType::counter] = 1;
+	_search_cost[TerrainType::road][EntityType::counter] = 1;
+	_search_cost[TerrainType::bridge][EntityType::counter] = 0;
+	_search_cost[TerrainType::capital][EntityType::counter] = 0;
+	_search_cost[TerrainType::city][EntityType::counter] = 0;
+	_search_cost[TerrainType::territory][EntityType::counter] = 1;
 }

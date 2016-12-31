@@ -1,0 +1,12 @@
+,name,supply,deployment,dispatch
+none,ERROR,FALSE,FALSE,FALSE
+prairie,草原,FALSE,FALSE,FALSE
+woods,森林,FALSE,FALSE,FALSE
+mountain,山脈,FALSE,FALSE,FALSE
+river,河川,FALSE,FALSE,FALSE
+ocean,大洋,FALSE,FALSE,FALSE
+road,道路,FALSE,FALSE,FALSE
+bridge,橋梁,FALSE,FALSE,FALSE
+capital,首都,TRUE,TRUE,TRUE
+city,都市,TRUE,TRUE,FALSE
+territory,竜脈,FALSE,FALSE,FALSE
