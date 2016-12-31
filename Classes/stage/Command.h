@@ -6,10 +6,11 @@
 class Entity;
 class StageTile;
 
-#define forCommand(counter, command) for(int counter=0;counter<static_cast<int>(command::COUNT);counter++)
-#define forUnit(counter) forCommand(counter, UnitCommand)
-#define forCity(counter) forCommand(counter, CityCommand)
-#define forMove(counter) forCommand(counter, MoveCommand)
+#define forCommand(counter, first, end) for(int counter=static_cast<int>(first);counter<static_cast<int>(end);counter++)
+#define forUnit(counter) forCommand(counter, 0, UnitCommand::COUNT)
+#define forCity(counter) forCommand(counter, 0, CityCommand::COUNT)
+#define forMove(counter) forCommand(counter, 0, MoveCommand::COUNT)
+#define forMove2(counter) forCommand(counter, MoveCommand::decision, MoveCommand::COUNT2)
 #define castCommand(counter, command) static_cast<command>(counter)
 #define castUnit(counter) castCommand(counter, UnitCommand)
 #define castCity(counter) castCommand(counter, CityCommand)
@@ -30,7 +31,9 @@ enum class CityCommand
 enum class MoveCommand
 {
 	start, end,
-	COUNT
+	COUNT,
+	decision, cancel,
+	COUNT2
 };
 
 namespace command

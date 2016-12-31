@@ -155,7 +155,9 @@ public:
 	cocos2d::Vec2 nextUnit(Owner owner, Entity* nowUnit);
 
 	std::vector<StageTile*> moveCheck(Entity* entity);
-	void moveUnit(Entity *entiy, StageTile* tile);
+	std::vector<StageTile*> provisionalMoveUnit(Entity *entity, StageTile *tile);
+	void provisionalMoveCancel(Entity *entity);
+	void moveUnit(Entity *entiy, std::vector<StageTile*> tiles);
 };
 
 #endif // __STAGE_H__

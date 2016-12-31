@@ -142,7 +142,7 @@ Stage * Stage::parseStage(const std::string file)
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 100; i++)
 	{
 		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
 		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
@@ -735,9 +735,10 @@ std::vector<StageTile*> Stage::moveCheck(Entity * entity)
 }
 
 /*
- * Move unit to tile
+ * Move unit to tile provisionally
+ * Return terminate tile
  */
-void Stage::moveUnit(Entity * entity, StageTile * tile)
+std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * tile)
 {
 	auto root = startRecursiveTileSearchForMove(tile->getTileCoordinate(_mapSize.y), entity->getTileCoordinate(_mapSize.y), entity->getMobility(), entity->getType());
 	Vector<FiniteTimeAction*> acts;
@@ -750,24 +751,45 @@ void Stage::moveUnit(Entity * entity, StageTile * tile)
 			auto pos = this->getCoordinateByTile(cor.x, cor.y);
 			acts.pushBack(Sequence::create(
 				MoveTo::create(0.5f, pos + Vec2(getChipSize().x / 2, 0)),
-				CallFunc::create([this, cor, entity] {
-					auto shadow = getShadowLayer();
-					for (auto tile : startRecursiveTileSearch(cor, entity->getSearchingAbility(), EntityType::sight))
-					{
-						auto cor = tile->getTileCoordinate(_mapSize.y);
-						tile->setSearched(true);
-						if (shadow->getTile(cor.x, cor.y) != nullptr)
-							shadow->removeTile(cor.x, cor.y);
-						auto unit = getUnit(cor.x, cor.y);
-						if (unit && unit->getAffiliation() != Owner::player)
-							unit->setOpacity(255);
-					}
-				}),
 			NULL));
 		}
 		i++;
 	}
 	entity->runAction(Sequence::create(acts));
-	auto pos = root.back()->getTileCoordinate(_mapSize.y);
-	entity->setTag(pos.x * _mapSize.y + pos.y);
+	return root;
+}
+
+/*
+ * Cancel to move unit
+ */
+void Stage::provisionalMoveCancel(Entity * entity)
+{
+	auto cor = entity->getTileCoordinate(_mapSize.y);
+	auto pos = this->getCoordinateByTile(cor.x, cor.y);
+	entity->stopAllActions();
+	entity->setPosition(pos.x + getChipSize().x / 2, pos.y);
+}
+
+/*
+ * Move unit to tile
+ */
+void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
+{
+	auto shadow = getShadowLayer();
+	for (auto tile : tiles)
+	{
+		for (auto tile : startRecursiveTileSearch(tile->getTileCoordinate(_mapSize.y), entity->getSearchingAbility(), EntityType::sight))
+		{
+			auto cor = tile->getTileCoordinate(_mapSize.y);
+			tile->setSearched(true);
+			if (shadow->getTile(cor.x, cor.y) != nullptr)
+				shadow->removeTile(cor.x, cor.y);
+			auto unit = getUnit(cor.x, cor.y);
+			if (unit && unit->getAffiliation() != Owner::player)
+				unit->setOpacity(255);
+		}
+	}
+	auto point = tiles.back()->getTileCoordinate(_mapSize.y);
+	entity->setTag(point.x * _mapSize.y + point.y);
+	entity->setState(EntityState::moved);
 }

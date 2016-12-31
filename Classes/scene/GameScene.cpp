@@ -47,12 +47,7 @@ bool Game::init(Stage* stage)
 
 		// move mode
 		if(_mode == GameMode::move)
-			// enable move
-			if (util::find(_moveTiles, tiles.back()))
-				menu->setMenuMode(MenuMode::move, _preUnit, tiles ,true);
-			// unenable move
-			else
-				menu->setMenuMode(MenuMode::move, _preUnit, tiles, false);
+			menu->setMenuMode(MenuMode::move, _preUnit, tiles , util::find(_moveTiles, tiles.back()));
 
 		//Set unit information
 		auto unit = stage->getUnit(v.x, v.y);
@@ -124,18 +119,30 @@ bool Game::init(Stage* stage)
 	});
 
 	menu->setMoveFunction(MoveCommand::start, [this, stage, menu] {
-		stage->moveUnit(_preUnit, _preTiles.back());
-		_preUnit->setState(EntityState::moved);
-		menu->getMoveFunction(MoveCommand::end)();
+		CCLOG("START");
+		_moveRoot = stage->provisionalMoveUnit(_preUnit, _preTiles.back());
+		menu->setMenuMode(MenuMode::moving, _preUnit, _preTiles, false);
 	});
 	menu->setMoveFunction(MoveCommand::end, [this, stage, menu] {
+		CCLOG("END");
 		for (auto tile : _moveTiles)
 			stage->blinkOffTile(tile);
 		if (!_preTiles.empty())
 			stage->blinkTile(_preTiles.back());
 		_moveTiles.clear();
+		_moveRoot.clear();
 		_mode = GameMode::normal;
 		menu->setMenuMode(MenuMode::unit, _preUnit, _preTiles, false);
+	});
+	menu->setMoveFunction(MoveCommand::decision, [this, stage, menu] {
+		CCLOG("DECIDE");
+		stage->moveUnit(_preUnit, _moveRoot);
+		menu->getMoveFunction(MoveCommand::end)();
+	});
+	menu->setMoveFunction(MoveCommand::cancel, [this, stage, menu] {
+		CCLOG("CANCEL");
+		stage->provisionalMoveCancel(_preUnit);
+		menu->setMenuMode(MenuMode::move, _preUnit, _preTiles, true);
 	});
 
 	stage->initTileSearched(Owner::player);

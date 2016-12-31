@@ -1,4 +1,4 @@
-#include "Command.h"
+ï»¿#include "Command.h"
 #include "entity/Entity.h"
 #include "stage/Tile.h"
 #include "stage/Stage.h"
@@ -9,12 +9,12 @@ const std::string command::getName(UnitCommand com)
 {
 	switch (com)
 	{
-	case UnitCommand::supply: return u8"•â‹‹";
-	case UnitCommand::move: return u8"ˆÚ“®";
-	case UnitCommand::attack: return u8"UŒ‚";
-	case UnitCommand::occupation: return u8"è—Ì";
-	case UnitCommand::spec: return u8"«”\";
-	case UnitCommand::wait: return u8"‘Ò‹@";
+	case UnitCommand::supply: return u8"è£œçµ¦";
+	case UnitCommand::move: return u8"ç§»å‹•";
+	case UnitCommand::attack: return u8"æ”»æ’ƒ";
+	case UnitCommand::occupation: return u8"å é ˜";
+	case UnitCommand::spec: return u8"æ€§èƒ½";
+	case UnitCommand::wait: return u8"å¾…æ©Ÿ";
 	default: return "ERROR";
 	}
 };
@@ -22,9 +22,9 @@ const std::string command::getName(CityCommand com)
 {
 	switch (com)
 	{
-	case CityCommand::supply: return u8"•â‹‹";
-	case CityCommand::deployment: return u8"”z”õ";
-	case CityCommand::dispatch: return u8"”hŒ­";
+	case CityCommand::supply: return u8"è£œçµ¦";
+	case CityCommand::deployment: return u8"é…å‚™";
+	case CityCommand::dispatch: return u8"æ´¾é£";
 	default: return "ERROR";
 	}
 }
@@ -32,8 +32,10 @@ const std::string command::getName(MoveCommand com)
 {
 	switch (com)
 	{
-	case MoveCommand::start: return u8"Šm’è";
-	case MoveCommand::end: return u8"’†~";
+	case MoveCommand::start: return u8"é–‹å§‹";
+	case MoveCommand::end: return u8"ä¸­æ­¢";
+	case MoveCommand::decision: return u8"ç¢ºå®š";
+	case MoveCommand::cancel: return u8"æ’¤å›";
 	default: return "ERROR";
 	}
 }
@@ -51,13 +53,11 @@ bool command::isEnable(UnitCommand com, Entity * unit, std::vector<StageTile*> t
 
 		auto stage = unit->getStage();
 		auto pos = unit->getTileCoordinate(stage->getMapSize().y);
-		CCLOG("POS(%f,%f)", pos.x, pos.y);
 		auto tiles = stage->startRecursiveTileSearch(pos, 1, EntityType::counter);
 		for (auto t : tiles)
 		{
 			auto cor = t->getTileCoordinate(stage->getMapSize().y);
 			auto unit = stage->getUnit(cor.x, cor.y);
-			CCLOG("(%f,%f)", cor.x, cor.y);
 			if (unit && unit->getAffiliation() != Owner::player)
 				return true;
 		}
@@ -82,6 +82,7 @@ bool command::isEnable(UnitCommand com, Entity * unit, std::vector<StageTile*> t
 		return true;
 	else if (com == UnitCommand::wait)
 		return unit->getState() != EntityState::acted;
+	return true;
 }
 
 bool command::isEnable(CityCommand com, Entity * unit, std::vector<StageTile*> tile)

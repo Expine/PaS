@@ -140,19 +140,25 @@ bool MenuLayer::init()
 		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
 		_move_command[castMove(i)] = command;
 	}
+	forMove2(i)
+	{
+		auto name = command::getName(castMove(i));
+		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
+		_move_command[castMove(i)] = command;
+	}
 
 	// Set listener
 	setFrameListener(_unit, _unitLabels, FrameType::unit, 300 - MODIFY);
 	setFrameListener(_map, _mapLabels, FrameType::map, 300 - MODIFY);
 	setFrameListener(_menu, _menuLabels, FrameType::menu, -220 + MODIFY);
 
-	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase)  endPhase(); });
-	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity)  nextCity(); });
-	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit)  nextUnit(); });
-	setMenuListener(_menu->getChildByTag(13), [this] { if (talkStaff) talkStaff(); });
-	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	  save(); });
-	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	  load(); });
-	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	  option(); });
+	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase)  endPhase(); }, false);
+	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity)  nextCity(); }, false);
+	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit)  nextUnit(); }, false);
+	setMenuListener(_menu->getChildByTag(13), [this] { if (talkStaff) talkStaff(); }, false);
+	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	  save(); }, false);
+	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	  load(); }, false);
+	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	  option(); }, false);
 
 	forUnit(i)
 		setMenuListener(_unit_command[castUnit(i)], [this, i] {if (_unit_function[castUnit(i)]) _unit_function[castUnit(i)](); });
@@ -161,6 +167,9 @@ bool MenuLayer::init()
 		setMenuListener(_city_command[castCity(i)], [this, i] {if (_city_function[castCity(i)]) _city_function[castCity(i)](); });
 
 	forMove(i)
+		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
+
+	forMove2(i)
 		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
 
 	return true;
@@ -383,6 +392,9 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
 			else
 				_move_command[castMove(i)]->setColor(Color3B::GRAY);
 	}
+	else if (_mode == MenuMode::moving)
+	{
+	}
 
 	if (_isShowedUnitCommand)
 		return;
@@ -405,11 +417,16 @@ void MenuLayer::moveUnitCommand()
 	}
 	else if (_mode == MenuMode::move)
 	{
-		auto unit = _unit_command[UnitCommand::move];
+		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::move]);
+		forMove(i)
+			showUnitCommandByOne(0 + i, 1, _move_command[castMove(i)]);
+	}
+	else if (_mode == MenuMode::moving)
+	{
 		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::move]);
 		showUnitCommandByOne(0, 1, _unit_command[UnitCommand::attack]);
-		forMove(i)
-			showUnitCommandByOne(1 + i, 1, _move_command[castMove(i)]);
+		forMove2(i)
+			showUnitCommandByOne(1 + i - static_cast<int>(MoveCommand::decision), 1, _move_command[castMove(i)]);
 	}
 }
 
@@ -432,6 +449,13 @@ void MenuLayer::hideUnitCommand()
 		hideUnitCommandByOne(_unit_command[UnitCommand::move]);
 		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
 		forMove(i)
+			hideUnitCommandByOne(_move_command[castMove(i)]);
+	}
+	else if (_mode == MenuMode::moving)
+	{
+		hideUnitCommandByOne(_unit_command[UnitCommand::move]);
+		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
+		forMove2(i)
 			hideUnitCommandByOne(_move_command[castMove(i)]);
 	}
 	_isShowedUnitCommand = false;
@@ -664,7 +688,7 @@ void MenuLayer::setFrameListener(Node *target, const std::vector<Label*>& target
  * Set menu item listener
  * if tap on target, call func
  */
-void MenuLayer::setMenuListener(cocos2d::Node * target, std::function<void()> func)
+void MenuLayer::setMenuListener(cocos2d::Node * target, std::function<void()> func, bool isWhiteEnable)
 {
 	auto listener = SingleTouchListener::create();
 	listener->setSwallowTouches(true);
@@ -672,9 +696,9 @@ void MenuLayer::setMenuListener(cocos2d::Node * target, std::function<void()> fu
 	{
 		return util::isTouchInEvent(touch, event);
 	};
-	listener->onTap = [target, func](Touch* touch, Event* event)
+	listener->onTap = [target, func, isWhiteEnable](Touch* touch, Event* event)
 	{
-		if(target->getColor() == Color3B::WHITE)
+		if(!isWhiteEnable || target->getColor() == Color3B::WHITE)
 			if(func)
 				func();
 	};

@@ -13,7 +13,7 @@ enum class MoveCommand;
 
 enum class MenuMode
 {
-	unit, move
+	unit, move, moving
 };
 
 /*********************************************************/
@@ -47,7 +47,7 @@ private:
 
 	Node* setCommand(const std::string &name, const int x, const int y, const int width, const int height);
 	void setFrameListener(cocos2d::Node *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
-	void setMenuListener(cocos2d::Node* target, std::function<void()> func);
+	void setMenuListener(cocos2d::Node* target, std::function<void()> func, bool isWhiteEnable = true);
 
 	void showUnitCommandByOne(int x, int y, cocos2d::Node* command);
 	void hideUnitCommandByOne(cocos2d::Node* command);
