@@ -26,7 +26,7 @@ enum class CityCommand
 
 enum class MoveCommand
 {
-	start, cancel, end,
+	start, end,
 	COUNT
 };
 

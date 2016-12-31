@@ -41,19 +41,25 @@ bool Game::init(Stage* stage)
 	// Set stgae listener
 	stage->onTap = [this, menu, stage](Vec2 v, std::vector<StageTile*> tiles)
 	{
+		// If running menu action, do nothing
 		if (menu->isRunningAction())
 			return;
 
-		if (util::find(_moveTiles, tiles.back()))
-			menu->setMenuMode(MenuMode::move, _preUnit, true);
-		else if(_mode == GameMode::move)
-			menu->setMenuMode(MenuMode::move, _preUnit, false);
+		// move mode
+		if(_mode == GameMode::move)
+			// enable move
+			if (util::find(_moveTiles, tiles.back()))
+				menu->setMenuMode(MenuMode::move, _preUnit, tiles ,true);
+			// unenable move
+			else
+				menu->setMenuMode(MenuMode::move, _preUnit, tiles, false);
 
 		//Set unit information
 		auto unit = stage->getUnit(v.x, v.y);
 		if (unit)
 			setPreUnit(stage, menu, unit);
 
+		//Set tile information
 		setPreTiles(stage, menu, tiles);
 
 		//Set base information
@@ -73,13 +79,16 @@ bool Game::init(Stage* stage)
 	};
 
 	//Set menu listener
+	//End phase
 	menu->endPhase = [this]
 	{
 		_endFunction();
 	};
+	//Next city
 	menu->nextCity = [this, stage, menu]
 	{
 		StageTile* tile = nullptr;
+		//Get top tile
 		for (auto t : _preTiles)
 			if (t->getId())
 				tile = t;
@@ -87,8 +96,10 @@ bool Game::init(Stage* stage)
 		setPreTiles(stage, menu, stage->getTiles(pos.x, pos.y));
 		menu->setInfo(pos.x, pos.y);
 	};
+	//Next unit
 	menu->nextUnit = [this, stage, menu]
 	{
+		//if move mode, move to moving unit
 		if (_mode == GameMode::move)
 		{
 			stage->movePosition(_preUnit->getPosition().x, _preUnit->getPosition().y);
@@ -100,6 +111,7 @@ bool Game::init(Stage* stage)
 		menu->setInfo(pos.x, pos.y);
 	};
 
+	//Move function
 	menu->setUnitFunction(UnitCommand::move, [this, stage, menu] {
 		if (_mode == GameMode::normal)
 		{
@@ -107,16 +119,13 @@ bool Game::init(Stage* stage)
 			for (auto tile : _moveTiles)
 				stage->blinkTile(tile, Color3B::BLUE);
 			_mode = GameMode::move;
-			if(!_preTiles.empty())
-				menu->setMenuMode(MenuMode::move, _preUnit, util::find(_moveTiles, _preTiles.back()));
+			menu->setMenuMode(MenuMode::move, _preUnit, _preTiles, util::find(_moveTiles, _preTiles.back()));
 		}
 	});
 
 	menu->setMoveFunction(MoveCommand::start, [this, stage, menu] {
 		stage->moveUnit(_preUnit, _preTiles.back());
 		menu->getMoveFunction(MoveCommand::end)();
-	});
-	menu->setMoveFunction(MoveCommand::cancel, [menu] {
 	});
 	menu->setMoveFunction(MoveCommand::end, [this, stage, menu] {
 		for (auto tile : _moveTiles)
@@ -125,7 +134,7 @@ bool Game::init(Stage* stage)
 			stage->blinkTile(_preTiles.back());
 		_moveTiles.clear();
 		_mode = GameMode::normal;
-		menu->setMenuMode(MenuMode::unit, _preUnit, false);
+		menu->setMenuMode(MenuMode::unit, _preUnit, _preTiles, false);
 	});
 
 	stage->initTileSearched(Owner::player);

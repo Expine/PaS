@@ -48,6 +48,9 @@ private:
 	Node* setCommand(const std::string &name, const int x, const int y, const int width, const int height);
 	void setFrameListener(cocos2d::Node *target, const std::vector<cocos2d::Label*> &targets, FrameType type, int moveX);
 	void setMenuListener(cocos2d::Node* target, std::function<void()> func);
+
+	void showUnitCommandByOne(int x, int y, cocos2d::Node* command);
+	void hideUnitCommandByOne(cocos2d::Node* command);
 protected:
 	MenuLayer()
 		: _unit(nullptr), _map(nullptr), _menu(nullptr), _info(nullptr)
@@ -77,7 +80,7 @@ public:
 	void setUnit(std::vector<StageTile*> tiles, Entity *unit);
 	void setInfo(int x, int y);
 	void setUnitToTile(std::vector<StageTile*> tiles, Entity *unit);
-	void showUnitCommand(Entity* entity, bool movable = nullptr);
+	void showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool movable = nullptr);
 	void moveUnitCommand();
 	void hideUnitCommand();
 	void showCityCommand(City* city);
@@ -108,7 +111,7 @@ public:
 	inline void setMoveFunction(MoveCommand com, std::function<void()> func) { _move_function[com] = func; };
 
 	inline MenuMode getMenuMode() { return _mode; };
-	void setMenuMode(MenuMode mode, Entity *unit, bool movable);
+	void setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles, bool movable);
 
 	std::function<void()> endPhase;
 	std::function<void()> nextCity;

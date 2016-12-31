@@ -28,7 +28,6 @@ const std::string command::getName(MoveCommand com)
 	switch (com)
 	{
 	case MoveCommand::start: return u8"Šm’è";
-	case MoveCommand::cancel: return u8"“P‰ñ";
 	case MoveCommand::end: return u8"’†Ž~";
 	default: return "ERROR";
 	}

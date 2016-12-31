@@ -77,3 +77,20 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 
 	return tile;
 }
+
+/*
+ * Get Stage layer
+ */
+StageLayer * StageTile::getStageLayer()
+{
+	return dynamic_cast<StageLayer*>(getParent()->getParent());
+}
+
+/*
+ * Get Stage
+ */
+Stage * StageTile::getStage()
+{
+	return dynamic_cast<Stage*>(getStageLayer()->getParent());
+}
+

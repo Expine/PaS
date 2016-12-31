@@ -282,7 +282,7 @@ void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
 	setUnitToTile(tiles, unit);
 
 	if (unit->getAffiliation() == Owner::player)
-		showUnitCommand(unit);
+		showUnitCommand(unit, tiles);
 	else
 		hideUnitCommand();
 }
@@ -361,7 +361,7 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
  * Show unit command
  * If already showed, do nothing
  */
-void MenuLayer::showUnitCommand(Entity* entity, bool movable)
+void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool movable)
 {
 	if (_mode == MenuMode::unit)
 	{
@@ -398,52 +398,15 @@ void MenuLayer::moveUnitCommand()
 	if (_mode == MenuMode::unit)
 	{
 		forUnit(i)
-		{
-			auto unit = _unit_command[castUnit(i)];
-			unit->stopAllActions();
-			if (isHided(FrameType::unit))
-				unit->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 3) * (unit->getContentSize().width + 20), -20 + _unit->getPosition().y - (i % 3) * (unit->getContentSize().height + 15)))),
-					NULL));
-			else
-				unit->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10 + (i % 3) * (unit->getContentSize().width + 20), -i / 3 * (unit->getContentSize().height + 15) - _unit->getContentSize().height))),
-					NULL));
-		}
+			showUnitCommandByOne(i % 3, i / 3, _unit_command[castUnit(i)]);
 	}
 	else if (_mode == MenuMode::move)
 	{
 		auto unit = _unit_command[UnitCommand::move];
-		unit->stopAllActions();
-		if (isHided(FrameType::unit))
-			unit->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10, -20 + _unit->getPosition().y))),
-				NULL));
-		else
-			unit->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10, -_unit->getContentSize().height))),
-				NULL));
+		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::move]);
+		showUnitCommandByOne(0, 1, _unit_command[UnitCommand::attack]);
 		forMove(i)
-		{
-			auto move = _move_command[castMove(i)];
-			move->stopAllActions();
-			i += 3;
-			if (isHided(FrameType::unit))
-				move->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 3) * (move->getContentSize().width + 20), -20 + _unit->getPosition().y - (i % 3) * (move->getContentSize().height + 15)))),
-					NULL));
-			else
-				move->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10 + (i % 3) * (move->getContentSize().width + 20), -i / 3 * (move->getContentSize().height + 15) - _unit->getContentSize().height))),
-					NULL));
-			i -= 3;
-		}
+			showUnitCommandByOne(1 + i, 1, _move_command[castMove(i)]);
 	}
 }
 
@@ -459,55 +422,52 @@ void MenuLayer::hideUnitCommand()
 	if (_mode == MenuMode::unit)
 	{
 		forUnit(i)
-		{
-			auto unit = _unit_command[castUnit(i)];
-			unit->stopAllActions();
-			if (isHided(FrameType::unit))
-				unit->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-					NULL));
-			else
-				unit->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-					NULL));
-
-		}
+			hideUnitCommandByOne(_unit_command[castUnit(i)]);
 	}
 	else if (_mode == MenuMode::move)
 	{
-		auto unit = _unit_command[UnitCommand::move];
-		unit->stopAllActions();
-		if (isHided(FrameType::unit))
-			unit->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-				NULL));
-		else
-			unit->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-unit->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-				NULL));
+		hideUnitCommandByOne(_unit_command[UnitCommand::move]);
+		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
 		forMove(i)
-		{
-			auto move = _move_command[castMove(i)];
-			move->stopAllActions();
-			if (isHided(FrameType::unit))
-				move->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-move->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-					NULL));
-			else
-				move->runAction(Sequence::create(
-					EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
-					EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-move->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
-					NULL));
-
-		}
-
+			hideUnitCommandByOne(_move_command[castMove(i)]);
 	}
 	_isShowedUnitCommand = false;
+}
+
+/*
+ * Showing unit command one by one
+ */
+void MenuLayer::showUnitCommandByOne(int x, int y, Node* command)
+{
+	command->stopAllActions();
+	if (isHided(FrameType::unit))
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + y * (command->getContentSize().width + 20), -20 + _unit->getPosition().y - x * (command->getContentSize().height + 15)))),
+			NULL));
+	else
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _unit->getPosition().y) + Vec2(10 + x * (command->getContentSize().width + 20), -y * (command->getContentSize().height + 15) - _unit->getContentSize().height))),
+			NULL));
+}
+
+/*
+* Hiding unit command one by one
+*/
+void MenuLayer::hideUnitCommandByOne(Node* command)
+{
+	command->stopAllActions();
+	if (isHided(FrameType::unit))
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-command->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
+			NULL));
+	else
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _unit->getPosition().y - _unit->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-command->getContentSize().width, _unit->getPosition().y - _unit->getContentSize().height))),
+			NULL));
 }
 
 /*
@@ -783,17 +743,17 @@ bool MenuLayer::isUnHidableBySwipe(FrameType type, cocos2d::Vec2 diff)
 /*
  * Set menu mode
  */
-void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, bool movable)
+void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles, bool movable)
 {
 	if (_mode != mode)
 	{
 		hideUnitCommand();
 		_mode = mode;
-		showUnitCommand(unit, movable);
+		showUnitCommand(unit, tiles, movable);
 		_isShowedUnitCommand = true;
 	}
 	else
 	{
-		showUnitCommand(unit, movable);
+		showUnitCommand(unit, tiles, movable);
 	}
 }
