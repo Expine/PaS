@@ -192,7 +192,6 @@ protected:
 							onDoubleTap(t->getLocation());
 						break;
 					}
-					CCLOG("LOG");
 					action = Sequence::create(
 						DelayTime::create(getDoubleTapThreshold()),
 						CallFunc::create([this, locale] {
@@ -218,6 +217,8 @@ protected:
 			}
 			if (_numberOfTouch == 0)
 				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
+			else if (_numberOfTouch == 1)
+				_state[0] = _state[1] = MultiTouchListener::State::swipe;
 		};
 		return true;
 	};

@@ -790,10 +790,10 @@ void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
 	auto shadow = getShadowLayer();
 	for (auto tile : tiles)
 	{
-		for (auto tile : startRecursiveTileSearch(tile->getTileCoordinate(_mapSize.y), entity->getSearchingAbility(), EntityType::sight))
+		for (auto t : startRecursiveTileSearch(tile->getTileCoordinate(_mapSize.y), entity->getSearchingAbility(), EntityType::sight))
 		{
-			auto cor = tile->getTileCoordinate(_mapSize.y);
-			tile->setSearched(true);
+			auto cor = t->getTileCoordinate(_mapSize.y);
+			t->setSearched(true);
 			if (shadow->getTile(cor.x, cor.y) != nullptr)
 				shadow->removeTile(cor.x, cor.y);
 			auto unit = getUnit(cor.x, cor.y);
