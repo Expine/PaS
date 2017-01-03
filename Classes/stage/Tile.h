@@ -9,6 +9,10 @@ class Stage;
 class StageLayer;
 enum class CityCommand;
 
+constexpr int STAGE_TILE_WHITE = 39;
+constexpr int STAGE_TILE_DARK = 38;
+constexpr int STAGE_TILE_FRAME = 36;
+
 /*********************************************************/
 
 /*

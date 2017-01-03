@@ -187,7 +187,11 @@ void Game::setPreTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*> t
 	//Set tile information
 	menu->setTile(tiles, _preUnit);
 	if (!util::find(_moveTiles, tiles.back()))
+	{
 		stage->blinkTile(tiles.back());
+		auto pos = tiles.back()->getTileCoordinate(stage->getMapSize().y);
+		stage->selectTile(pos.x, pos.y);
+	}
 	else
 		stage->blinkChange(tiles.back(), Color3B::WHITE);
 	for (auto tile : tiles)

@@ -83,6 +83,7 @@ private:
 	std::queue<std::function<std::vector<StageTile*>()>> searchQueue;
 	std::vector<StageTile*> _searchResult;
 	int searchCost;
+	cocos2d::Sprite* selector;
 public:
 	/** listener action */
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;
@@ -95,12 +96,14 @@ protected:
 	Stage()
 		: _gap(0)
 		, onTap(nullptr), onDoubleTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onSwipeCheck(nullptr), onFlickCheck(nullptr)
+		, selector(nullptr)
 	{};
 	~Stage()
 	{
 		_gap = 0;
 		onTap = onDoubleTap = onLongTapBegan = onLongTapEnd = nullptr;
 		onSwipeCheck = onFlickCheck = nullptr;
+		selector = nullptr;
 	}
 	virtual bool init();
 public:
@@ -122,6 +125,7 @@ public:
 	/** Get tile by x, y, layer number*/
 	inline StageTile* getTile(int l, int x, int y) { return getStageLayer(l)->getTile(x, y); };
 	std::vector<StageTile*> getTiles(int x, int y);
+	void selectTile(int x, int y);
 	void blinkTile(StageTile* tile, cocos2d::Color3B color = cocos2d::Color3B::WHITE);
 	void blinkChange(StageTile* tile, cocos2d::Color3B color);
 	void blinkOffTile(StageTile* tile);

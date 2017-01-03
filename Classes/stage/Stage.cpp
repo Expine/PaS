@@ -138,6 +138,20 @@ Stage * Stage::parseStage(const std::string file)
 		}
 	}
 
+	// Add selector
+	batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
+	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / stage->getChipSize().x);
+	stage->selector = Sprite::createWithTexture(batch->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y));
+	stage->selector->setOpacity(0);
+	stage->selector->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	auto animation = Animation::create();
+	animation->addSpriteFrame(SpriteFrame::createWithTexture(batch->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
+	animation->addSpriteFrame(SpriteFrame::createWithTexture(batch->getTexture(), Rect(((STAGE_TILE_FRAME + 1) % wnum) * stage->getChipSize().x, ((STAGE_TILE_FRAME + 1) / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
+	animation->setDelayPerUnit(0.1f);
+	animation->setRestoreOriginalFrame(true);
+	stage->selector->runAction(RepeatForever::create(Animate::create(animation)));
+	stage->addChild(stage->selector, 100);
+
 	// for debug 
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
@@ -352,7 +366,7 @@ void Stage::initTileSearched(Owner owner)
 			for (auto tile : getTiles(x, y))
 				tile->setSearched(false);
 			if (shadow->getTile(x, y) == nullptr)
-				shadow->setTile(x, y, 22);
+				shadow->setTile(x, y, STAGE_TILE_DARK);
 			auto unit = getUnit(x, y);
 			if (unit && unit->getAffiliation() != owner)
 				unit->setOpacity(0);
@@ -582,6 +596,24 @@ std::vector<StageTile*> Stage::getTiles(int x, int y)
 }
 
 /*
+ * Show selector
+ * If minus coordinate, remove selector
+ */
+void Stage::selectTile(int x, int y)
+{
+	CCLOG("Vec(%d, %d)", x, y);
+	// Remove selector
+	if (x < 0 || y < 0)
+	{
+		selector->setOpacity(0);
+		return;
+	}
+
+	selector->setOpacity(255);
+	selector->setPosition(getCoordinateByTile(x, y));
+}
+
+/*
  * Blink tile
  */
 void Stage::blinkTile(StageTile* tile, Color3B color)
@@ -590,7 +622,8 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
 	auto cor = tile->getTileCoordinate(_mapSize.y);
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
-	if (shadow_tile && shadow_tile->getId() == 22)
+	// For unsearch area
+	if (shadow_tile && shadow_tile->getId() == STAGE_TILE_DARK)
 	{
 		//Already blinking, resert
 		shadow_tile->removeAllChildren();
@@ -603,7 +636,7 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
 		if (shadow_tile)
 			shadow_tile->removeFromParent();
 
-		white = shadow->setTile(cor.x, cor.y, 23);
+		white = shadow->setTile(cor.x, cor.y, STAGE_TILE_WHITE);
 	}
 
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
@@ -624,7 +657,7 @@ void Stage::blinkChange(StageTile* tile, cocos2d::Color3B color)
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
 	if (shadow_tile)
-		if (shadow_tile->getId() == 23)
+		if (shadow_tile->getId() == STAGE_TILE_WHITE)
 			shadow_tile->setColor(color);
 		else if(shadow_tile->getChildrenCount() == 1)
 			shadow_tile->getChildren().at(0)->setColor(color);
@@ -639,7 +672,7 @@ void Stage::blinkOffTile(StageTile* tile)
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
 	if (shadow_tile)
-		if (shadow_tile->getId() == 23)
+		if (shadow_tile->getId() == STAGE_TILE_WHITE)
 			shadow_tile->removeFromParent();
 		else
 			shadow_tile->removeAllChildren();
