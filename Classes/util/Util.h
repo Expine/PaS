@@ -38,6 +38,7 @@ namespace util
 	Of* instance(const What w) { return dynamic_cast<Of*>(w); };
 
 	Node* createCutSkin(const std::string &file, int w, int h, int cut_mask, int opacity = 255);
+	Node* createCutSkinAndAnimation(const std::string &file, int w, int h, int wnum, int hnum, int cut_mask, float duration, int opacity = 255);
 
 	template<typename V>
 	bool find(const std::vector<V>& vec, V element)

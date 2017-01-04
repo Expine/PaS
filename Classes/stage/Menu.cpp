@@ -803,6 +803,9 @@ void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*>
 	}
 }
 
+/*
+ * Show enemy unit
+ */
 void MenuLayer::showEnemyUnit(Entity * enemy)
 {
 	auto winSize = Director::getInstance()->getWinSize();
@@ -810,12 +813,18 @@ void MenuLayer::showEnemyUnit(Entity * enemy)
 	_enemy_unit->runAction(EaseSineIn::create(MoveTo::create(0.5f, Vec2(winSize.width, winSize.height))));
 }
 
+/*
+ * Hide enemy unit
+ */
 void MenuLayer::hideEnemyUnit()
 {
 	auto winSize = Director::getInstance()->getWinSize();
-	_enemy_unit->runAction(EaseSineOut::create(MoveTo::create(0.5f, Vec2(winSize.width + _enemy_unit->getContentSize().width, 0))));
+	_enemy_unit->runAction(EaseSineOut::create(MoveTo::create(0.5f, Vec2(winSize.width + _enemy_unit->getContentSize().width, winSize.height))));
 }
 
+/*
+ * Show weapon frame
+ */
 void MenuLayer::showWeaponFrame(Entity* unit)
 {
 	auto winSize = Director::getInstance()->getWinSize();
@@ -824,7 +833,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	// Set weapon frame
 	auto weapon = util::createCutSkin(FRAME, 700, h, 0, 255);
 	weapon->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
-	weapon->setPosition(winSize.width / 2 - 25, 0);
+	weapon->setPosition(winSize.width / 2, 0);
 	weapon->setTag(1000);
 	this->addChild(weapon);
 
@@ -852,6 +861,23 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 		if(weapon)
 			renderWeapon(weapon, no++);
 
+	// Set frame
+	auto frame = util::createCutSkinAndAnimation("image/frame_1.png", 680, 40, 6, 1, 0, 0.15f);
+	frame->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	frame->setPosition(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30);
+	weapon->addChild(frame);
+
+	// Set decision frame
+	auto decision = util::createCutSkin(COMMAND_FRAME, 50, h, 0, 200);
+	decision->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
+	decision->setPosition(-25, 0);
+	weapon->addChild(decision);
+	auto decision_label = Label::createWithSystemFont(u8"確定", JP_FONT, MENU_SIZE);
+	decision_label->setWidth(MENU_SIZE);
+	decision_label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	decision_label->setPosition(decision->getContentSize() / 2);
+	decision->addChild(decision_label);
+
 	// Set cancel frame
 	auto cancel = util::createCutSkin(COMMAND_FRAME, 50, h, 0, 200);
 	cancel->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
@@ -862,8 +888,48 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	cancel_label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	cancel_label->setPosition(cancel->getContentSize() / 2);
 	cancel->addChild(cancel_label);
+
+	// Set listener
+	auto lis = SingleTouchListener::create();
+	lis->setSwallowTouches(true);
+	lis->onTap = [this, weapon, frame, decision, cancel](Touch* touch, Event* event)
+	{
+		if (util::isTouchInEvent(touch->getLocation(), weapon))
+		{
+			auto pos = touch->getLocation() - (weapon->getPosition() - Vec2(weapon->getContentSize().width / 2, 0));
+			int no = (weapon->getContentSize().height - pos.y - 15 - 30 - MENU_SIZE / 2) / 50;
+			if (no >= 0)
+			{
+				frame->stopAllActions();
+				frame->runAction(MoveTo::create(0.2f, Vec2(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30 - no * 50)));
+			}
+		}
+		if (util::isTouchInEvent(touch->getLocation(), decision))
+		{
+			hideWeaponFrame();
+			hideEnemyUnit();
+		}
+		if (util::isTouchInEvent(touch->getLocation(), cancel))
+		{
+			hideWeaponFrame();
+			hideEnemyUnit();
+		}
+	};
+	lis->onSwipe = [weapon](Vec2 v, Vec2 diff, float time)
+	{
+		auto winSize = Director::getInstance()->getWinSize();
+		auto size = weapon->getContentSize();
+		auto pos = weapon->getPosition() + diff;
+		pos.x = (pos.x < size.width / 2 + 50) ? size.width / 2 + 50 : (pos.x > winSize.width - size.width / 2 - 50) ? winSize.width - size.width / 2 - 50 : pos.x;
+		pos.y = (pos.y < 0) ? 0 : (pos.y > winSize.height - size.height) ? winSize.height - size.height : pos.y;
+		weapon->setPosition(pos);
+	};
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, weapon);
 }
 
+/*
+ * Render a weapon information
+ */
 void MenuLayer::renderWeapon(WeaponData * weapon, int no)
 {
 	auto frame = this->getChildByTag(1000);
@@ -896,5 +962,5 @@ void MenuLayer::renderWeapon(WeaponData * weapon, int no)
 
 void MenuLayer::hideWeaponFrame()
 {
-	this->removeChildByTag(1000);
+	this->getChildByTag(1000)->removeFromParentAndCleanup(true);
 }

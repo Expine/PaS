@@ -279,4 +279,198 @@ Node* util::createCutSkin(const std::string &file, int w, int h, int cut_mask, i
 	//return node
 	return node;
 }
+/*
+* create frame by skin data.
+*/
+Node* util::createCutSkinAndAnimation(const std::string &file, int w, int h, int wnum, int hnum, int cut_mask, float duration, int opacity)
+{
+	auto origine = Sprite::create(file);
+
+	auto ori_w = origine->getContentSize().width / wnum;
+	auto ori_h = origine->getContentSize().height / hnum;
+
+	int top = ori_h / 3;
+	int under = ori_h / 3;
+	int right = ori_w / 3;
+	int left = ori_w / 3;
+
+	//create base node.
+	auto node = Node::create();
+	node->setContentSize(Size(w, h));
+
+	//convert skin type to integer.
+	if (!(cut_mask & CUT_MASK_UP))
+	{
+		//Upper left (not cut up and left)
+		if (!(cut_mask & CUT_MASK_LEFT))
+		{
+			auto addSkin = Sprite::create(file, Rect(0, 0, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(ori_w / 6, h - ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+			auto animation = Animation::create();
+			animation->setDelayPerUnit(duration);
+			animation->setRestoreOriginalFrame(true);
+			for (int x = 0; x < wnum; x++)
+				for (int y = 0; y < hnum; y++)
+					animation->addSpriteFrame(SpriteFrame::create(file, Rect(0 + x * ori_w, 0 + y * ori_h, ori_w / 3, ori_h / 3)));
+			addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+		}
+		//Upper right (not cut up and right)
+		if (!(cut_mask & CUT_MASK_RIGHT))
+		{
+			auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, 0, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(w - ori_w / 6, h - ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+			auto animation = Animation::create();
+			animation->setDelayPerUnit(duration);
+			animation->setRestoreOriginalFrame(true);
+			for (int x = 0; x < wnum; x++)
+				for (int y = 0; y < hnum; y++)
+					animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 * 2 + x * ori_w, 0 + y * ori_h, ori_w / 3, ori_h / 3)));
+			addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+		}
+	}
+	else
+	{
+		//top is zero for cut up.
+		top = 0;
+	}
+
+	if (!(cut_mask & CUT_MASK_DOWN))
+	{
+		//Lower left (not cut down and left)
+		if (!(cut_mask & CUT_MASK_LEFT))
+		{
+			auto addSkin = Sprite::create(file, Rect(0, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(ori_w / 6, ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+			auto animation = Animation::create();
+			animation->setDelayPerUnit(duration);
+			animation->setRestoreOriginalFrame(true);
+			for (int x = 0; x < wnum; x++)
+				for (int y = 0; y < hnum; y++)
+					animation->addSpriteFrame(SpriteFrame::create(file, Rect(0 + x * ori_w, ori_h / 3 * 2 + y * ori_h, ori_w / 3, ori_h / 3)));
+			addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+		}
+		//Lower right (not cut down and right)
+		if (!(cut_mask & CUT_MASK_RIGHT))
+		{
+			auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+			addSkin->setPosition(Vec2(w - ori_w / 6, ori_h / 6));
+			addSkin->setOpacity(opacity);
+			node->addChild(addSkin);
+			auto animation = Animation::create();
+			animation->setDelayPerUnit(duration);
+			animation->setRestoreOriginalFrame(true);
+			for (int x = 0; x < wnum; x++)
+				for (int y = 0; y < hnum; y++)
+					animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 * 2 + x * ori_w, ori_h / 3 * 2 + y * ori_h, ori_w / 3, ori_h / 3)));
+			addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+		}
+	}
+	else
+	{
+		//under is zero for cut down.
+		under = 0;
+	}
+
+	//In the following, scaling in some cases.
+
+	//Left (not cut left)
+	if (!(cut_mask & CUT_MASK_LEFT))
+	{
+		auto addSkin = Sprite::create(file, Rect(0, ori_h / 3, ori_w / 3, ori_h / 3));
+		addSkin->setScaleY((h - top - under) / (ori_h / 3));
+		addSkin->setPosition(Vec2(ori_w / 6, (h - top + under) / 2));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+		auto animation = Animation::create();
+		animation->setDelayPerUnit(duration);
+		animation->setRestoreOriginalFrame(true);
+		for (int x = 0; x < wnum; x++)
+			for (int y = 0; y < hnum; y++)
+				animation->addSpriteFrame(SpriteFrame::create(file, Rect(0 + x * ori_w, ori_h / 3 + y * ori_h, ori_w / 3, ori_h / 3)));
+		addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+	}
+	else
+	{
+		//left is zero for cut left.
+		left = 0;
+	}
+	//Right (not cut right)
+	if (!(cut_mask & CUT_MASK_RIGHT))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3 * 2, 0 + ori_h / 3, ori_w / 3, ori_h / 3));
+		addSkin->setScaleY((h - top - under) / (ori_h / 3));
+		addSkin->setPosition(Vec2(w - ori_w / 6, (h - top + under) / 2));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+		auto animation = Animation::create();
+		animation->setDelayPerUnit(duration);
+		animation->setRestoreOriginalFrame(true);
+		for (int x = 0; x < wnum; x++)
+			for (int y = 0; y < hnum; y++)
+				animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 * 2 + x * ori_w, ori_h / 3 + y * ori_h, ori_w / 3, ori_h / 3)));
+		addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+	}
+	else
+	{
+		//right is zero for cut right.
+		right = 0;
+	}
+
+	//Upper (not cut up)
+	if (!(cut_mask & CUT_MASK_UP))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3, 0, ori_w / 3, ori_h / 3));
+		addSkin->setScaleX((w - left - right) / (ori_w / 3));
+		addSkin->setPosition(Vec2((w + left - right) / 2, h - ori_h / 6));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+		auto animation = Animation::create();
+		animation->setDelayPerUnit(duration);
+		animation->setRestoreOriginalFrame(true);
+		for (int x = 0; x < wnum; x++)
+			for (int y = 0; y < hnum; y++)
+				animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 + x * ori_w, 0 + y * ori_h, ori_w / 3, ori_h / 3)));
+		addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+	}
+	//Lower (not cut down)
+	if (!(cut_mask & CUT_MASK_DOWN))
+	{
+		auto addSkin = Sprite::create(file, Rect(ori_w / 3, ori_h / 3 * 2, ori_w / 3, ori_h / 3));
+		addSkin->setScaleX((w - left - right) / (ori_w / 3));
+		addSkin->setPosition(Vec2((w + left - right) / 2, ori_h / 6));
+		addSkin->setOpacity(opacity);
+		node->addChild(addSkin);
+		auto animation = Animation::create();
+		animation->setDelayPerUnit(duration);
+		animation->setRestoreOriginalFrame(true);
+		for (int x = 0; x < wnum; x++)
+			for (int y = 0; y < hnum; y++)
+				animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 + x * ori_w, ori_h / 3 * 2 + y * ori_h, ori_w / 3, ori_h / 3)));
+		addSkin->runAction(RepeatForever::create(Animate::create(animation)));
+	}
+
+	//main skin(center)
+	auto skin = Sprite::create(file, Rect(ori_w / 3, ori_h / 3, ori_w / 3, ori_h / 3));
+	skin->setScaleX((w - left - right) / (ori_w / 3));
+	skin->setScaleY((h - top - under) / (ori_h / 3));
+	skin->setPosition(Vec2((w + left - right) / 2, (h - top + under) / 2));
+	skin->setOpacity(opacity);
+	node->addChild(skin);
+	auto animation = Animation::create();
+	animation->setDelayPerUnit(duration);
+	animation->setRestoreOriginalFrame(true);
+	for (int x = 0; x < wnum; x++)
+		for (int y = 0; y < hnum; y++)
+			animation->addSpriteFrame(SpriteFrame::create(file, Rect(ori_w / 3 + x * ori_w, ori_h / 3 + y * ori_h, ori_w / 3, ori_h / 3)));
+	skin->runAction(RepeatForever::create(Animate::create(animation)));
+
+	//return node
+	return node;
+}
 
