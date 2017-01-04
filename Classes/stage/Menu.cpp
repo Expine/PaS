@@ -4,6 +4,7 @@
 
 #include "entity/EntityToTile.h"
 #include "entity/Entity.h"
+#include "entity/Weapon.h"
 #include "util/MultiListener.h"
 #include "util/Util.h"
 
@@ -147,6 +148,20 @@ bool MenuLayer::init()
 		_move_command[castMove(i)] = command;
 	}
 
+	// Set enemy unit frame
+	_enemy_unit = Sprite::create();
+	_enemy_unit = util::createCutSkin(FRAME, 300, 200, util::CUT_MASK_RIGHT, 255);
+	_enemy_unit->setAnchorPoint(Vec2::ANCHOR_TOP_RIGHT);
+	_enemy_unit->setPosition(winSize.width + _enemy_unit->getContentSize().width, winSize.height);
+	this->addChild(_enemy_unit);
+
+	// Set enemy unit label
+	auto enemy_label = Label::createWithSystemFont("ENEMY", EN_FONT, INFO_SIZE);
+	enemy_label->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	enemy_label->setPosition(0, _enemy_unit->getContentSize().height);
+	enemy_label->setColor(Color3B::RED);
+	_enemy_unit->addChild(enemy_label);
+
 	// Set listener
 	setFrameListener(_unit, _unitLabels, FrameType::unit, 300 - MODIFY);
 	setFrameListener(_map, _mapLabels, FrameType::map, 300 - MODIFY);
@@ -224,18 +239,18 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 /*
  * Set unit information
  */
-void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
+void MenuLayer::setUnit(Node * target, std::vector<StageTile*> tiles, Entity * unit)
 {
 	// Remove pre-information
-	if (_unit->getChildByTag(0) != NULL)
+	if (target->getChildByTag(0) != NULL)
 	{
-		_unit->removeChildByTag(0);
-		_unit->removeChildByTag(1);
-		_unit->removeChildByTag(2);
-		_unit->removeChildByTag(3);
-		_unit->removeChildByTag(4);
-		_unit->removeChildByTag(5);
-		_unit->removeChildByTag(6);
+		target->removeChildByTag(0);
+		target->removeChildByTag(1);
+		target->removeChildByTag(2);
+		target->removeChildByTag(3);
+		target->removeChildByTag(4);
+		target->removeChildByTag(5);
+		target->removeChildByTag(6);
 	}
 
 	if (!unit)
@@ -247,10 +262,10 @@ void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
 	// Set unit image
 	auto unitImage = Sprite::create("image/unit.png", Rect(0, static_cast<int>(unit->getType()) * 32, 32, 32));
 	unitImage->setAnchorPoint(Vec2::ANCHOR_MIDDLE_LEFT);
-	unitImage->setPosition(10, _unit->getContentSize().height / 2);
+	unitImage->setPosition(10, target->getContentSize().height / 2);
 	unitImage->setScale(2.5f);
 	unitImage->setTag(0);
-	_unit->addChild(unitImage);
+	target->addChild(unitImage);
 
 	// Set unit color
 	auto color = Sprite::create();
@@ -259,7 +274,7 @@ void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
 	color->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 	color->setPosition(75, 180);
 	color->setTag(1);
-	_unit->addChild(color);
+	target->addChild(color);
 
 	// Set unit name
 	auto name = Label::createWithSystemFont(unit->getName(), JP_FONT, INFO_SIZE);
@@ -267,28 +282,29 @@ void MenuLayer::setUnit(std::vector<StageTile*> tiles, Entity* unit)
 	name->setPosition(110, 165);
 	name->setColor(Color3B::BLACK);
 	name->setTag(2);
-	_unit->addChild(name);
+	target->addChild(name);
 
 
 	// Set unit ability
 	auto count = 0;
-	for (auto i : { 
-			StringUtils::format(u8"残存兵力 %d / %d", unit->getDurability(), unit->getMaxDurability()), 
-			StringUtils::format(u8"残存物資 %d / %d", unit->getMaterial(), unit->getMaxMaterial()),
-			StringUtils::format(u8"索敵能力 %d", unit->getSearchingAbility()),
-			StringUtils::format(u8"移動能力 %d", unit->getMobility())
-		})
+	for (auto i : {
+		StringUtils::format(u8"残存兵力 %d / %d", unit->getDurability(), unit->getMaxDurability()),
+		StringUtils::format(u8"残存物資 %d / %d", unit->getMaterial(), unit->getMaxMaterial()),
+		StringUtils::format(u8"索敵能力 %d", unit->getSearchingAbility()),
+		StringUtils::format(u8"移動能力 %d", unit->getMobility())
+	})
 	{
 		auto item = Label::createWithSystemFont(i, JP_FONT, INFO_SIZE);
 		item->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 		item->setPosition(90, 140 - count * (INFO_SIZE + 10));
 		item->setColor(Color3B::BLACK);
 		item->setTag(count + 3);
-		_unit->addChild(item);
+		target->addChild(item);
 		count++;
 	}
 
-	setUnitToTile(tiles, unit);
+	if(!tiles.empty())
+		setUnitToTile(tiles, unit);
 
 	if (unit->getAffiliation() == Owner::player)
 		showUnitCommand(unit, tiles);
@@ -785,4 +801,100 @@ void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*>
 	{
 		showUnitCommand(unit, tiles, movable);
 	}
+}
+
+void MenuLayer::showEnemyUnit(Entity * enemy)
+{
+	auto winSize = Director::getInstance()->getWinSize();
+	setUnit(_enemy_unit, std::vector<StageTile*>(), enemy);
+	_enemy_unit->runAction(EaseSineIn::create(MoveTo::create(0.5f, Vec2(winSize.width, winSize.height))));
+}
+
+void MenuLayer::hideEnemyUnit()
+{
+	auto winSize = Director::getInstance()->getWinSize();
+	_enemy_unit->runAction(EaseSineOut::create(MoveTo::create(0.5f, Vec2(winSize.width + _enemy_unit->getContentSize().width, 0))));
+}
+
+void MenuLayer::showWeaponFrame(Entity* unit)
+{
+	auto winSize = Director::getInstance()->getWinSize();
+	auto h = unit->getWeaponsByRef().size() * 50 + 30 + 30;
+
+	// Set weapon frame
+	auto weapon = util::createCutSkin(FRAME, 700, h, 0, 255);
+	weapon->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
+	weapon->setPosition(winSize.width / 2 - 25, 0);
+	weapon->setTag(1000);
+	this->addChild(weapon);
+
+	// Set info
+	auto height = weapon->getContentSize().height - 10 - INFO_SIZE;
+	auto name = Label::createWithSystemFont(u8"装備名", JP_FONT, INFO_SIZE);
+	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	name->setPosition(70, height);
+	weapon->addChild(name);
+	auto x = 160;
+	for (auto item : { u8"対人", u8"対魔", u8"対炎", u8"対氷", u8"対雷", u8"対土", u8"命中", u8"範囲" })
+	{
+		if(item == u8"範囲")
+			x += 30;
+		auto label = Label::createWithSystemFont(item, JP_FONT, INFO_SIZE);
+		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+		label->setPosition(x, height);
+		weapon->addChild(label);
+		x += 60;
+	}
+
+	// Set weapon data
+	auto no = 0;
+	for (auto weapon : unit->getWeaponsByRef())
+		if(weapon)
+			renderWeapon(weapon, no++);
+
+	// Set cancel frame
+	auto cancel = util::createCutSkin(COMMAND_FRAME, 50, h, 0, 200);
+	cancel->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
+	cancel->setPosition(weapon->getContentSize().width + 25, 0);
+	weapon->addChild(cancel);
+	auto cancel_label = Label::createWithSystemFont(u8"撤回", JP_FONT, MENU_SIZE);
+	cancel_label->setWidth(MENU_SIZE);
+	cancel_label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	cancel_label->setPosition(cancel->getContentSize() / 2);
+	cancel->addChild(cancel_label);
+}
+
+void MenuLayer::renderWeapon(WeaponData * weapon, int no)
+{
+	auto frame = this->getChildByTag(1000);
+	auto height = frame->getContentSize().height - 15 - 50 * no - MENU_SIZE - 30;
+
+	// Set name
+	auto name = Label::createWithSystemFont(weapon->getName(), JP_FONT, MENU_SIZE);
+	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	name->setPosition(70, height);
+	frame->addChild(name);
+
+	// Set info
+	auto x = 160;
+	for (auto item : { weapon->getAntiPersonnel(), weapon->getAntiWizard(), weapon->getAntiFire(), weapon->getAntiIce(), weapon->getAntiThunder(), weapon->getAntiGround(), weapon->getAccuracy() })
+	{
+		auto label = Label::createWithSystemFont(StringUtils::format("%d", item), EN_FONT, INFO_SIZE);
+		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+		label->setPosition(x, height);
+		frame->addChild(label);
+		x += 60;
+	}
+
+	// Set range
+	x += 30;
+	auto range = Label::createWithSystemFont(WeaponInformation::getInstance()->getRangeName(weapon->getRange()), JP_FONT, INFO_SIZE);
+	range->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	range->setPosition(x, height);
+	frame->addChild(range);
+}
+
+void MenuLayer::hideWeaponFrame()
+{
+	this->removeChildByTag(1000);
 }

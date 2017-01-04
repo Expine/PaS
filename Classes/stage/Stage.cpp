@@ -601,7 +601,6 @@ std::vector<StageTile*> Stage::getTiles(int x, int y)
  */
 void Stage::selectTile(int x, int y)
 {
-	CCLOG("Vec(%d, %d)", x, y);
 	// Remove selector
 	if (x < 0 || y < 0)
 	{
@@ -640,12 +639,15 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
 	}
 
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	white->setOpacity(100);
+	/*
 	white->setOpacity(0);
 	white->setColor(color);
 	white->runAction(RepeatForever::create(Sequence::create(
 		EaseExponentialIn::create(FadeTo::create(0.5f, 200)),
 		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
 		NULL)));
+	*/
 }
 
 /*

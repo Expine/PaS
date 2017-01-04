@@ -68,6 +68,7 @@ public:
 		return &info;
 	};
 	WeaponData* getWeapon(const std::string &name) { return _weapons.at(name); };
+	std::string getRangeName(RangeType type);
 };
 
 

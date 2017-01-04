@@ -47,3 +47,22 @@ WeaponInformation::WeaponInformation()
 		_weapons.insert(weapon->getName(), weapon);
 	}
 }
+
+std::string WeaponInformation::getRangeName(RangeType type)
+{
+	switch (type.directionRange)
+	{
+	case DirectionRange::liner:
+		return u8"’¼ü";
+	case DirectionRange::crescent:
+		return u8"O•ûŒü";
+	case DirectionRange::half:
+		return u8"”¼‰~";
+	case DirectionRange::overHalf:
+		return u8"ŒÜ•ûŒü";
+	case DirectionRange::full:
+		return u8"‘S•ûˆÊ";
+	case DirectionRange::select:
+		return u8"‘I‘ğ";
+	}
+}

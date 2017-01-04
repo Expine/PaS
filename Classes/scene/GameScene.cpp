@@ -62,21 +62,33 @@ bool Game::init(Stage* stage)
 		auto unit = stage->getUnit(v.x, v.y);
 		if (_mode == GameMode::normal)
 		{
-			if(EntityInformation::getInstance()->getCommand(_preUnit->getType(), UnitCommand::move) && command::isEnable(UnitCommand::move, _preUnit, tiles))
-				if(unit && unit->getAffiliation() == Owner::player)
+			// If double tap on unit, move process
+			if (unit && unit->getAffiliation() == Owner::player)
+				if(EntityInformation::getInstance()->getCommand(_preUnit->getType(), UnitCommand::move) && command::isEnable(UnitCommand::move, _preUnit, tiles))
 					menu->getUnitFunction(UnitCommand::move)();
 		}
 		else if (_mode == GameMode::move)
 		{
+			// If double tap on same unit, end process
+			/*
 			if (unit && unit == _preUnit)
 				menu->getMoveFunction(MoveCommand::end)();
-			else if (util::find(_moveTiles, tiles.back()))
+			*/
+			// If double tap on movable tile, start process
+			if (util::find(_moveTiles, tiles.back()))
 				menu->getMoveFunction(MoveCommand::start)();
+			else
+				menu->getMoveFunction(MoveCommand::end)();
 		}
 		else if (_mode == GameMode::moving)
 		{
 			if (util::find(tiles, _moveRoot.back()))
 				menu->getMoveFunction(MoveCommand::decision)();
+			else if(util::find(_moveTiles, tiles.back()))
+			{
+				menu->getMoveFunction(MoveCommand::cancel)();
+				menu->getMoveFunction(MoveCommand::start)();
+			}
 		}
 	};
 	// if menu action, swipe is disable
@@ -131,7 +143,7 @@ bool Game::init(Stage* stage)
 		{
 			_moveTiles = stage->moveCheck(_preUnit);
 			for (auto tile : _moveTiles)
-				stage->blinkTile(tile, Color3B::BLUE);
+				stage->blinkTile(tile, Color3B::WHITE);
 			_mode = GameMode::move;
 			menu->setMenuMode(MenuMode::move, _preUnit, _preTiles, util::find(_moveTiles, _preTiles.back()));
 		}
@@ -145,8 +157,6 @@ bool Game::init(Stage* stage)
 	menu->setMoveFunction(MoveCommand::end, [this, stage, menu] {
 		for (auto tile : _moveTiles)
 			stage->blinkOffTile(tile);
-		if (!_preTiles.empty())
-			stage->blinkTile(_preTiles.back());
 		_moveTiles.clear();
 		_moveRoot.clear();
 		_mode = GameMode::normal;
@@ -160,6 +170,12 @@ bool Game::init(Stage* stage)
 		stage->provisionalMoveCancel(_preUnit);
 		_mode = GameMode::move;
 		menu->setMenuMode(MenuMode::move, _preUnit, _preTiles, true);
+	});
+
+	//Attack function
+	menu->setUnitFunction(UnitCommand::attack, [this, stage, menu] {
+		menu->showEnemyUnit(_preUnit);
+		menu->showWeaponFrame(_preUnit);
 	});
 
 	stage->initTileSearched(Owner::player);
@@ -181,26 +197,26 @@ void Game::setPreTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*> t
 	if (_preTiles.size() > 0 && !util::find(_moveTiles, _preTiles.back()))
 		stage->blinkOffTile(_preTiles.back());
 	else if (!_preTiles.empty())
-		stage->blinkChange(_preTiles.back(), Color3B::BLUE);
+		stage->blinkChange(_preTiles.back(), Color3B::WHITE);
 
 	_preTiles.clear();
 	//Set tile information
 	menu->setTile(tiles, _preUnit);
+	auto pos = tiles.back()->getTileCoordinate(stage->getMapSize().y);
+	stage->selectTile(pos.x, pos.y);
+	/*
 	if (!util::find(_moveTiles, tiles.back()))
-	{
-		stage->blinkTile(tiles.back());
-		auto pos = tiles.back()->getTileCoordinate(stage->getMapSize().y);
-		stage->selectTile(pos.x, pos.y);
-	}
+//		stage->blinkTile(tiles.back());
 	else
 		stage->blinkChange(tiles.back(), Color3B::WHITE);
+	*/
 	for (auto tile : tiles)
 		_preTiles.push_back(tile);
 }
 
 void Game::setPreUnit(Stage * stage, MenuLayer * menu, Entity * unit)
 {
-	if (_mode == GameMode::move)
+	if (_mode == GameMode::move || _mode == GameMode::moving)
 		return;
 
 	// If tap same unit, only remove

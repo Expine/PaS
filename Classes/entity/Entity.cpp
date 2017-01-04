@@ -88,72 +88,72 @@ Entity* Entity::create(EntityType type, const int x, const int y, SpriteBatchNod
 	unit->getTexture()->setAliasTexParameters();
 
 	//For debug
-	unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("空拳"));
+	unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"空拳"));
 	if (false)
 		return unit;
 	else if (type == EntityType::infantry)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("銃剣"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("短銃"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("小銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"銃剣"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"短銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"小銃"));
 	}
 	else if (type == EntityType::heavy)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("銃剣"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("短銃"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("小銃"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("機関銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"銃剣"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"短銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"小銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"機関銃"));
 	}
 	else if (type == EntityType::spy)
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("短銃"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"短銃"));
 	else if (type == EntityType::fire)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("火炎"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("延焼"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("炎放"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"火炎"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"延焼"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"炎砲"));
 	}
 	else if (type == EntityType::ice)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("氷結"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("吹雪"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"氷結"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"吹雪"));
 	}
 	else if (type == EntityType::thunder)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("迅雷"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("神鳴"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"迅雷"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"神鳴"));
 	}
 	else if (type == EntityType::ground)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("地震"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"地震"));
 	}
 	else if (type == EntityType::king)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("獅子炎"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("王臨"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"獅子炎"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"王臨"));
 	}
 	else if (type == EntityType::weapon)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("双剣"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("鎖鎌"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"双剣"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"鎖鎌"));
 	}
 	else if (type == EntityType::relief)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("回復"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("慈雨"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"回復"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"慈雨"));
 	}
 	else if (type == EntityType::guardian)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("樹奏"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"樹奏"));
 	}
 	else if (type == EntityType::dark)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("闇討"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("漆黒"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"闇討"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"漆黒"));
 	}
 	else if (type == EntityType::light)
 	{
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("回復"));
-		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon("天光"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"回復"));
+		unit->_weapons.push_back(WeaponInformation::getInstance()->getWeapon(u8"天光"));
 	}
 
 	return unit;

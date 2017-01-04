@@ -7,6 +7,7 @@ class Stage;
 class Entity;
 class StageTile;
 class City;
+class WeaponData;
 enum class UnitCommand;
 enum class CityCommand;
 enum class MoveCommand;
@@ -29,6 +30,7 @@ public:
 	enum class FrameType { unit, map, menu, info };
 private:
 	cocos2d::Node* _unit;
+	cocos2d::Node* _enemy_unit;
 	cocos2d::Node* _map;
 	cocos2d::Node* _menu;
 	cocos2d::Sprite* _info;
@@ -77,7 +79,8 @@ public:
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
 	void setTile(std::vector<StageTile*> tiles, Entity *unit);
-	void setUnit(std::vector<StageTile*> tiles, Entity *unit);
+	inline void setUnit(std::vector<StageTile*> tiles, Entity *unit) { setUnit(_unit, tiles, unit); };
+	void setUnit(Node* target, std::vector<StageTile*> tiles, Entity *unit);
 	void setInfo(int x, int y);
 	void setUnitToTile(std::vector<StageTile*> tiles, Entity *unit);
 	void showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool movable = nullptr);
@@ -112,6 +115,12 @@ public:
 
 	inline MenuMode getMenuMode() { return _mode; };
 	void setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles, bool movable);
+
+	void showEnemyUnit(Entity* enemy);
+	void hideEnemyUnit();
+	void showWeaponFrame(Entity* unit);
+	void renderWeapon(WeaponData* weapon, int no);
+	void hideWeaponFrame();
 
 	std::function<void()> endPhase;
 	std::function<void()> nextCity;
