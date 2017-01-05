@@ -11,10 +11,12 @@ class StageTile;
 #define forCity(counter) forCommand(counter, 0, CityCommand::COUNT)
 #define forMove(counter) forCommand(counter, 0, MoveCommand::COUNT)
 #define forMove2(counter) forCommand(counter, MoveCommand::decision, MoveCommand::COUNT2)
+#define forAttack(counter) forCommand(counter, 0, AttackCommand::COUNT)
 #define castCommand(counter, command) static_cast<command>(counter)
 #define castUnit(counter) castCommand(counter, UnitCommand)
 #define castCity(counter) castCommand(counter, CityCommand)
 #define castMove(counter) castCommand(counter, MoveCommand)
+#define castAttack(counter) castCommand(counter, AttackCommand)
 
 enum class UnitCommand
 {
@@ -36,15 +38,23 @@ enum class MoveCommand
 	COUNT2
 };
 
+enum class AttackCommand
+{
+	decision, cancel,
+	COUNT
+};
+
 namespace command
 {
 	const std::string getName(UnitCommand com);
 	const std::string getName(CityCommand com);
 	const std::string getName(MoveCommand com);
+	const std::string getName(AttackCommand com);
 
 	bool isEnable(UnitCommand com, Entity *unit, std::vector<StageTile*> tile);
 	bool isEnable(CityCommand com, Entity *unit, std::vector<StageTile*> tile);
 	bool isEnable(MoveCommand com, Entity *unit, std::vector<StageTile*> tile);
+	bool isEnable(AttackCommand com, Entity *unit, std::vector<StageTile*> tile);
 };
 
 

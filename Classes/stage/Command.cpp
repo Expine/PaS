@@ -40,6 +40,16 @@ const std::string command::getName(MoveCommand com)
 	}
 }
 
+const std::string command::getName(AttackCommand com)
+{
+	switch (com)
+	{
+	case AttackCommand::decision: return u8"開始";
+	case AttackCommand::cancel: return u8"撤回";
+	default: return "ERROR";
+	}
+}
+
 bool command::isEnable(UnitCommand com, Entity * unit, std::vector<StageTile*> tile)
 {
 	if (com == UnitCommand::supply)
@@ -93,4 +103,12 @@ bool command::isEnable(CityCommand com, Entity * unit, std::vector<StageTile*> t
 bool command::isEnable(MoveCommand com, Entity * unit, std::vector<StageTile*> tile)
 {
 	return true;
+}
+
+bool command::isEnable(AttackCommand com, Entity * unit, std::vector<StageTile*> tile)
+{
+	if (com == AttackCommand::decision)
+		return unit && unit->getAffiliation() != Owner::player;
+	else
+		return true;
 }

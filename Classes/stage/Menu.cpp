@@ -148,6 +148,14 @@ bool MenuLayer::init()
 		_move_command[castMove(i)] = command;
 	}
 
+	// Set attack command
+	forAttack(i)
+	{
+		auto name = command::getName(castAttack(i));
+		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
+		_attack_command[castAttack(i)] = command;
+	}
+
 	// Set enemy unit frame
 	_enemy_unit = Sprite::create();
 	_enemy_unit = util::createCutSkin(FRAME, 300, 200, util::CUT_MASK_RIGHT, 255);
@@ -186,6 +194,9 @@ bool MenuLayer::init()
 
 	forMove2(i)
 		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
+
+	forAttack(i)
+		setMenuListener(_attack_command[castAttack(i)], [this, i] {if (_attack_function[castAttack(i)]) _attack_function[castAttack(i)](); });
 
 	return true;
 }
@@ -412,6 +423,16 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
 	else if (_mode == MenuMode::moving)
 	{
 	}
+	else if (_mode == MenuMode::attack)
+	{
+		_unit_command[UnitCommand::attack]->setColor(Color3B::GRAY);
+		forAttack(i)
+			if (command::isEnable(castAttack(i), entity, tiles))
+				_attack_command[castAttack(i)]->setColor(Color3B::WHITE);
+			else
+				_attack_command[castAttack(i)]->setColor(Color3B::GRAY);
+	}
+
 
 	if (_isShowedUnitCommand)
 		return;
@@ -445,6 +466,12 @@ void MenuLayer::moveUnitCommand()
 		forMove2(i)
 			showUnitCommandByOne(1 + i - static_cast<int>(MoveCommand::decision), 1, _move_command[castMove(i)]);
 	}
+	else if (_mode == MenuMode::attack)
+	{
+		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::attack]);
+		forAttack(i)
+			showUnitCommandByOne(i, 1, _attack_command[castAttack(i)]);
+	}
 }
 
 /*
@@ -474,6 +501,12 @@ void MenuLayer::hideUnitCommand()
 		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
 		forMove2(i)
 			hideUnitCommandByOne(_move_command[castMove(i)]);
+	}
+	else if (_mode == MenuMode::attack)
+	{
+		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
+		forAttack(i)
+			hideUnitCommandByOne(_attack_command[castAttack(i)]);
 	}
 	_isShowedUnitCommand = false;
 }
@@ -866,6 +899,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	frame->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	frame->setPosition(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30);
 	weapon->addChild(frame);
+	_selectWeapon = 0;
 
 	// Set decision frame
 	auto decision = util::createCutSkin(COMMAND_FRAME, 50, h, 0, 200);
@@ -892,7 +926,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	// Set listener
 	auto lis = SingleTouchListener::create();
 	lis->setSwallowTouches(true);
-	lis->onTap = [this, weapon, frame, decision, cancel](Touch* touch, Event* event)
+	lis->onTap = [this, unit, weapon, frame, decision, cancel](Touch* touch, Event* event)
 	{
 		if (util::isTouchInEvent(touch->getLocation(), weapon))
 		{
@@ -902,27 +936,25 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 			{
 				frame->stopAllActions();
 				frame->runAction(MoveTo::create(0.2f, Vec2(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30 - no * 50)));
+				_selectWeapon = no;
 			}
 		}
-		if (util::isTouchInEvent(touch->getLocation(), decision))
-		{
-			hideWeaponFrame();
-			hideEnemyUnit();
-		}
-		if (util::isTouchInEvent(touch->getLocation(), cancel))
-		{
-			hideWeaponFrame();
-			hideEnemyUnit();
-		}
+		else if (util::isTouchInEvent(touch->getLocation(), decision))
+			attack_decision(unit->getWeaponsByRef().at(_selectWeapon));
+		else if (util::isTouchInEvent(touch->getLocation(), cancel))
+			attack_cancel(unit->getWeaponsByRef().at(_selectWeapon));
 	};
 	lis->onSwipe = [weapon](Vec2 v, Vec2 diff, float time)
 	{
-		auto winSize = Director::getInstance()->getWinSize();
-		auto size = weapon->getContentSize();
-		auto pos = weapon->getPosition() + diff;
-		pos.x = (pos.x < size.width / 2 + 50) ? size.width / 2 + 50 : (pos.x > winSize.width - size.width / 2 - 50) ? winSize.width - size.width / 2 - 50 : pos.x;
-		pos.y = (pos.y < 0) ? 0 : (pos.y > winSize.height - size.height) ? winSize.height - size.height : pos.y;
-		weapon->setPosition(pos);
+		if (util::isTouchInEvent(v, weapon))
+		{
+			auto winSize = Director::getInstance()->getWinSize();
+			auto size = weapon->getContentSize();
+			auto pos = weapon->getPosition() + diff;
+			pos.x = (pos.x < size.width / 2 + 50) ? size.width / 2 + 50 : (pos.x > winSize.width - size.width / 2 - 50) ? winSize.width - size.width / 2 - 50 : pos.x;
+			pos.y = (pos.y < 0) ? 0 : (pos.y > winSize.height - size.height) ? winSize.height - size.height : pos.y;
+			weapon->setPosition(pos);
+		}
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, weapon);
 }

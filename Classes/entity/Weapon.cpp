@@ -56,8 +56,6 @@ std::string WeaponInformation::getRangeName(RangeType type)
 		return u8"’¼ü";
 	case DirectionRange::crescent:
 		return u8"O•ûŒü";
-	case DirectionRange::half:
-		return u8"”¼‰~";
 	case DirectionRange::overHalf:
 		return u8"ŒÜ•ûŒü";
 	case DirectionRange::full:

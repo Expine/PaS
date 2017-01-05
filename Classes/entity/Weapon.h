@@ -5,7 +5,7 @@
 
 enum class DirectionRange
 {
-	liner, crescent, half, overHalf, full, select
+	liner, crescent, overHalf, full, select
 };
 
 typedef struct RangeType

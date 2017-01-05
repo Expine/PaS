@@ -8,6 +8,7 @@
 class StageTile;
 class City;
 class Entity;
+class WeaponData;
 enum class EntityType;
 
 #ifndef max
@@ -155,6 +156,9 @@ public:
 	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type);
 	std::vector<StageTile*> startRecursiveTileSearchForMove(cocos2d::Vec2 goal, cocos2d::Vec2 point, int remainCost, EntityType type);
 	std::vector<StageTile*> recursiveTileSearchForMove(cocos2d::Vec2 goal, cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type, std::vector<StageTile*> result);
+	std::vector<StageTile*> startRecursiveTileSearchForWeapon(Entity* executer, Entity* enemy, WeaponData* weapon);
+	std::vector<StageTile*> startRecursiveTileSearchForLiner(cocos2d::Vec2 point, int remainCost);
+	std::vector<StageTile*> recursiveTileSearchForLiner(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost);
 
 	cocos2d::Vec2 nextCity(Owner owner, StageTile* nowTile);
 	cocos2d::Vec2 nextUnit(Owner owner, Entity* nowUnit);
