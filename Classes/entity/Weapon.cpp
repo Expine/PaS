@@ -1,4 +1,4 @@
-#include "Weapon.h"
+ï»¿#include "Weapon.h"
 #include "util/Util.h"
 
 WeaponInformation::WeaponInformation()
@@ -53,14 +53,14 @@ std::string WeaponInformation::getRangeName(RangeType type)
 	switch (type.directionRange)
 	{
 	case DirectionRange::liner:
-		return u8"’¼ü";
+		return u8"ç›´ç·š";
 	case DirectionRange::crescent:
-		return u8"O•ûŒü";
+		return u8"ä¸‰æ–¹å‘";
 	case DirectionRange::overHalf:
-		return u8"ŒÜ•ûŒü";
+		return u8"äº”æ–¹å‘";
 	case DirectionRange::full:
-		return u8"‘S•ûˆÊ";
+		return u8"å…¨æ–¹ä½";
 	case DirectionRange::select:
-		return u8"‘I‘ğ";
+		return u8"é¸æŠ";
 	}
 }

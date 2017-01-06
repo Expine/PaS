@@ -600,20 +600,39 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 	std::vector<StageTile*> tiles;
 	Vec2 intrusion;
 	auto diff = executer->getPosition() - enemy->getPosition();
-	if (diff.x < elim && diff.y > 0)
-		intrusion = Vec2(0, -1);
-	else if (diff.x < elim && diff.y < 0)
-		intrusion = Vec2(0, 1);
-	else if (diff.x > 0 && diff.y > 0)
-		intrusion = Vec2(-1, -1);
-	else if (diff.x > 0 && diff.y < 0)
-		intrusion = Vec2(-1, 1);
-	else if (diff.x < 0 && diff.y > 0)
-		intrusion = Vec2(1, -1);
-	else if (diff.x < 0 && diff.y < 0)
-		intrusion = Vec2(1, 1);
 	auto point = executer->getTileCoordinate(_mapSize.y);
 	auto enemy_point = enemy->getTileCoordinate(_mapSize.y);
+	CCLOG("DIFF(%f, %f)", diff.x, diff.y);
+	if (abs(diff.x) < elim && diff.y > 0)
+	{
+		intrusion = Vec2(0, -1);
+		point += Vec2(0, 2);
+	}
+	else if (abs(diff.x) < elim && diff.y < 0)
+	{
+		intrusion = Vec2(0, 1);
+		point += Vec2(0, -2);
+	}
+	else if (diff.x > 0 && diff.y > 0)
+	{
+		intrusion = Vec2(-1, -1);
+		point += Vec2((int)(point.y) % 2 - 1, 1);
+	}
+	else if (diff.x > 0 && diff.y < 0)
+	{
+		intrusion = Vec2(-1, 1);
+		point += Vec2(((int)(point.y) % 2) - 1, -1);
+	}
+	else if (diff.x < 0 && diff.y > 0)
+	{
+		intrusion = Vec2(1, -1);
+		point += Vec2((int)(point.y) % 2, 1);
+	}
+	else if (diff.x < 0 && diff.y < 0)
+	{
+		intrusion = Vec2(1, 1);
+		point += Vec2((int)(point.y) % 2, -1);
+	}
 	switch (weapon->getRange().directionRange)
 	{
 	case DirectionRange::liner:
@@ -629,7 +648,9 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 	case DirectionRange::overHalf:
 		break;
 	case DirectionRange::full:
-		tiles = recursiveTileSearch(intrusion, point, weapon->getRange().FiringRange, EntityType::counter);
+		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(_mapSize.y), weapon->getRange().FiringRange, EntityType::counter);
+		for (auto tile : getTiles(executer->getTileCoordinate(_mapSize.y).x, executer->getTileCoordinate(_mapSize.y).y))
+			tiles.erase(std::remove(tiles.begin(), tiles.end(), tile), tiles.end());
 		break;
 	case DirectionRange::select:
 		for(auto tile : getTiles(enemy_point.x, enemy_point.y))

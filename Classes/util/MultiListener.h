@@ -162,6 +162,8 @@ protected:
 		onTouchesCancelled = [this](const std::vector<cocos2d::Touch*> &touches, cocos2d::Event* event)
 		{
 			_numberOfTouch -= touches.size();
+			if (_numberOfTouch < 0)
+				_numberOfTouch = 0;
 			if (_numberOfTouch == 0)
 				cocos2d::Director::getInstance()->getScheduler()->unschedule(schedule_selector(MultiTouchListener::update), this);
 		};
@@ -169,6 +171,11 @@ protected:
 		{
 			// count down
 			_numberOfTouch -= touches.size();
+			if (_numberOfTouch < 0)
+			{
+				_numberOfTouch = 0;
+				return;
+			}
 			for (cocos2d::Touch* t : touches)
 			{
 				// The third doesn't correspond

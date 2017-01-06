@@ -7,11 +7,12 @@ class Entity;
 class StageTile;
 class Stage;
 class MenuLayer;
+class WeaponData;
 
 enum class GameMode
 {
 	normal, move, moving,
-	attack
+	attack, attacking
 };
 
 /*
@@ -27,15 +28,17 @@ private:
 	std::vector<StageTile*> _moveRoot;
 	Entity* _preUnit;
 	Entity* _enemy;
+	WeaponData* _weapon;
 	void setPreTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
 	void setPreUnit(Stage* stage, MenuLayer* menu, Entity* unit);
 protected:
 	Game()
-		: _mode(GameMode::normal), _preUnit(nullptr), _enemy(nullptr)
+		: _mode(GameMode::normal), _preUnit(nullptr), _enemy(nullptr), _weapon(nullptr)
 	{};
 	~Game()
 	{
 		_preUnit = _enemy = nullptr;
+		_weapon = nullptr;
 	}
 	virtual bool init(Stage* stage);
 public:

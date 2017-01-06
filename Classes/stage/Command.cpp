@@ -44,8 +44,10 @@ const std::string command::getName(AttackCommand com)
 {
 	switch (com)
 	{
-	case AttackCommand::decision: return u8"開始";
+	case AttackCommand::decision: return u8"確定";
 	case AttackCommand::cancel: return u8"撤回";
+	case AttackCommand::attack: return u8"開始";
+	case AttackCommand::end: return u8"撤回";
 	default: return "ERROR";
 	}
 }

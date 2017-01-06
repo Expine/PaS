@@ -173,7 +173,6 @@ bool Game::init(Stage* stage)
 			menu->setMenuMode(MenuMode::move, _preUnit, _preTiles, util::find(_moveTiles, _preTiles.back()));
 		}
 	});
-
 	menu->setMoveFunction(MoveCommand::start, [this, stage, menu] {
 		_moveRoot = stage->provisionalMoveUnit(_preUnit, _preTiles.back());
 		_mode = GameMode::moving;
@@ -206,11 +205,17 @@ bool Game::init(Stage* stage)
 	menu->attack_decision = [this, stage, menu](WeaponData* data)
 	{
 		_mode = GameMode::attack;
+		_weapon = data;
 		menu->setMenuMode(MenuMode::attack, _enemy, _preTiles, false);
 		menu->attack_cancel(data);
 //		_moveTiles = stage->startRecursiveTileSearchForWeapon(_preUnit, _enemy, data);
 		if (data->getRange().directionRange == DirectionRange::liner)
 			_moveTiles = stage->startRecursiveTileSearchForLiner(_preUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange);
+		else if (data->getRange().directionRange == DirectionRange::full)
+		{
+			menu->getAttackFunction(AttackCommand::decision);
+			return;
+		}
 		else
 			_moveTiles = stage->startRecursiveTileSearch(_preUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange, EntityType::counter);
 		for (auto tile : _moveTiles)
@@ -222,14 +227,34 @@ bool Game::init(Stage* stage)
 		menu->hideWeaponFrame();
 	};
 	menu->setAttackFunction(AttackCommand::decision, [this, stage, menu] {
-		_mode = GameMode::normal;
+		_mode = GameMode::attacking;
 		menu->getAttackFunction(AttackCommand::cancel)();
+		_mode = GameMode::attacking;
+		menu->setMenuMode(MenuMode::attacking, _preUnit, _preTiles, false);
+		_moveTiles = stage->startRecursiveTileSearchForWeapon(_preUnit, _enemy, _weapon);
+		for (auto tile : _moveTiles)
+			stage->blinkTile(tile, Color3B::RED);
 	});
 	menu->setAttackFunction(AttackCommand::cancel, [this, stage, menu] {
-		if(_mode == GameMode::attack	)
+		// If not call by decision, back to weapon frame
+		if (_mode == GameMode::attack)
+		{
 			menu->showWeaponFrame(_preUnit);
+			menu->hideEnemyUnit();
+			if (_enemy)
+				stage->blinkOffUnit(_enemy);
+			_enemy = nullptr;
+		}
 		_mode = GameMode::normal;
 		menu->setMenuMode(MenuMode::unit, _preUnit, _preTiles, false);
+		for (auto tile : _moveTiles)
+			stage->blinkOffTile(tile);
+		_moveTiles.clear();
+	});
+	menu->setAttackFunction(AttackCommand::attack, [this, stage, menu] {
+		menu->getAttackFunction(AttackCommand::end)();
+	});	
+	menu->setAttackFunction(AttackCommand::end, [this, stage, menu] {
 		menu->hideEnemyUnit();
 		for (auto tile : _moveTiles)
 			stage->blinkOffTile(tile);
@@ -237,6 +262,7 @@ bool Game::init(Stage* stage)
 		if (_enemy)
 			stage->blinkOffUnit(_enemy);
 		_enemy = nullptr;
+		menu->attack_decision(_weapon);
 	});
 
 	stage->initTileSearched(Owner::player);

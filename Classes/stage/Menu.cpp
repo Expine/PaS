@@ -155,6 +155,12 @@ bool MenuLayer::init()
 		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
 		_attack_command[castAttack(i)] = command;
 	}
+	forAttack2(i)
+	{
+		auto name = command::getName(castAttack(i));
+		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
+		_attack_command[castAttack(i)] = command;
+	}
 
 	// Set enemy unit frame
 	_enemy_unit = Sprite::create();
@@ -196,6 +202,9 @@ bool MenuLayer::init()
 		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
 
 	forAttack(i)
+		setMenuListener(_attack_command[castAttack(i)], [this, i] {if (_attack_function[castAttack(i)]) _attack_function[castAttack(i)](); });
+
+	forAttack2(i)
 		setMenuListener(_attack_command[castAttack(i)], [this, i] {if (_attack_function[castAttack(i)]) _attack_function[castAttack(i)](); });
 
 	return true;
@@ -266,7 +275,8 @@ void MenuLayer::setUnit(Node * target, std::vector<StageTile*> tiles, Entity * u
 
 	if (!unit)
 	{
-		hideUnitCommand();
+		if(_mode == MenuMode::unit)
+			hideUnitCommand();
 		return;
 	}
 
@@ -432,6 +442,10 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
 			else
 				_attack_command[castAttack(i)]->setColor(Color3B::GRAY);
 	}
+	else if (_mode == MenuMode::attacking)
+	{
+
+	}
 
 
 	if (_isShowedUnitCommand)
@@ -472,6 +486,12 @@ void MenuLayer::moveUnitCommand()
 		forAttack(i)
 			showUnitCommandByOne(i, 1, _attack_command[castAttack(i)]);
 	}
+	else if (_mode == MenuMode::attacking)
+	{
+		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::attack]);
+		forAttack2(i)
+			showUnitCommandByOne(i - static_cast<int>(AttackCommand::attack), 1, _attack_command[castAttack(i)]);
+	}
 }
 
 /*
@@ -506,6 +526,12 @@ void MenuLayer::hideUnitCommand()
 	{
 		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
 		forAttack(i)
+			hideUnitCommandByOne(_attack_command[castAttack(i)]);
+	}
+	else if (_mode == MenuMode::attacking)
+	{
+		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
+		forAttack2(i)
 			hideUnitCommandByOne(_attack_command[castAttack(i)]);
 	}
 	_isShowedUnitCommand = false;
@@ -994,5 +1020,6 @@ void MenuLayer::renderWeapon(WeaponData * weapon, int no)
 
 void MenuLayer::hideWeaponFrame()
 {
-	this->getChildByTag(1000)->removeFromParentAndCleanup(true);
+	if(this->getChildByTag(1000))
+		this->getChildByTag(1000)->removeFromParentAndCleanup(true);
 }

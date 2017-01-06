@@ -16,7 +16,7 @@ enum class AttackCommand;
 enum class MenuMode
 {
 	unit, move, moving,
-	attack
+	attack, attacking
 };
 
 /*********************************************************/
@@ -39,6 +39,10 @@ private:
 	std::vector<cocos2d::Label*> _unitLabels;
 	std::vector<cocos2d::Label*> _mapLabels;
 	std::vector<cocos2d::Label*> _menuLabels;
+	template <typename T>
+	std::map<T, cocos2d::Node*> _commands;
+	template <typename T>
+	std::map<T, std::function<void()>> _functions;
 	std::map<UnitCommand, cocos2d::Node*> _unit_command;
 	std::map<UnitCommand, std::function<void()>> _unit_function;
 	std::map<CityCommand, cocos2d::Node*> _city_command;

@@ -12,6 +12,7 @@ class StageTile;
 #define forMove(counter) forCommand(counter, 0, MoveCommand::COUNT)
 #define forMove2(counter) forCommand(counter, MoveCommand::decision, MoveCommand::COUNT2)
 #define forAttack(counter) forCommand(counter, 0, AttackCommand::COUNT)
+#define forAttack2(counter) forCommand(counter, AttackCommand::attack, AttackCommand::COUNT2)
 #define castCommand(counter, command) static_cast<command>(counter)
 #define castUnit(counter) castCommand(counter, UnitCommand)
 #define castCity(counter) castCommand(counter, CityCommand)
@@ -41,7 +42,9 @@ enum class MoveCommand
 enum class AttackCommand
 {
 	decision, cancel,
-	COUNT
+	COUNT,
+	attack, end,
+	COUNT2
 };
 
 namespace command
