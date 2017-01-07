@@ -473,4 +473,3 @@ Node* util::createCutSkinAndAnimation(const std::string &file, int w, int h, int
 	//return node
 	return node;
 }
-

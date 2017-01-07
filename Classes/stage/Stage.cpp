@@ -424,8 +424,15 @@ std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCo
 }
 
 /*
-* Recursive search
-*/
+ * Recursive search
+ * Intrusion
+ * go ↑: (0, 1)
+ * go ↓: (0, -1)
+ * go →↑: (-1, 1)
+ * go →↓: (-1, -1)
+ * go ←↑: (1, 1)
+ * go ←↓: (1, -1)
+ */
 std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type)
 {
 	// Out of range
@@ -584,12 +591,22 @@ std::vector<StageTile*> Stage::recursiveTileSearchForMove(Vec2 goal, Vec2 intrus
 
 inline Vec2 getVecRight(Vec2 vec)
 {
-	return Vec2(vec.x == 0 ? vec.y : vec.x == vec.y ? vec.x : 0, vec.x == vec.y ? -vec.y : vec.y);
+	return Vec2(vec.x == 0 ? -vec.y : vec.x == vec.y ? 0 : vec.x, vec.x + vec.y == 0 ? -vec.y : vec.y);
 }
 
 inline Vec2 getVecLeft(Vec2 vec)
 {
-	return Vec2(vec.x == 0 ? -vec.y : vec.x == vec.y ? 0 : vec.x, vec.x == -vec.y ? -vec.y : vec.y);
+	return Vec2(vec.x == 0 ? vec.y : vec.x == vec.y ? vec.x : 0, vec.x == vec.y ? -vec.y : vec.y);
+}
+
+inline Vec2 getPosRight(Vec2 in, Vec2 pos)
+{
+	return pos + (in.x + in.y == 0 ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2, 1 - 2 * in.x) : Vec2((int)pos.y % 2 - 1, -2 * in.x - 1));
+}
+
+inline Vec2 getPosLeft(Vec2 in, Vec2 pos)
+{
+	return pos + (in.x == in.y ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2 - 1, 1 + 2 * in.x) : Vec2((int)pos.y % 2, 2 * in.x - 1));
 }
 
 /*
@@ -602,35 +619,40 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 	auto diff = executer->getPosition() - enemy->getPosition();
 	auto point = executer->getTileCoordinate(_mapSize.y);
 	auto enemy_point = enemy->getTileCoordinate(_mapSize.y);
-	CCLOG("DIFF(%f, %f)", diff.x, diff.y);
+	// Down
 	if (abs(diff.x) < elim && diff.y > 0)
 	{
 		intrusion = Vec2(0, -1);
 		point += Vec2(0, 2);
 	}
+	// Up
 	else if (abs(diff.x) < elim && diff.y < 0)
 	{
 		intrusion = Vec2(0, 1);
 		point += Vec2(0, -2);
 	}
+	// Down left
 	else if (diff.x > 0 && diff.y > 0)
 	{
-		intrusion = Vec2(-1, -1);
+		intrusion = Vec2(1, -1);
 		point += Vec2((int)(point.y) % 2 - 1, 1);
 	}
+	// Up left
 	else if (diff.x > 0 && diff.y < 0)
 	{
-		intrusion = Vec2(-1, 1);
+		intrusion = Vec2(1, 1);
 		point += Vec2(((int)(point.y) % 2) - 1, -1);
 	}
+	// Down right
 	else if (diff.x < 0 && diff.y > 0)
 	{
-		intrusion = Vec2(1, -1);
+		intrusion = Vec2(-1, -1);
 		point += Vec2((int)(point.y) % 2, 1);
 	}
+	// Up right
 	else if (diff.x < 0 && diff.y < 0)
 	{
-		intrusion = Vec2(1, 1);
+		intrusion = Vec2(-1, 1);
 		point += Vec2((int)(point.y) % 2, -1);
 	}
 	switch (weapon->getRange().directionRange)
@@ -639,13 +661,22 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 		tiles = recursiveTileSearchForLiner(intrusion, point, weapon->getRange().FiringRange);
 		break;
 	case DirectionRange::crescent:
-		tiles = recursiveTileSearchForLiner(getVecRight(intrusion), point, weapon->getRange().FiringRange);
-		for (auto tile : recursiveTileSearchForLiner(getVecLeft(intrusion), point, weapon->getRange().FiringRange))
+		tiles = recursiveTileSearchForLiner(getVecRight(intrusion), getPosRight(intrusion, point), weapon->getRange().FiringRange);
+		for (auto tile : recursiveTileSearchForLiner(getVecLeft(intrusion), getPosLeft(intrusion, point), weapon->getRange().FiringRange))
 			tiles.push_back(tile);
 		for(auto tile : recursiveTileSearch(intrusion, point, weapon->getRange().FiringRange, EntityType::counter))
 			tiles.push_back(tile);
 		break;
 	case DirectionRange::overHalf:
+		tiles = recursiveTileSearchForLiner(getVecRight(getVecRight(intrusion)), getPosRight(getVecRight(intrusion), getPosRight(intrusion, point)), weapon->getRange().FiringRange);
+		for (auto tile : recursiveTileSearchForLiner(getVecLeft(getVecLeft(intrusion)), getPosLeft(getVecLeft(intrusion), getPosLeft(intrusion, point)), weapon->getRange().FiringRange))
+			tiles.push_back(tile);
+		for (auto tile : recursiveTileSearch(intrusion, point, weapon->getRange().FiringRange, EntityType::counter))
+			tiles.push_back(tile);
+		for (auto tile : recursiveTileSearch(getVecRight(intrusion), getPosRight(intrusion, point), weapon->getRange().FiringRange, EntityType::counter))
+			tiles.push_back(tile);
+		for (auto tile : recursiveTileSearch(getVecLeft(intrusion), getPosLeft(intrusion, point), weapon->getRange().FiringRange, EntityType::counter))
+			tiles.push_back(tile);
 		break;
 	case DirectionRange::full:
 		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(_mapSize.y), weapon->getRange().FiringRange, EntityType::counter);
@@ -708,6 +739,7 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForLiner(cocos2d::Vec2 po
 */
 std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 point, int remainCost)
 {
+	CCLOG("INTRUS(%f, %f) COST %d", intrusion.x, intrusion.y, remainCost);
 	// Out of range
 	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
 		return std::vector<StageTile*>();
@@ -732,6 +764,8 @@ std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 
 	if (clearFlag)
 		tiles.clear();
 
+	if(!tiles.empty())
+		CCLOG("INTRUS(%f, %f) TILE (%f, %f)", intrusion.x, intrusion.y, tiles.front()->getTileCoordinate(_mapSize.y).x, tiles.front()->getTileCoordinate(_mapSize.y).y);
 	//Up
 	if (intrusion == Vec2(0, 1))
 		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2(0, -2), remainCost))
@@ -992,10 +1026,8 @@ std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * 
  */
 void Stage::provisionalMoveCancel(Entity * entity)
 {
-	auto cor = entity->getTileCoordinate(_mapSize.y);
-	auto pos = this->getCoordinateByTile(cor.x, cor.y);
 	entity->stopAllActions();
-	entity->setPosition(pos.x + getChipSize().x / 2, pos.y);
+	entity->setPosition(getCoordinateByTile(entity->getTileCoordinate(_mapSize.y)) +  Vec2(getChipSize().x / 2, 0));
 }
 
 /*

@@ -9,12 +9,6 @@ class Stage;
 class MenuLayer;
 class WeaponData;
 
-enum class GameMode
-{
-	normal, move, moving,
-	attack, attacking
-};
-
 /*
  * SLG Game scene
  * For player turn
@@ -22,22 +16,22 @@ enum class GameMode
 class Game: public cocos2d::Layer
 {
 private:
-	GameMode _mode;
-	std::vector<StageTile*> _preTiles;
-	std::vector<StageTile*> _moveTiles;
+	std::vector<StageTile*> _selectTiles;
+	std::vector<StageTile*> _selectArea;
 	std::vector<StageTile*> _moveRoot;
-	Entity* _preUnit;
-	Entity* _enemy;
+	Entity* _selectUnit;
+	Entity* _selectEnemy;
 	WeaponData* _weapon;
-	void setPreTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
-	void setPreUnit(Stage* stage, MenuLayer* menu, Entity* unit);
+	void setCursol(Stage* stage, MenuLayer* menu, cocos2d::Vec2 tileCoordinate);
+	void setSelectTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
+	void setSelectUnit(Stage* stage, MenuLayer* menu, Entity* unit);
 protected:
 	Game()
-		: _mode(GameMode::normal), _preUnit(nullptr), _enemy(nullptr), _weapon(nullptr)
+		: _selectUnit(nullptr), _selectEnemy(nullptr), _weapon(nullptr)
 	{};
 	~Game()
 	{
-		_preUnit = _enemy = nullptr;
+		_selectUnit = _selectEnemy = nullptr;
 		_weapon = nullptr;
 	}
 	virtual bool init(Stage* stage);

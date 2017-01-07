@@ -7,7 +7,7 @@
 
 class Stage;
 class StageLayer;
-enum class CityCommand;
+enum class Command;
 
 constexpr int STAGE_TILE_WHITE = 39;
 constexpr int STAGE_TILE_DARK = 38;
@@ -32,7 +32,7 @@ class TileInformation
 {
 private:
 	std::map<TerrainType, std::string> _name;
-	std::map<TerrainType, std::map<CityCommand, bool>> _commands;
+	std::map<TerrainType, std::map<Command, bool>> _commands;
 protected:
 	TileInformation();
 public:
@@ -42,7 +42,7 @@ public:
 		return &info;
 	};
 	std::string getName(TerrainType type) { return _name[type]; };
-	bool getCommand(TerrainType type, CityCommand com) { return _commands[type][com]; };
+	bool getCommand(TerrainType type, Command com) { return _commands[type][com]; };
 };
 
 /*********************************************************/

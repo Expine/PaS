@@ -126,7 +126,9 @@ public:
 	/** Get tile by x, y, layer number*/
 	inline StageTile* getTile(int l, int x, int y) { return getStageLayer(l)->getTile(x, y); };
 	std::vector<StageTile*> getTiles(int x, int y);
+	inline std::vector<StageTile*> getTiles(cocos2d::Vec2 v) { return getTiles(v.x, v.y); };
 	void selectTile(int x, int y);
+	inline void selectTile(cocos2d::Vec2 v) { selectTile(v.x, v.y); };
 	void blinkTile(StageTile* tile, cocos2d::Color3B color = cocos2d::Color3B::WHITE);
 	void blinkChange(StageTile* tile, cocos2d::Color3B color);
 	void blinkOffTile(StageTile* tile);
@@ -135,6 +137,7 @@ public:
 	void setUnit(int x, int y, EntityType type, const Owner owner);
 	/** Get unit*/
 	inline Entity* getUnit(int x, int y) { return getUnitLayer()->getUnit(x, y); };
+	inline Entity* getUnit(cocos2d::Vec2 v) { return getUnit(v.x, v.y); };
 	void blinkUnit(Entity* unit);
 	void blinkOffUnit(Entity* unit);
 
@@ -149,7 +152,9 @@ public:
 
 	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
 	cocos2d::Vec2 getCoordinateByTile(int x, int y);
+	inline cocos2d::Vec2 getCoordinateByTile(cocos2d::Vec2 v) { return getCoordinateByTile(v.x, v.y); };
 	void movePosition(int x, int y);
+	inline void movePosition(cocos2d::Vec2 v) { movePosition(v.x, v.y); };
 
 	void initTileSearched(Owner owner);
 	std::vector<StageTile*> startRecursiveTileSearch(cocos2d::Vec2 point, int remainCost, EntityType type);

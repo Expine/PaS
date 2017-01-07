@@ -8,15 +8,13 @@ class Entity;
 class StageTile;
 class City;
 class WeaponData;
-enum class UnitCommand;
-enum class CityCommand;
-enum class MoveCommand;
-enum class AttackCommand;
+enum class Command;
 
 enum class MenuMode
 {
-	unit, move, moving,
-	attack, attacking
+	none, 
+	city_supply, deploy, dispatch,
+	move, moving, attack, attacking, occupy, wait
 };
 
 /*********************************************************/
@@ -31,6 +29,7 @@ public:
 	/** Frame type*/
 	enum class FrameType { unit, map, menu, info };
 private:
+	MenuMode _mode;
 	cocos2d::Node* _unit;
 	cocos2d::Node* _enemy_unit;
 	cocos2d::Node* _map;
@@ -39,21 +38,10 @@ private:
 	std::vector<cocos2d::Label*> _unitLabels;
 	std::vector<cocos2d::Label*> _mapLabels;
 	std::vector<cocos2d::Label*> _menuLabels;
-	template <typename T>
-	std::map<T, cocos2d::Node*> _commands;
-	template <typename T>
-	std::map<T, std::function<void()>> _functions;
-	std::map<UnitCommand, cocos2d::Node*> _unit_command;
-	std::map<UnitCommand, std::function<void()>> _unit_function;
-	std::map<CityCommand, cocos2d::Node*> _city_command;
-	std::map<CityCommand, std::function<void()>> _city_function;
-	std::map<MoveCommand, cocos2d::Node*> _move_command;
-	std::map<MoveCommand, std::function<void()>> _move_function;
-	std::map<AttackCommand, cocos2d::Node*> _attack_command;
-	std::map<AttackCommand, std::function<void()>> _attack_function;
+	std::map<Command, cocos2d::Node*> _commands;
+	std::map<Command, std::function<void()>> _functions;
 	bool _isShowedCityCommand;
 	bool _isShowedUnitCommand;
-	MenuMode _mode;
 	int _selectWeapon;
 
 	Node* setCommand(const std::string &name, const int x, const int y, const int width, const int height);
@@ -68,9 +56,8 @@ protected:
 		, _onUnitFrame(false), _onMapFrame(false), _onMenuFrame(false)
 		, _stage(nullptr)
 		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
-		, _mode(MenuMode::unit)
+		, _mode(MenuMode::none)
 		, _selectWeapon(0)
-		, endPhase(nullptr), nextCity(nullptr), nextUnit(nullptr), talkStaff(nullptr), save(nullptr), load(nullptr), option(nullptr)
 		, attack_decision(nullptr), attack_cancel(nullptr)
 	{};
 	~MenuLayer()
@@ -81,7 +68,6 @@ protected:
 		_stage = nullptr;
 		_isShowedCityCommand = _isShowedUnitCommand = false;
 		_selectWeapon = 0;
-		endPhase = nextCity = nextUnit = talkStaff = save = load = option = nullptr;
 		attack_decision = attack_cancel = nullptr;
 	};
 	virtual bool init();
@@ -92,14 +78,15 @@ public:
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
 	void setTile(std::vector<StageTile*> tiles, Entity *unit);
-	inline void setUnit(std::vector<StageTile*> tiles, Entity *unit) { setUnit(_unit, tiles, unit); };
 	void setUnit(Node* target, std::vector<StageTile*> tiles, Entity *unit);
+	inline void setUnit(std::vector<StageTile*> tiles, Entity *unit) { setUnit(_unit, tiles, unit); };
 	void setInfo(int x, int y);
+	inline void setInfo(cocos2d::Vec2 v) { setInfo(v.x, v.y); };
 	void setUnitToTile(std::vector<StageTile*> tiles, Entity *unit);
-	void showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool movable = nullptr);
+	void checkUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool able = false);
 	void moveUnitCommand();
 	void hideUnitCommand();
-	void showCityCommand(City* city);
+	void checkCityCommand(City* city);
 	void moveCityCommand();
 	void hideCityCommand();
 
@@ -118,32 +105,19 @@ public:
 	bool isHided(FrameType type);
 	bool isHidableBySwipe(FrameType type, cocos2d::Vec2 diff);
 	bool isUnHidableBySwipe(FrameType type, cocos2d::Vec2 diff);
-	
-	inline std::function<void()> getUnitFunction(UnitCommand com) { return _unit_function[com]; };
-	inline std::function<void()> getCityFunction(CityCommand com) { return _city_function[com]; };
-	inline std::function<void()> getMoveFunction(MoveCommand com) { return _move_function[com]; };
-	inline std::function<void()> getAttackFunction(AttackCommand com) { return _attack_function[com]; };
-	inline void setUnitFunction(UnitCommand com, std::function<void()> func) { _unit_function[com] = func; };
-	inline void setCityFunction(CityCommand com, std::function<void()> func) { _city_function[com] = func; };
-	inline void setMoveFunction(MoveCommand com, std::function<void()> func) { _move_function[com] = func; };
-	inline void setAttackFunction(AttackCommand com, std::function<void()> func) { _attack_function[com] = func; };
+
+	inline std::function<void()> getFunction(Command com) { return _functions[com]; };
+	inline void setFunction(Command com, std::function<void()> func) { _functions[com] = func; };
 
 	inline MenuMode getMenuMode() { return _mode; };
-	void setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles, bool movable);
+	void setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles);
 
 	void showEnemyUnit(Entity* enemy);
 	void hideEnemyUnit();
+
 	void showWeaponFrame(Entity* unit);
 	void renderWeapon(WeaponData* weapon, int no);
 	void hideWeaponFrame();
-
-	std::function<void()> endPhase;
-	std::function<void()> nextCity;
-	std::function<void()> nextUnit;
-	std::function<void()> talkStaff;
-	std::function<void()> save;
-	std::function<void()> load;
-	std::function<void()> option;
 
 	std::function<void(WeaponData*)> attack_decision;
 	std::function<void(WeaponData*)> attack_cancel;

@@ -29,7 +29,7 @@ TileInformation::TileInformation()
 			{
 			case 1:	_name[static_cast<TerrainType>(i - 1)] = item;					break;
 			case 2: case 3: case 4:
-				_commands[static_cast<TerrainType>(i - 1)][static_cast<CityCommand>(j - 2)] = item == "TRUE";
+				_commands[static_cast<TerrainType>(i - 1)][static_cast<Command>(j - 2 + static_cast<int>(Command::CITY_START) + 1)] = item == "TRUE";
 			}
 		}
 	}

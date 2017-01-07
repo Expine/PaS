@@ -8,7 +8,7 @@
 class Stage;
 class WeaponData;
 class UnitLayer;
-enum class UnitCommand;
+enum class Command;
 
 
 /*********************************************************/
@@ -48,7 +48,7 @@ private:
 	std::map<EntityType, int> _search;
 	std::map<EntityType, int> _defence;
 	std::map<EntityType, int> _durability;
-	std::map<EntityType, std::map<UnitCommand, bool>> _unit_commands;
+	std::map<EntityType, std::map<Command, bool>> _unit_commands;
 protected:
 	EntityInformation();
 public:
@@ -58,7 +58,7 @@ public:
 		return &info;
 	};
 	inline const std::string& getName(EntityType type) { return _name[type]; };
-	inline bool getCommand(EntityType type, UnitCommand command) { return _unit_commands[type][command]; };
+	inline bool getCommand(EntityType type, Command command) { return _unit_commands[type].count(command) == 0 || _unit_commands[type][command]; };
 	inline int getMobility(EntityType type) { return _mobility[type]; };
 	inline int getMaterial(EntityType type) { return _material[type]; };
 	inline int getSearch(EntityType type) { return _search[type]; };

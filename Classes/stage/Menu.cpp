@@ -30,7 +30,6 @@ bool MenuLayer::init()
 	auto winSize = Director::getInstance()->getWinSize();
 
 	// Set unit frame
-	_unit = Sprite::create();
 	_unit = util::createCutSkin(FRAME, 300, 200, util::CUT_MASK_LEFT, 200);
 	_unit->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
 	_unit->setPosition(0, winSize.height);
@@ -96,17 +95,15 @@ bool MenuLayer::init()
 	}
 
 	// Set menu item
-	for (auto name : { u8"フェイズ終了", u8"次の都市へ", u8"次の部隊へ", u8"参謀と話す", u8"セーブ", u8"ロード", u8"オプション" })
-	{
-		static Label* preItem = nullptr;
-		auto item = Label::createWithSystemFont(name, JP_FONT, MENU_SIZE);
+	command::forMenu([this] (Command com, int i){
+		auto item = Label::createWithSystemFont(command::getName(com), JP_FONT, MENU_SIZE);
 		item->setAnchorPoint(Vec2::ANCHOR_TOP_RIGHT);
 		item->setColor(Color3B::BLACK);
-		item->setPosition(_menu->getContentSize().width - 10, preItem ? preItem->getPosition().y - 60 : _menu->getContentSize().height - 50);
-		item->setTag(preItem ? preItem->getTag() + 1 : 10);
+		item->setPosition(_menu->getContentSize().width - 10, _menu->getContentSize().height - 50 - 60 * i);
+		item->setTag(10 + (i - static_cast<int>(Command::MENU_START) - 1));
 		_menu->addChild(item);
-		preItem = item;
-	}
+		_commands[com] = item;
+	});
 
 	// Set info frame
 	_info = Sprite::create();
@@ -118,49 +115,17 @@ bool MenuLayer::init()
 	this->addChild(_info);
 
 	// Unit command
-	forUnit(i)
+	command::forAllUnit([this] (Command com, int i)
 	{
-		auto name = command::getName(castUnit(i));
-		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
-		_unit_command[castUnit(i)] = command;
-	}
+		_commands[com] = setCommand(command::getName(com), -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40); 
+	});
 
 	// City command
-	forCity(i)
+	command::forAllCity([this](Command com, int i) 
 	{
-		auto name = command::getName(castCity(i));
-		auto command = setCommand(name, -80, _map->getContentSize().height, 80, 40);
-		command->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-		_city_command[castCity(i)] = command;
-	}
-
-	// Set Move command
-	forMove(i)
-	{
-		auto name = command::getName(castMove(i));
-		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
-		_move_command[castMove(i)] = command;
-	}
-	forMove2(i)
-	{
-		auto name = command::getName(castMove(i));
-		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
-		_move_command[castMove(i)] = command;
-	}
-
-	// Set attack command
-	forAttack(i)
-	{
-		auto name = command::getName(castAttack(i));
-		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
-		_attack_command[castAttack(i)] = command;
-	}
-	forAttack2(i)
-	{
-		auto name = command::getName(castAttack(i));
-		auto command = setCommand(name, -80, _unit->getPosition().y - _unit->getContentSize().height, 80, 40);
-		_attack_command[castAttack(i)] = command;
-	}
+		_commands[com] = setCommand(command::getName(com), -80, _map->getContentSize().height, 80, 40);
+		_commands[com]->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	});
 
 	// Set enemy unit frame
 	_enemy_unit = Sprite::create();
@@ -181,31 +146,15 @@ bool MenuLayer::init()
 	setFrameListener(_map, _mapLabels, FrameType::map, 300 - MODIFY);
 	setFrameListener(_menu, _menuLabels, FrameType::menu, -220 + MODIFY);
 
-	setMenuListener(_menu->getChildByTag(10), [this] { if (endPhase)  endPhase(); }, false);
-	setMenuListener(_menu->getChildByTag(11), [this] { if (nextCity)  nextCity(); }, false);
-	setMenuListener(_menu->getChildByTag(12), [this] { if (nextUnit)  nextUnit(); }, false);
-	setMenuListener(_menu->getChildByTag(13), [this] { if (talkStaff) talkStaff(); }, false);
-	setMenuListener(_menu->getChildByTag(14), [this] { if (save)	  save(); }, false);
-	setMenuListener(_menu->getChildByTag(15), [this] { if (load)	  load(); }, false);
-	setMenuListener(_menu->getChildByTag(16), [this] { if (option)	  option(); }, false);
+	command::forMenu([this] (Command com, int i)
+	{
+		setMenuListener(_commands[com], [this, com] {if (_functions[com]) _functions[com](); }, false);
+	});
 
-	forUnit(i)
-		setMenuListener(_unit_command[castUnit(i)], [this, i] {if (_unit_function[castUnit(i)]) _unit_function[castUnit(i)](); });
-
-	forCity(i)
-		setMenuListener(_city_command[castCity(i)], [this, i] {if (_city_function[castCity(i)]) _city_function[castCity(i)](); });
-
-	forMove(i)
-		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
-
-	forMove2(i)
-		setMenuListener(_move_command[castMove(i)], [this, i] {if (_move_function[castMove(i)]) _move_function[castMove(i)](); });
-
-	forAttack(i)
-		setMenuListener(_attack_command[castAttack(i)], [this, i] {if (_attack_function[castAttack(i)]) _attack_function[castAttack(i)](); });
-
-	forAttack2(i)
-		setMenuListener(_attack_command[castAttack(i)], [this, i] {if (_attack_function[castAttack(i)]) _attack_function[castAttack(i)](); });
+	command::forAll([this](Command com, int i) 
+	{
+		setMenuListener(_commands[com], [this, com] {if (_functions[com]) _functions[com](); });
+	});
 
 	return true;
 }
@@ -216,7 +165,7 @@ bool MenuLayer::init()
 void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 {
 	// Remove pre-information
-	if (_map->getChildByTag(0) != NULL)
+	if (_map->getChildByTag(0))
 	{
 		_map->removeChildByTag(0);
 		_map->removeChildByTag(1);
@@ -225,11 +174,15 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 	// Get last tile
 	StageTile* tile = nullptr;
 	for (auto t : tiles)
-		if (t->getId() != 0)
+		if (t && t->getId() != 0)
 			tile = t;
 
+	// Check null
 	if (!tile)
+	{
+		hideCityCommand();
 		return;
+	}
 
 	// Set tile image
 	auto id = tile->getId();
@@ -248,10 +201,15 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 	name->setTag(1);
 	_map->addChild(name);
 
+	// Set unit to tile information
 	setUnitToTile(tiles, unit);
 
+	// Show city command
 	if (util::instanceof<City>(tile) && util::instance<City>(tile)->getOwner() == Owner::player)
-		showCityCommand(util::instance<City>(tile));
+	{
+		checkCityCommand(util::instance<City>(tile));
+		moveCityCommand();
+	}
 	else
 		hideCityCommand();
 }
@@ -273,10 +231,10 @@ void MenuLayer::setUnit(Node * target, std::vector<StageTile*> tiles, Entity * u
 		target->removeChildByTag(6);
 	}
 
+	// Check null
 	if (!unit)
 	{
-		if(_mode == MenuMode::unit)
-			hideUnitCommand();
+		hideUnitCommand();
 		return;
 	}
 
@@ -324,13 +282,20 @@ void MenuLayer::setUnit(Node * target, std::vector<StageTile*> tiles, Entity * u
 		count++;
 	}
 
-	if(!tiles.empty())
-		setUnitToTile(tiles, unit);
+	// Set unit to tile information
+	setUnitToTile(tiles, unit);
 
-	if (unit->getAffiliation() == Owner::player)
-		showUnitCommand(unit, tiles);
-	else
-		hideUnitCommand();
+	// If unit frame, check command
+	if (target == _unit)
+	{
+		if (unit->getAffiliation() == Owner::player)
+		{
+			checkUnitCommand(unit, tiles);
+			moveUnitCommand();
+		}
+		else
+			hideUnitCommand();
+	}
 }
 
 /*
@@ -372,12 +337,11 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
 		_map->removeChildByTag(3);
 	}
 
-	if (tiles.size() == 0)
+	// Check empty and null
+	if (tiles.empty() || !unit)
 		return;
 
-	if (!unit)
-		return;
-
+	// Calculate cost and effect
 	auto search_cost = 0;
 	auto effect_value = 0;
 	for (auto tile : tiles)
@@ -404,56 +368,55 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
 }
 
 /*
- * Show unit command
- * If already showed, do nothing
+ * Check unit command enable
  */
-void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool movable)
+void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, bool able)
 {
-	if (_mode == MenuMode::unit)
+	switch (_mode)
 	{
-		forUnit(i)
-			if (!EntityInformation::getInstance()->getCommand(entity->getType(), castUnit(i)))
-				_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
-			else if(command::isEnable(castUnit(i), entity, tiles))
-				_unit_command[castUnit(i)]->setColor(Color3B::WHITE);
+	case MenuMode::none:
+		command::forUnit([this, entity, tiles](Command com, int i) 
+		{
+			// Whether this command is enable
+			if (command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::WHITE);
 			else
-				_unit_command[castUnit(i)]->setColor(Color3B::GRAY);
-	}
-	else if (_mode == MenuMode::move)
-	{
-		_unit_command[UnitCommand::move]->setColor(Color3B::GRAY);
-		forMove(i)
-			if (castMove(i) == MoveCommand::start && !movable)
-				_move_command[castMove(i)]->setColor(Color3B::GRAY);
-			else if(command::isEnable(castMove(i), entity, tiles))
-				_move_command[castMove(i)]->setColor(Color3B::WHITE);
+				_commands[com]->setColor(Color3B::GRAY);
+		});
+		break;
+	case MenuMode::move:
+		_commands[Command::move]->setColor(Color3B::GRAY);
+		command::forMove([this, entity, tiles, able] (Command com, int i)
+		{
+			// If move start, check movable
+			if (com == Command::move_start && !able)
+				_commands[com]->setColor(Color3B::GRAY);
+			// Whether this command is enable
+			else if (command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::WHITE);
 			else
-				_move_command[castMove(i)]->setColor(Color3B::GRAY);
-	}
-	else if (_mode == MenuMode::moving)
-	{
-	}
-	else if (_mode == MenuMode::attack)
-	{
-		_unit_command[UnitCommand::attack]->setColor(Color3B::GRAY);
-		forAttack(i)
-			if (command::isEnable(castAttack(i), entity, tiles))
-				_attack_command[castAttack(i)]->setColor(Color3B::WHITE);
+				_commands[com]->setColor(Color3B::GRAY);
+		});
+		break;
+	case MenuMode::moving:
+		break;
+	case MenuMode::attack:
+		_commands[Command::attack]->setColor(Color3B::GRAY);
+		command::forAttack([this, entity, tiles, able] (Command com, int i)
+		{
+			// If move start, check movable
+			if (com == Command::attack_target && !able)
+				_commands[com]->setColor(Color3B::GRAY);
+			// Whether this command is enable
+			else if (command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::WHITE);
 			else
-				_attack_command[castAttack(i)]->setColor(Color3B::GRAY);
+				_commands[com]->setColor(Color3B::GRAY);
+		});
+		break;
+	default:
+		break;
 	}
-	else if (_mode == MenuMode::attacking)
-	{
-
-	}
-
-
-	if (_isShowedUnitCommand)
-		return;
-
-	moveUnitCommand();
-
-	_isShowedUnitCommand = true;
 }
 
 /*
@@ -462,36 +425,49 @@ void MenuLayer::showUnitCommand(Entity* entity, std::vector<StageTile*> tiles, b
  */
 void MenuLayer::moveUnitCommand()
 {
-	if (_mode == MenuMode::unit)
+	if (_isShowedUnitCommand)
+		return;
+
+	switch (_mode)
 	{
-		forUnit(i)
-			showUnitCommandByOne(i % 3, i / 3, _unit_command[castUnit(i)]);
+	case MenuMode::none:
+		command::forUnit([this] (Command com, int i)
+		{
+			showUnitCommandByOne(i % 3, i / 3, _commands[com]);
+		});
+		break;
+	case MenuMode::move:
+		showUnitCommandByOne(0, 0, _commands[Command::move]);
+		command::forMove([this](Command com, int i) 
+		{
+			showUnitCommandByOne(0 + i, 1, _commands[com]);
+		});
+		break;
+	case MenuMode::moving:
+		showUnitCommandByOne(0, 0, _commands[Command::move]);
+		showUnitCommandByOne(0, 1, _commands[Command::attack]);
+		command::forMove2([this](Command com, int i) 
+		{
+			showUnitCommandByOne(i + 1, 1, _commands[com]);
+		});
+		break;
+	case MenuMode::attack:
+		showUnitCommandByOne(0, 0, _commands[Command::attack]);
+		command::forAttack([this](Command com, int i) 
+		{
+			showUnitCommandByOne(i, 1, _commands[com]);
+		});
+		break;
+	case MenuMode::attacking:
+		showUnitCommandByOne(0, 0, _commands[Command::attack]);
+		command::forAttack2([this] (Command com, int i)
+		{
+			showUnitCommandByOne(i, 1, _commands[com]);
+		});
+		break;
 	}
-	else if (_mode == MenuMode::move)
-	{
-		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::move]);
-		forMove(i)
-			showUnitCommandByOne(0 + i, 1, _move_command[castMove(i)]);
-	}
-	else if (_mode == MenuMode::moving)
-	{
-		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::move]);
-		showUnitCommandByOne(0, 1, _unit_command[UnitCommand::attack]);
-		forMove2(i)
-			showUnitCommandByOne(1 + i - static_cast<int>(MoveCommand::decision), 1, _move_command[castMove(i)]);
-	}
-	else if (_mode == MenuMode::attack)
-	{
-		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::attack]);
-		forAttack(i)
-			showUnitCommandByOne(i, 1, _attack_command[castAttack(i)]);
-	}
-	else if (_mode == MenuMode::attacking)
-	{
-		showUnitCommandByOne(0, 0, _unit_command[UnitCommand::attack]);
-		forAttack2(i)
-			showUnitCommandByOne(i - static_cast<int>(AttackCommand::attack), 1, _attack_command[castAttack(i)]);
-	}
+
+	_isShowedUnitCommand = true;
 }
 
 /*
@@ -503,37 +479,39 @@ void MenuLayer::hideUnitCommand()
 	if (!_isShowedUnitCommand)
 		return;
 
-	if (_mode == MenuMode::unit)
+	std::function<void(std::function<void(Command, int)>)> func;
+
+	switch (_mode)
 	{
-		forUnit(i)
-			hideUnitCommandByOne(_unit_command[castUnit(i)]);
+	case MenuMode::none:
+		func = command::forUnit;
+		break;
+	case MenuMode::move:
+		hideUnitCommandByOne(_commands[Command::move]);
+		hideUnitCommandByOne(_commands[Command::attack]);
+		func = command::forMove;
+		break;
+	case MenuMode::moving:
+		hideUnitCommandByOne(_commands[Command::move]);
+		hideUnitCommandByOne(_commands[Command::attack]);
+		func = command::forMove2;
+		break;
+	case MenuMode::attack:
+		hideUnitCommandByOne(_commands[Command::attack]);
+		func = command::forAttack;
+		break;
+	case MenuMode::attacking:
+		hideUnitCommandByOne(_commands[Command::attack]);
+		func = command::forAttack2;
+		break;
 	}
-	else if (_mode == MenuMode::move)
+
+	// Hide supecify commands
+	func([this](Command com, int i)
 	{
-		hideUnitCommandByOne(_unit_command[UnitCommand::move]);
-		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
-		forMove(i)
-			hideUnitCommandByOne(_move_command[castMove(i)]);
-	}
-	else if (_mode == MenuMode::moving)
-	{
-		hideUnitCommandByOne(_unit_command[UnitCommand::move]);
-		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
-		forMove2(i)
-			hideUnitCommandByOne(_move_command[castMove(i)]);
-	}
-	else if (_mode == MenuMode::attack)
-	{
-		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
-		forAttack(i)
-			hideUnitCommandByOne(_attack_command[castAttack(i)]);
-	}
-	else if (_mode == MenuMode::attacking)
-	{
-		hideUnitCommandByOne(_unit_command[UnitCommand::attack]);
-		forAttack2(i)
-			hideUnitCommandByOne(_attack_command[castAttack(i)]);
-	}
+		hideUnitCommandByOne(_commands[com]);
+	});
+
 	_isShowedUnitCommand = false;
 }
 
@@ -574,25 +552,17 @@ void MenuLayer::hideUnitCommandByOne(Node* command)
 }
 
 /*
- * Show city command
- * If already showed, do nothing
+ * Check city command enable
  */
-void MenuLayer::showCityCommand(City* city)
+void MenuLayer::checkCityCommand(City* city)
 {
-	forCity(i)
+	command::forCity([this, city](Command com, int i) 
 	{
-		if(TileInformation::getInstance()->getCommand(city->getTerrainType(), castCity(i)))
-			_city_command[castCity(i)]->setColor(Color3B(255, 255, 255));
+		if (TileInformation::getInstance()->getCommand(city->getTerrainType(), com))
+			_commands[com]->setColor(Color3B::WHITE);
 		else
-			_city_command[castCity(i)]->setColor(Color3B(128, 128, 128));
-	}
-
-	if (_isShowedCityCommand)
-		return;
-
-	moveCityCommand();
-
-	_isShowedCityCommand = true;
+			_commands[com]->setColor(Color3B::GRAY);
+	});
 }
 
 /*
@@ -601,21 +571,28 @@ void MenuLayer::showCityCommand(City* city)
  */
 void MenuLayer::moveCityCommand()
 {
-	forCity(i)
+	// Check showed
+	if (_isShowedCityCommand)
+		return;
+
+	// Move command
+	command::forCity([this](Command command, int i)
 	{
-		auto com = _city_command[castCity(i)];
+		auto com = _commands[command];
 		com->stopAllActions();
 		if (isHided(FrameType::map))
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 2) * (com->getContentSize().width + 20), _map->getPosition().y + _map->getContentSize().height - (com->getContentSize().height + 10) - (i % 2) * (com->getContentSize().height + 15)))),
-			NULL));
+				NULL));
 		else
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _map->getPosition().y) + Vec2(10 + (i % 3) * (com->getContentSize().width + 20), i / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
-			NULL));
-	}
+				NULL));
+	});
+
+	_isShowedCityCommand = true;
 }
 
 /*
@@ -627,21 +604,22 @@ void MenuLayer::hideCityCommand()
 	if (!_isShowedCityCommand)
 		return;
 
-	forCity(i)
+	command::forCity([this](Command command, int i) 
 	{
-		auto com = _city_command[castCity(i)];
+		auto com = _commands[command];
 		com->stopAllActions();
-		if(isHided(FrameType::map))
+		if (isHided(FrameType::map))
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
-			NULL));
+				NULL));
 		else
 			com->runAction(Sequence::create(
 				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
 				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
-			NULL));
-	}
+				NULL));
+	});
+
 	_isShowedCityCommand = false;
 }
 
@@ -708,10 +686,16 @@ void MenuLayer::setFrameListener(Node *target, const std::vector<Label*>& target
 				x += unitLabel->getContentSize().width;
 				y += unitLabel->getContentSize().height;
 			}
-			if (type == FrameType::map && _isShowedCityCommand)
+			if (type == FrameType::map)
+			{
+				_isShowedCityCommand = false;
 				moveCityCommand();
-			if (type == FrameType::unit &&_isShowedUnitCommand)
+			}
+			if (type == FrameType::unit)
+			{
+				_isShowedUnitCommand = false;
 				moveUnitCommand();
+			}
 		}
 	};
 	//long tap began equals tap
@@ -751,10 +735,16 @@ void MenuLayer::setFrameListener(Node *target, const std::vector<Label*>& target
 				x += unitLabel->getContentSize().width;
 				y += unitLabel->getContentSize().height;
 			}
-			if (type == FrameType::map && _isShowedCityCommand)
+			if (type == FrameType::map)
+			{
+				_isShowedCityCommand = false;
 				moveCityCommand();
-			if (type == FrameType::unit &&_isShowedUnitCommand)
+			}
+			if (type == FrameType::unit)
+			{
+				_isShowedUnitCommand = false;
 				moveUnitCommand();
+			}
 		}
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(unitListener, target);
@@ -847,18 +837,18 @@ bool MenuLayer::isUnHidableBySwipe(FrameType type, cocos2d::Vec2 diff)
 /*
  * Set menu mode
  */
-void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles, bool movable)
+void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*> tiles)
 {
 	if (_mode != mode)
 	{
 		hideUnitCommand();
 		_mode = mode;
-		showUnitCommand(unit, tiles, movable);
-		_isShowedUnitCommand = true;
+		checkUnitCommand(unit, tiles);
+		moveUnitCommand();
 	}
 	else
 	{
-		showUnitCommand(unit, tiles, movable);
+		checkUnitCommand(unit, tiles);
 	}
 }
 
@@ -869,6 +859,7 @@ void MenuLayer::showEnemyUnit(Entity * enemy)
 {
 	auto winSize = Director::getInstance()->getWinSize();
 	setUnit(_enemy_unit, std::vector<StageTile*>(), enemy);
+	_enemy_unit->stopAllActions();
 	_enemy_unit->runAction(EaseSineIn::create(MoveTo::create(0.5f, Vec2(winSize.width, winSize.height))));
 }
 
@@ -878,6 +869,7 @@ void MenuLayer::showEnemyUnit(Entity * enemy)
 void MenuLayer::hideEnemyUnit()
 {
 	auto winSize = Director::getInstance()->getWinSize();
+	_enemy_unit->stopAllActions();
 	_enemy_unit->runAction(EaseSineOut::create(MoveTo::create(0.5f, Vec2(winSize.width + _enemy_unit->getContentSize().width, winSize.height))));
 }
 
@@ -972,7 +964,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	};
 	lis->onSwipe = [weapon](Vec2 v, Vec2 diff, float time)
 	{
-		if (util::isTouchInEvent(v, weapon))
+		if (util::isTouchInEvent(v, weapon) && util::isTouchInEvent(v, weapon))
 		{
 			auto winSize = Director::getInstance()->getWinSize();
 			auto size = weapon->getContentSize();

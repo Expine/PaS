@@ -3,6 +3,8 @@
 
 #include "cocos2d.h"
 
+class StageTile;
+
 USING_NS_CC;
 
 /*********************************************************/
@@ -45,6 +47,14 @@ namespace util
 	{
 		for (V comp : vec)
 			if (comp == element)
+				return true;
+		return false;
+	};
+	template<typename V, typename T>
+	bool find(const std::vector<V>& vec, T element, std::function<bool(V, T)> func)
+	{
+		for (V comp : vec)
+			if(func(comp, element))
 				return true;
 		return false;
 	};

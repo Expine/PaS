@@ -34,7 +34,7 @@ EntityInformation::EntityInformation()
 			case 5: _defence[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
 			case 6: _durability[static_cast<EntityType>(i - 1)] = atoi(item.c_str());	break;
 			case 7: case 8: case 9: case 10: case 11: case 12:
-				_unit_commands[static_cast<EntityType>(i - 1)][static_cast<UnitCommand>(j - 7)] = item == "TRUE";
+				_unit_commands[static_cast<EntityType>(i - 1)][static_cast<Command>(j - 7 + static_cast<int>(Command::UNIT_START) + 1)] = item == "TRUE";
 			}
 		}
 	}
