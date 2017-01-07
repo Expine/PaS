@@ -171,17 +171,7 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 		if (!unit || unit->getState() == EntityState::acted)
 			return false;
 
-		auto stage = unit->getStage();
-		auto pos = unit->getTileCoordinate(stage->getMapSize().y);
-		auto tiles = stage->startRecursiveTileSearch(pos, 1, EntityType::counter);
-		for (auto t : tiles)
-		{
-			auto cor = t->getTileCoordinate(stage->getMapSize().y);
-			auto unit = stage->getUnit(cor.x, cor.y);
-			if (unit && unit->getAffiliation() != Owner::player)
-				return true;
-		}
-		return false;
+		return unit->isAttakable();
 	}
 	case Command::occupation:
 	{

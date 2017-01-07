@@ -168,3 +168,11 @@ Stage * Entity::getStage()
 {
 	return util::instance<Stage>(getUnitLayer()->getParent());
 }
+
+bool Entity::isAttakable()
+{
+	for (auto weapon : _weapons)
+		if (weapon->isUsable(this))
+			return true;
+	return false;
+}

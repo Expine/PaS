@@ -166,6 +166,7 @@ bool Game::init(Stage* stage)
 	{
 		_moveRoot = stage->provisionalMoveUnit(_selectUnit, _selectTiles.back());
 		menu->setMenuMode(MenuMode::moving, _selectUnit, _selectTiles);
+		menu->checkUnitCommand(_selectUnit, _selectTiles);
 	});
 	menu->setFunction(Command::move_end, [this, stage, menu] 
 	{
@@ -206,6 +207,16 @@ bool Game::init(Stage* stage)
 		// If full, should not select enemy
 		else if (data->getRange().directionRange == DirectionRange::full)
 		{
+			for (auto tile : stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange, EntityType::counter))
+			{
+				auto target = stage->getUnit(tile->getTileCoordinate(stage->getMapSize().y));
+				if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
+				{
+					_selectEnemy = target;
+					menu->showEnemyUnit(_selectEnemy);
+					break;
+				}
+			}
 			menu->getFunction(Command::attack_target)();
 			return;
 		}
@@ -253,6 +264,7 @@ bool Game::init(Stage* stage)
 	{
 		menu->getFunction(Command::attack_end)();
 		_selectUnit->setState(EntityState::acted);
+		menu->checkUnitCommand(_selectUnit, _selectTiles);
 	});	
 	menu->setFunction(Command::attack_cancel, [this, stage, menu] 
 	{

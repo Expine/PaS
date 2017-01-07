@@ -104,6 +104,7 @@ public:
 	Stage* getStage();
 	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
 	inline std::vector<WeaponData*>& getWeaponsByRef() { return _weapons; };
+	bool isAttakable();
 };
 
 /*********************************************************/

@@ -1,4 +1,9 @@
 ﻿#include "Weapon.h"
+#include "Entity.h"
+
+#include "ai/Owner.h"
+#include "stage/Stage.h"
+#include "stage/Tile.h"
 #include "util/Util.h"
 
 WeaponInformation::WeaponInformation()
@@ -63,4 +68,21 @@ std::string WeaponInformation::getRangeName(RangeType type)
 	case DirectionRange::select:
 		return u8"選択";
 	}
+}
+
+bool WeaponData::isUsable(Entity * unit)
+{
+	auto stage = unit->getStage();
+	std::vector <StageTile*> tiles;
+	if (_range.directionRange == DirectionRange::liner)
+		tiles = stage->startRecursiveTileSearchForLiner(unit->getTileCoordinate(stage->getMapSize().y), _range.FiringRange);
+	else
+		tiles = stage->startRecursiveTileSearch(unit->getTileCoordinate(stage->getMapSize().y), _range.FiringRange, EntityType::counter);
+	for (auto tile : tiles)
+	{
+		auto target = stage->getUnit(tile->getTileCoordinate(stage->getMapSize().y));
+		if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
+			return true;
+	}
+	return false;
 }

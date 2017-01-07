@@ -159,7 +159,7 @@ Stage * Stage::parseStage(const std::string file)
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 500; i++)
 	{
 		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
 		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
@@ -680,8 +680,12 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 		break;
 	case DirectionRange::full:
 		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(_mapSize.y), weapon->getRange().FiringRange, EntityType::counter);
-		for (auto tile : getTiles(executer->getTileCoordinate(_mapSize.y).x, executer->getTileCoordinate(_mapSize.y).y))
+
+		for (auto tile : getTiles(executer->getTileCoordinate(_mapSize.y)))
+		{
+			tile->setRemainCost(-1);
 			tiles.erase(std::remove(tiles.begin(), tiles.end(), tile), tiles.end());
+		}
 		break;
 	case DirectionRange::select:
 		for(auto tile : getTiles(enemy_point.x, enemy_point.y))
@@ -739,7 +743,6 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForLiner(cocos2d::Vec2 po
 */
 std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 point, int remainCost)
 {
-	CCLOG("INTRUS(%f, %f) COST %d", intrusion.x, intrusion.y, remainCost);
 	// Out of range
 	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
 		return std::vector<StageTile*>();
@@ -764,8 +767,6 @@ std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 
 	if (clearFlag)
 		tiles.clear();
 
-	if(!tiles.empty())
-		CCLOG("INTRUS(%f, %f) TILE (%f, %f)", intrusion.x, intrusion.y, tiles.front()->getTileCoordinate(_mapSize.y).x, tiles.front()->getTileCoordinate(_mapSize.y).y);
 	//Up
 	if (intrusion == Vec2(0, 1))
 		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2(0, -2), remainCost))
@@ -1018,6 +1019,9 @@ std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * 
 		i++;
 	}
 	entity->runAction(Sequence::create(acts));
+	_preProvisionalPos = entity->getTileCoordinate(_mapSize.y);
+	auto point = root.back()->getTileCoordinate(_mapSize.y);
+	entity->setTag(point.x * _mapSize.y + point.y);
 	return root;
 }
 
@@ -1026,6 +1030,7 @@ std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * 
  */
 void Stage::provisionalMoveCancel(Entity * entity)
 {
+	entity->setTag(_preProvisionalPos.x * _mapSize.y + _preProvisionalPos.y);
 	entity->stopAllActions();
 	entity->setPosition(getCoordinateByTile(entity->getTileCoordinate(_mapSize.y)) +  Vec2(getChipSize().x / 2, 0));
 }

@@ -1,6 +1,7 @@
 ﻿#include "Menu.h"
 #include "Tile.h"
 #include "Command.h"
+#include "Stage.h"
 
 #include "entity/EntityToTile.h"
 #include "entity/Entity.h"
@@ -399,7 +400,13 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
 		});
 		break;
 	case MenuMode::moving:
+	{
+		if (entity->isAttakable())
+			_commands[Command::attack]->setColor(Color3B::WHITE);
+		else
+			_commands[Command::attack]->setColor(Color3B::GRAY);
 		break;
+	}
 	case MenuMode::attack:
 		_commands[Command::attack]->setColor(Color3B::GRAY);
 		command::forAttack([this, entity, tiles, able] (Command com, int i)
@@ -413,6 +420,8 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
 			else
 				_commands[com]->setColor(Color3B::GRAY);
 		});
+		break;
+	case MenuMode::attacking:
 		break;
 	default:
 		break;
@@ -460,6 +469,7 @@ void MenuLayer::moveUnitCommand()
 		break;
 	case MenuMode::attacking:
 		showUnitCommandByOne(0, 0, _commands[Command::attack]);
+		showUnitCommandByOne(2, 1, _commands[Command::attack_end]);
 		command::forAttack2([this] (Command com, int i)
 		{
 			showUnitCommandByOne(i, 1, _commands[com]);
@@ -502,6 +512,7 @@ void MenuLayer::hideUnitCommand()
 		break;
 	case MenuMode::attacking:
 		hideUnitCommandByOne(_commands[Command::attack]);
+		hideUnitCommandByOne(_commands[Command::attack_end]);
 		func = command::forAttack2;
 		break;
 	}
@@ -686,12 +697,12 @@ void MenuLayer::setFrameListener(Node *target, const std::vector<Label*>& target
 				x += unitLabel->getContentSize().width;
 				y += unitLabel->getContentSize().height;
 			}
-			if (type == FrameType::map)
+			if (type == FrameType::map && _isShowedCityCommand)
 			{
 				_isShowedCityCommand = false;
 				moveCityCommand();
 			}
-			if (type == FrameType::unit)
+			if (type == FrameType::unit && _isShowedUnitCommand)
 			{
 				_isShowedUnitCommand = false;
 				moveUnitCommand();
@@ -735,12 +746,12 @@ void MenuLayer::setFrameListener(Node *target, const std::vector<Label*>& target
 				x += unitLabel->getContentSize().width;
 				y += unitLabel->getContentSize().height;
 			}
-			if (type == FrameType::map)
+			if (type == FrameType::map && _isShowedCityCommand)
 			{
 				_isShowedCityCommand = false;
 				moveCityCommand();
 			}
-			if (type == FrameType::unit)
+			if (type == FrameType::unit && _isShowedUnitCommand)
 			{
 				_isShowedUnitCommand = false;
 				moveUnitCommand();
@@ -891,6 +902,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	// Set info
 	auto height = weapon->getContentSize().height - 10 - INFO_SIZE;
 	auto name = Label::createWithSystemFont(u8"装備名", JP_FONT, INFO_SIZE);
+	name->setColor(Color3B::BLACK);
 	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	name->setPosition(70, height);
 	weapon->addChild(name);
@@ -900,6 +912,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 		if(item == u8"範囲")
 			x += 30;
 		auto label = Label::createWithSystemFont(item, JP_FONT, INFO_SIZE);
+		label->setColor(Color3B::BLACK);
 		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 		label->setPosition(x, height);
 		weapon->addChild(label);
@@ -910,14 +923,22 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	auto no = 0;
 	for (auto weapon : unit->getWeaponsByRef())
 		if(weapon)
-			renderWeapon(weapon, no++);
+			renderWeapon(unit, weapon, no++);
 
 	// Set frame
+	no = 0;
+	for (auto weapon : unit->getWeaponsByRef())
+	{
+		if (weapon && weapon->isUsable(unit))
+			break;
+		no++;
+	}
+
 	auto frame = util::createCutSkinAndAnimation("image/frame_1.png", 680, 40, 6, 1, 0, 0.15f);
 	frame->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
-	frame->setPosition(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30);
+	frame->setPosition(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30 - no * 50);
 	weapon->addChild(frame);
-	_selectWeapon = 0;
+	_selectWeapon = no;
 
 	// Set decision frame
 	auto decision = util::createCutSkin(COMMAND_FRAME, 50, h, 0, 200);
@@ -950,7 +971,7 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 		{
 			auto pos = touch->getLocation() - (weapon->getPosition() - Vec2(weapon->getContentSize().width / 2, 0));
 			int no = (weapon->getContentSize().height - pos.y - 15 - 30 - MENU_SIZE / 2) / 50;
-			if (no >= 0)
+			if (no >= 0 && weapon->getChildByTag(no)->getColor() == Color3B::BLACK)
 			{
 				frame->stopAllActions();
 				frame->runAction(MoveTo::create(0.2f, Vec2(weapon->getContentSize().width / 2, weapon->getContentSize().height - 15 - MENU_SIZE - 30 - no * 50)));
@@ -980,15 +1001,18 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 /*
  * Render a weapon information
  */
-void MenuLayer::renderWeapon(WeaponData * weapon, int no)
+void MenuLayer::renderWeapon(Entity *unit, WeaponData * weapon, int no)
 {
 	auto frame = this->getChildByTag(1000);
 	auto height = frame->getContentSize().height - 15 - 50 * no - MENU_SIZE - 30;
+	auto usable = weapon->isUsable(unit);
 
 	// Set name
 	auto name = Label::createWithSystemFont(weapon->getName(), JP_FONT, MENU_SIZE);
+	name->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
 	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	name->setPosition(70, height);
+	name->setTag(no);
 	frame->addChild(name);
 
 	// Set info
@@ -996,6 +1020,7 @@ void MenuLayer::renderWeapon(WeaponData * weapon, int no)
 	for (auto item : { weapon->getAntiPersonnel(), weapon->getAntiWizard(), weapon->getAntiFire(), weapon->getAntiIce(), weapon->getAntiThunder(), weapon->getAntiGround(), weapon->getAccuracy() })
 	{
 		auto label = Label::createWithSystemFont(StringUtils::format("%d", item), EN_FONT, INFO_SIZE);
+		label->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
 		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 		label->setPosition(x, height);
 		frame->addChild(label);
@@ -1005,6 +1030,7 @@ void MenuLayer::renderWeapon(WeaponData * weapon, int no)
 	// Set range
 	x += 30;
 	auto range = Label::createWithSystemFont(WeaponInformation::getInstance()->getRangeName(weapon->getRange()), JP_FONT, INFO_SIZE);
+	range->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
 	range->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	range->setPosition(x, height);
 	frame->addChild(range);

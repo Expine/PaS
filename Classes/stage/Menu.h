@@ -116,7 +116,7 @@ public:
 	void hideEnemyUnit();
 
 	void showWeaponFrame(Entity* unit);
-	void renderWeapon(WeaponData* weapon, int no);
+	void renderWeapon(Entity* unit, WeaponData* weapon, int no);
 	void hideWeaponFrame();
 
 	std::function<void(WeaponData*)> attack_decision;

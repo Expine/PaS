@@ -85,6 +85,7 @@ private:
 	std::vector<StageTile*> _searchResult;
 	int searchCost;
 	cocos2d::Sprite* selector;
+	cocos2d::Vec2 _preProvisionalPos;
 public:
 	/** listener action */
 	std::function<void(cocos2d::Vec2, std::vector<StageTile*>)> onTap;

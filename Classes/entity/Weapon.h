@@ -3,6 +3,8 @@
 
 #include "cocos2d.h"
 
+class Entity;
+
 enum class DirectionRange
 {
 	liner, crescent, overHalf, full, select
@@ -51,6 +53,8 @@ public:
 	CC_SYNTHESIZE(RangeType, _range, Range);
 	CC_SYNTHESIZE(int, _accuracy, Accuracy);
 	CC_SYNTHESIZE(int, _consumption, Consumption);
+
+	bool isUsable(Entity* unit);
 };
 
 /********************************************************************/
