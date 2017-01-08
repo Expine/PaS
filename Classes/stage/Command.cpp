@@ -76,7 +76,7 @@ void command::forDeploy(std::function<void(Command, int)> func)
 
 void command::forDispatch(std::function<void(Command, int)> func)
 {
-	forCommand(i, Command::DISPATCH_START, Command::DISPATCH_START)
+	forCommand(i, Command::DISPATCH_START, Command::DISPATCH_END)
 		func(castCommand(i), i - static_cast<int>(Command::DISPATCH_START) - 1);
 }
 
@@ -197,18 +197,32 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	{
 		StageTile* tile;
 		for (auto t : tiles)
-			if(t && t->getId() != 0)
+			if (t && t->getId())
 				tile = t;
 		auto stage = tile->getStage();
-		auto pos = tile->getTileCoordinate();
-		auto unit = stage->getUnit(pos.x, pos.y);
-		if (unit && unit->getAffiliation() == Owner::player)
+		auto unit = stage->getUnit(tile->getTileCoordinate());
+		if (unit && unit->getAffiliation() == Owner::player && unit->getState() == EntityState::none)
 			return true;
 		return false;
 	}
 	case Command::deployment:
+	{
+		City* tile;
+		for (auto t : tiles)
+			if (t && t->getId() && util::instanceof<City>(t))
+				tile = util::instance<City>(t);
+		auto stage = tile->getStage();
+		auto unit = stage->getUnit(tile->getTileCoordinate());
+		return unit && unit->getAffiliation() == Owner::player && tile->getDeployersByRef().size() < tile->getMaxDeployer();
+	}
 	case Command::dispatch:
-		return true;
+	{
+		City* tile;
+		for (auto t : tiles)
+			if (t && t->getId() && util::instanceof<City>(t))
+				tile = util::instance<City>(t);
+		return tile->getDeployersByRef().size() != 0;
+	}
 
 	// Move Command
 	case Command::move_start:

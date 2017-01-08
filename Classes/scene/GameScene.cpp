@@ -54,7 +54,10 @@ bool Game::init(Stage* stage)
 		if (unit)
 		{
 			stage->onTap(v, tiles);
+			auto preUnit = _selectUnit;
+			_selectUnit = unit;
 			menu->getFunction(Command::spec)();
+			_selectUnit = preUnit;
 		}
 	};
 	stage->onDoubleTap = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
@@ -385,6 +388,67 @@ bool Game::init(Stage* stage)
 		setCursol(stage, menu, _selectUnit->getTileCoordinate());
 	});
 
+	// City supply function
+	menu->setFunction(Command::city_supply, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::city_supply, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+	});
+	menu->setFunction(Command::city_supply_start, [this, stage, menu]
+	{
+		menu->getFunction(Command::city_supply_end)();
+	});
+	menu->setFunction(Command::city_supply_end, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+	});
+
+	// Deploy function
+	menu->setFunction(Command::deployment, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::deploy, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		menu->showDeployers(util::instance<City>(_selectTiles.back()));
+	});
+	menu->setFunction(Command::deploy_start, [this, stage, menu]
+	{
+		util::instance<City>(_selectTiles.back())->addDeoloyer(_selectUnit);
+		_selectUnit->removeFromParent();
+		_selectUnit = nullptr;
+		menu->getFunction(Command::deploy_end)();
+	});
+	menu->setFunction(Command::deploy_end, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		menu->hideDeployers();
+		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+	});
+
+	// Dispatch function
+	menu->setFunction(Command::dispatch, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::dispatch, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+	});
+	menu->setFunction(Command::dispatch_start, [this, stage, menu]
+	{
+		menu->getFunction(Command::dispatch_cancel)();
+	});
+	menu->setFunction(Command::dispatch_change, [this, stage, menu]
+	{
+		menu->getFunction(Command::dispatch_cancel)();
+	});
+	menu->setFunction(Command::dispatch_cancel, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
+		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+	});
+
+
 	stage->initTileSearched(Owner::player);
 
     return true;
@@ -448,6 +512,9 @@ void Game::setSelectTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*
 		menu->setTile(_selectTiles, _selectUnit);
 		break;
 	case MenuMode::occupy:
+	case MenuMode::city_supply:
+	case MenuMode::deploy:
+	case MenuMode::dispatch:
 		break;
 	}
 }
@@ -500,10 +567,11 @@ void Game::setSelectUnit(Stage * stage, MenuLayer * menu, Entity * unit)
 		_selectEnemy = unit;
 		break;
 	case MenuMode::attacking:
-		break;
 	case MenuMode::occupy:
-		break;
 	case MenuMode::wait:
+	case MenuMode::city_supply:
+	case MenuMode::deploy:
+	case MenuMode::dispatch:
 		break;
 	}
 }

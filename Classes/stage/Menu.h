@@ -14,7 +14,7 @@ enum class MenuMode
 {
 	none, 
 	city_supply, deploy, dispatch,
-	move, moving, attack, attacking, occupy, wait
+	move, moving, attack, attacking, occupy, wait,
 };
 
 /*********************************************************/
@@ -50,6 +50,8 @@ private:
 
 	void showUnitCommandByOne(int x, int y, cocos2d::Node* command);
 	void hideUnitCommandByOne(cocos2d::Node* command);
+	void showCityCommandByOne(int x, int y, cocos2d::Node* command);
+	void hideCityCommandByOne(cocos2d::Node* command);
 protected:
 	MenuLayer()
 		: _unit(nullptr), _map(nullptr), _menu(nullptr), _info(nullptr)
@@ -86,7 +88,7 @@ public:
 	void checkUnitCommand(Entity* entity, std::vector<StageTile*> tiles, bool able = false);
 	void moveUnitCommand();
 	void hideUnitCommand();
-	void checkCityCommand(City* city);
+	void checkCityCommand(Entity* entity, std::vector<StageTile*> tiles, City* city);
 	void moveCityCommand();
 	void hideCityCommand();
 
@@ -122,8 +124,15 @@ public:
 
 	void showSpecFrame(Entity* unit);
 
+	void showDeployers(City* city);
+	void renderDeployer(cocos2d::Node* target, Entity* unit, int y);
+	void hideDeployers();
+
 	std::function<void(WeaponData*)> attack_decision;
 	std::function<void(WeaponData*)> attack_cancel;
+
+	inline bool isCityMenuModeAble() { return _mode == MenuMode::none || _mode == MenuMode::city_supply || _mode == MenuMode::deploy || _mode == MenuMode::dispatch; };
+	inline bool isUnitMenuModeAble() { return _mode == MenuMode::none || !isCityMenuModeAble(); };
 };
 
 #endif // __MENU_H__

@@ -2,6 +2,7 @@
 #include "Stage.h"
 
 #include "stage/Command.h"
+#include "entity/Entity.h"
 #include "ai/Owner.h"
 #include "util/Util.h"
 
@@ -58,21 +59,26 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 		util::instance<Capital>(tile)->setOwner(Owner::player); 
 		util::instance<Capital>(tile)->setMaxDurability(200);
 		util::instance<Capital>(tile)->setDurability(100);
+		util::instance<Capital>(tile)->setMaxDeployer(10);
+		util::initRand();
 		break;
 	case 17:tile = City::create();		
 		util::instance<City>(tile)->setOwner(Owner::player);	
 		util::instance<City>(tile)->setMaxDurability(200);
 		util::instance<City>(tile)->setDurability(100);
+		util::instance<City>(tile)->setMaxDeployer(5);
 		break;
 	case 24:tile = Capital::create();	
 		util::instance<Capital>(tile)->setOwner(Owner::enemy);	
 		util::instance<Capital>(tile)->setMaxDurability(200);
 		util::instance<Capital>(tile)->setDurability(100);
+		util::instance<Capital>(tile)->setMaxDeployer(10);
 		break;
 	case 25:tile = City::create();
 		util::instance<City>(tile)->setOwner(Owner::enemy);		
 		util::instance<City>(tile)->setMaxDurability(200);
 		util::instance<City>(tile)->setDurability(100);
+		util::instance<City>(tile)->setMaxDeployer(5);
 		break;
 	default:tile = None::create();		break;
 	}
@@ -116,3 +122,7 @@ Stage * StageTile::getStage()
 	return dynamic_cast<Stage*>(getStageLayer()->getParent());
 }
 
+void City::addDeoloyer(Entity * entity)
+{
+	_deployers.pushBack(entity);
+}

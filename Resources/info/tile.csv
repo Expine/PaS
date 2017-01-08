@@ -8,5 +8,5 @@ ocean,大洋,FALSE,FALSE,FALSE
 road,道路,FALSE,FALSE,FALSE
 bridge,橋梁,FALSE,FALSE,FALSE
 capital,首都,TRUE,TRUE,TRUE
-city,都市,TRUE,TRUE,FALSE
+city,都市,TRUE,TRUE,TRUE
 territory,竜脈,FALSE,FALSE,FALSE

@@ -5,7 +5,7 @@
 
 USING_NS_CC;
 
-constexpr float DefaultLongTapThreshold = 0.1f;
+constexpr float DefaultLongTapThreshold = 0.3f;
 constexpr float DefaultDoubleTapThreshold = 0.15f;
 constexpr float DefaultSwipeThresholdDistance = 10.0f;
 constexpr float DefaultFlickThreshold = 0.1f;

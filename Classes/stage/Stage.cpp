@@ -181,6 +181,9 @@ Stage * Stage::parseStage(const std::string file)
 		}
 		check = true;
 	}
+	for (auto city : stage->_cities[Owner::player])
+		for(int i=0 ; i<city->getMaxDeployer() - 2; i++)
+			city->addDeoloyer(Entity::create(static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), 0, 0, stage->getUnitLayer()->getBatch(), stage));
 
 	return stage;
 }

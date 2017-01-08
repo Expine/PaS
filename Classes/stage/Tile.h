@@ -7,6 +7,7 @@
 
 class Stage;
 class StageLayer;
+class Entity;
 enum class Command;
 
 constexpr int STAGE_TILE_WHITE = 39;
@@ -55,7 +56,7 @@ class StageTile : public cocos2d::Sprite
 {
 protected:
 	StageTile()
-		: _id(0), _terrain(TerrainType::none), _explanation(""), _searched(false), _remainCost(-1)
+		: _id(0), _terrain(TerrainType::none), _searched(false), _remainCost(-1)
 	{};
 	~StageTile()
 	{
@@ -64,7 +65,6 @@ protected:
 public:
 	CC_SYNTHESIZE(int, _id, Id);
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);
-	CC_SYNTHESIZE(std::string, _explanation, Explanation);
 	CC_SYNTHESIZE(bool, _searched, Searched);
 	CC_SYNTHESIZE(int, _remainCost, RemainCost);
 	cocos2d::Vec2 getTileCoordinate();
@@ -82,7 +82,6 @@ protected:
 		if (!StageTile::init())
 			return false;
 		setTerrainType(TerrainType::none);
-		setExplanation("NO DATA");
 		return true;
 	};
 public:
@@ -98,7 +97,6 @@ protected:
 		if (!StageTile::init())
 			return false;
 		setTerrainType(TerrainType::prairie);
-		setExplanation(u8"開けた草原。\n移動しやすい。");
 		return true;
 	};
 public:
@@ -113,7 +111,6 @@ protected:
 		if (!StageTile::init())
 			return false;
 		setTerrainType(TerrainType::woods);
-		setExplanation(u8"茂った森林。\n見通しが悪い。\n火の魔法が有効。");
 		return true;
 	};
 public:
@@ -130,7 +127,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::mountain);
-		setExplanation(u8"険しい山。\n移動しづらい。\n土の魔法が有効。");
 		return true;
 	};
 public:
@@ -147,7 +143,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::ocean);
-		setExplanation(u8"深い海。\n一部移動可能。\n水の魔法が有効。");
 		return true;
 	};
 public:
@@ -163,7 +158,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::river);
-		setExplanation(u8"歩ける浅瀬。\n移動しにくい。\n水の魔法が有効。");
 		return true;
 	};
 public:
@@ -180,7 +174,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::road);
-		setExplanation(u8"整備された道。\n移動しやすい。\n土の魔法が有効。");
 		return true;
 	};
 public:
@@ -196,7 +189,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::bridge);
-		setExplanation(u8"建設された橋。\n移動しやすい。");
 		return true;
 	};
 public:
@@ -212,7 +204,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::city);
-		setExplanation(u8"拠点となる都市。\n兵士を駐在できる。\n");
 		return true;
 	};
 public:
@@ -220,6 +211,10 @@ public:
 	CC_SYNTHESIZE(Owner, _owner, Owner);
 	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
 	CC_SYNTHESIZE(int, _Durability, Durability);
+	CC_SYNTHESIZE(int, _maxDeployer, MaxDeployer);
+	cocos2d::Vector<Entity*> _deployers;
+	void addDeoloyer(Entity* entity);
+	inline const cocos2d::Vector<Entity*>& getDeployersByRef() { return _deployers; };
 };
 
 class Capital : public City
@@ -231,7 +226,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::capital);
-		setExplanation(u8"重要な首都。\n兵士を配備できる。\n");
 		return true;
 	};
 public:
@@ -248,7 +242,6 @@ protected:
 			return false;
 
 		setTerrainType(TerrainType::territory);
-		setExplanation(u8"自然の龍脈。\n魔法使いが補給\nできる。\n");
 		return true;
 	};
 public:

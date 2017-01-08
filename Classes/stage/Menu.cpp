@@ -232,7 +232,7 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 	// Show city command
 	if (util::instanceof<City>(tile) && util::instance<City>(tile)->getOwner() == Owner::player)
 	{
-		checkCityCommand(util::instance<City>(tile));
+		checkCityCommand(unit, tiles, util::instance<City>(tile));
 		moveCityCommand();
 	}
 	else
@@ -464,6 +464,12 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
  */
 void MenuLayer::moveUnitCommand()
 {
+	if (!isUnitMenuModeAble())
+	{
+		hideUnitCommand();
+		return;
+	}
+
 	if (_isShowedUnitCommand)
 		return;
 
@@ -617,15 +623,49 @@ void MenuLayer::hideUnitCommandByOne(Node* command)
 /*
  * Check city command enable
  */
-void MenuLayer::checkCityCommand(City* city)
+void MenuLayer::checkCityCommand(Entity* entity, std::vector<StageTile*> tiles, City* city)
 {
-	command::forCity([this, city](Command com, int i) 
+	switch (_mode)
 	{
-		if (TileInformation::getInstance()->getCommand(city->getTerrainType(), com))
-			_commands[com]->setColor(Color3B::WHITE);
-		else
-			_commands[com]->setColor(Color3B::GRAY);
-	});
+	case MenuMode::city_supply:
+		command::forCitySupply([this, entity, tiles](Command com, int i) 
+		{
+			if (!command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::GRAY);
+			else
+				_commands[com]->setColor(Color3B::WHITE);
+		});
+		break;
+	case MenuMode::deploy:
+		command::forDeploy([this, entity, tiles](Command com, int i)
+		{
+			if (!command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::GRAY);
+			else
+				_commands[com]->setColor(Color3B::WHITE);
+		});
+		break;
+	case MenuMode::dispatch:
+		command::forDispatch([this, entity, tiles](Command com, int i)
+		{
+			if (!command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::GRAY);
+			else
+				_commands[com]->setColor(Color3B::WHITE);
+		});
+		break;
+	default:
+		command::forCity([this, city, entity, tiles](Command com, int i)
+		{
+			if (!TileInformation::getInstance()->getCommand(city->getTerrainType(), com))
+				_commands[com]->setColor(Color3B::GRAY);
+			else if (!command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::GRAY);
+			else
+				_commands[com]->setColor(Color3B::WHITE);
+		});
+		break;
+	}
 }
 
 /*
@@ -634,26 +674,40 @@ void MenuLayer::checkCityCommand(City* city)
  */
 void MenuLayer::moveCityCommand()
 {
+	if (!isCityMenuModeAble())
+	{
+		hideCityCommand();
+		return;
+	}
+
 	// Check showed
 	if (_isShowedCityCommand)
 		return;
 
-	// Move command
-	command::forCity([this](Command command, int i)
+	std::function<void(std::function<void(Command, int)>)> func;
+
+	switch (_mode)
 	{
-		auto com = _commands[command];
-		com->stopAllActions();
-		if (isHided(FrameType::map))
-			com->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + (i / 2) * (com->getContentSize().width + 20), _map->getPosition().y + _map->getContentSize().height - (com->getContentSize().height + 10) - (i % 2) * (com->getContentSize().height + 15)))),
-				NULL));
-		else
-			com->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _map->getPosition().y) + Vec2(10 + (i % 3) * (com->getContentSize().width + 20), i / 3 * (com->getContentSize().height + 15) + _map->getContentSize().height))),
-				NULL));
-	});
+	case MenuMode::none:
+		func = command::forCity;
+		break;
+	case MenuMode::city_supply:
+		func = command::forCitySupply;
+		break;
+	case MenuMode::deploy:
+		func = command::forDeploy;
+		break;
+	case MenuMode::dispatch:
+		func = command::forDispatch;
+		break;
+	}
+
+	// Move command
+	if(func)
+		func([this](Command com, int i)
+		{
+			showCityCommandByOne(i % 3, i / 3, _commands[com]);
+		});
 
 	_isShowedCityCommand = true;
 }
@@ -667,23 +721,61 @@ void MenuLayer::hideCityCommand()
 	if (!_isShowedCityCommand)
 		return;
 
-	command::forCity([this](Command command, int i) 
+	std::function<void(std::function<void(Command, int)>)> func;
+
+	switch (_mode)
 	{
-		auto com = _commands[command];
-		com->stopAllActions();
-		if (isHided(FrameType::map))
-			com->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
-				NULL));
-		else
-			com->runAction(Sequence::create(
-				EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
-				EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-com->getContentSize().width, _map->getContentSize().height))),
-				NULL));
+	case MenuMode::none:
+		func = command::forCity;
+		break;
+	case MenuMode::city_supply:
+		func = command::forCitySupply;
+		break;
+	case MenuMode::deploy:
+		func = command::forDeploy;
+		break;
+	case MenuMode::dispatch:
+		func = command::forDispatch;
+		break;
+
+	}
+	func([this](Command com, int i) 
+	{
+		hideCityCommandByOne(_commands[com]);
 	});
 
 	_isShowedCityCommand = false;
+}
+
+void MenuLayer::showCityCommandByOne(int x, int y, cocos2d::Node * command)
+{
+	command->stopAllActions();
+	if (isHided(FrameType::map))
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(MODIFY + 10 + y * (command->getContentSize().width + 20), _map->getPosition().y + _map->getContentSize().height - x * (command->getContentSize().height + 15)))),
+			NULL));
+	else
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(0, _map->getPosition().y) + Vec2(10 + x * (command->getContentSize().width + 20), y * (command->getContentSize().height + 15) + _map->getContentSize().height))),
+			NULL));
+}
+
+void MenuLayer::hideCityCommandByOne(cocos2d::Node * command)
+{
+	command->stopAllActions();
+	if (isHided(FrameType::map))
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-command->getContentSize().width, _map->getContentSize().height))),
+			NULL));
+	else
+		command->runAction(Sequence::create(
+			EaseExponentialOut::create(MoveTo::create(0.15f, Vec2(MODIFY + 10, _map->getPosition().y + _map->getContentSize().height))),
+			EaseExponentialOut::create(MoveTo::create(0.5f, Vec2(-command->getContentSize().width, _map->getContentSize().height))),
+			NULL));
+
 }
 
 /*
@@ -905,13 +997,19 @@ void MenuLayer::setMenuMode(MenuMode mode, Entity *unit, std::vector<StageTile*>
 	if (_mode != mode)
 	{
 		hideUnitCommand();
+		hideCityCommand();
 		_mode = mode;
 		checkUnitCommand(unit, tiles);
 		moveUnitCommand();
+		if(util::instanceof<City>(tiles.back()))
+			checkCityCommand(unit, tiles, util::instance<City>(tiles.back()));
+		moveCityCommand();
 	}
 	else
 	{
 		checkUnitCommand(unit, tiles);
+		if (util::instanceof<City>(tiles.back()))
+			checkCityCommand(unit, tiles, util::instance<City>(tiles.back()));
 	}
 }
 
@@ -1194,4 +1292,114 @@ void MenuLayer::showSpecFrame(Entity * unit)
 		frame->removeFromParentAndCleanup(true);
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, frame);
+}
+
+void MenuLayer::showDeployers(City * city)
+{
+	auto winSize = Director::getInstance()->getWinSize();
+
+	// Set frame
+	auto frame = util::createCutSkin(FRAME, 400, 600, util::CUT_MASK_UP | util::CUT_MASK_DOWN);
+	frame->setAnchorPoint(Vec2::ANCHOR_BOTTOM_RIGHT);
+	frame->setPosition(winSize.width, 0);
+	frame->setTag(1001);
+	this->addChild(frame);
+
+	// Set node
+	auto node = Node::create();
+	node->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	node->setContentSize(Size(400, 100 * city->getDeployersByRef().size() + 20));
+	node->setPosition(0, 600 - node->getContentSize().height);
+	frame->addChild(node);
+
+	// Set unit data
+	auto count = 0;
+	for (auto unit : city->getDeployersByRef())
+		renderDeployer(node, unit, node->getContentSize().height - count++ * 100);
+
+
+	// Set listener
+	auto lis = SingleTouchListener::create();
+	lis->setSwallowTouches(true);
+	lis->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
+	lis->onSwipe = [node](Vec2 v, Vec2 diff, float time)
+	{
+		if (600 < node->getContentSize().height)
+		{
+			auto pos = node->getPosition() + Vec2(0, diff.y);
+			pos.y = (pos.y < 600 - node->getContentSize().height) ? 600 - node->getContentSize().height : (pos.y > 0) ? 0 : pos.y;
+			node->setPosition(pos);
+		}
+	};
+	lis->onFlick = [node](Vec2 v, Vec2 diff, float time)
+	{
+		if (600 < node->getContentSize().height)
+		{
+			node->runAction(Spawn::create(
+				Sequence::create(
+					EaseSineOut::create(MoveBy::create(0.5f, Vec2(0, diff.y) / time / 3)),
+					CallFunc::create([node] {
+						node->stopAllActions();
+					}),
+				NULL),
+				Repeat::create(Sequence::create(
+					CallFunc::create([node] {
+						auto pos = node->getPosition();
+						pos.y = (pos.y < 600 - node->getContentSize().height) ? 600 - node->getContentSize().height : (pos.y > 0) ? 0 : pos.y;
+						node->setPosition(pos);
+					}),
+					DelayTime::create(0.005f),
+				NULL), -1),
+			NULL));
+		}
+	};
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, frame);
+}
+
+void MenuLayer::renderDeployer(Node* target, Entity * unit, int y)
+{
+	y -= 10;
+
+	// Set unit image
+	auto unitImage = Sprite::create("image/unit.png", Rect(0, static_cast<int>(unit->getType()) * 32, 32, 32));
+	unitImage->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	unitImage->setPosition(20, y - 10);
+	unitImage->setScale(2.5f);
+	target->addChild(unitImage);
+
+	// Set unit color
+	auto color = Sprite::create();
+	color->setTextureRect(Rect(0, 0, 30, 30));
+	color->setColor(OwnerInformation::getInstance()->getColor(unit->getAffiliation()));
+	color->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	color->setPosition(110, y);
+	target->addChild(color);
+
+	// Set unit name
+	auto name = Label::createWithSystemFont(unit->getName(), JP_FONT, INFO_SIZE);
+	name->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	name->setPosition(150, y - 5);
+	name->setColor(Color3B::BLACK);
+	target->addChild(name);
+
+	// Set unit ability
+	auto count = 0;
+	for (auto i : {
+		StringUtils::format(u8"残存兵力 %d / %d", unit->getDurability(), unit->getMaxDurability()),
+		StringUtils::format(u8"残存物資 %d / %d", unit->getMaterial(), unit->getMaxMaterial()),
+	})
+	{
+		auto item = Label::createWithSystemFont(i, JP_FONT, INFO_SIZE);
+		item->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+		item->setPosition(130, y - 40 - count * (INFO_SIZE + 10));
+		item->setColor(Color3B::BLACK);
+		target->addChild(item);
+		count++;
+	}
+}
+
+void MenuLayer::hideDeployers()
+{
+	if (this->getChildByTag(1001))
+		this->removeChildByTag(1001);
 }
