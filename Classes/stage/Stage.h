@@ -154,6 +154,8 @@ public:
 	cocos2d::Vec2 getTileCoordinate(cocos2d::Vec2 cor);
 	cocos2d::Vec2 getCoordinateByTile(int x, int y);
 	inline cocos2d::Vec2 getCoordinateByTile(cocos2d::Vec2 v) { return getCoordinateByTile(v.x, v.y); };
+	void movePosition(Entity* unit);
+	void movePosition(StageTile* tile);
 	void movePosition(int x, int y);
 	inline void movePosition(cocos2d::Vec2 v) { movePosition(v.x, v.y); };
 

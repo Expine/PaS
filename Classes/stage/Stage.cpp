@@ -159,7 +159,7 @@ Stage * Stage::parseStage(const std::string file)
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
-	for (int i = 0; i < 500; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
 		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
@@ -337,6 +337,16 @@ Vec2 Stage::getTileCoordinate(Vec2 cor)
 Vec2 Stage::getCoordinateByTile(int x, int y)
 {
 	return Vec2(x * (_chipSize.x + _gap) + (y % 2) * (_chipSize.x + _gap) / 2, (_mapSize.y - 1 - y) * _chipSize.y / 2);
+}
+
+void Stage::movePosition(Entity * unit)
+{
+	movePosition(getCoordinateByTile(unit->getTileCoordinate()));
+}
+
+void Stage::movePosition(StageTile * tile)
+{
+	movePosition(getCoordinateByTile(tile->getTileCoordinate()));
 }
 
 /*
@@ -956,37 +966,48 @@ Vec2 Stage::nextCity(Owner owner, StageTile* nowTile)
 	{
 		if (discovered)
 		{
-			movePosition(city->getPosition().x, city->getPosition().y);
+			movePosition(city);
 			return city->getTileCoordinate();
 		}
 		if (city == nowTile)
 			discovered = true;
 	}
-	movePosition(cities.front()->getPosition().x, cities.front()->getPosition().y);
+	movePosition(cities.front());
 	return cities.front()->getTileCoordinate();
 }
 
 /*
  * Move next unit
+ * If all unit acted, return Vec2(0, 0)
  */
 Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 {
 	auto units = _units[owner];
 	if (!nowUnit)
-		nowUnit = units.back();
+		nowUnit = units.front();
 	bool discovered = false;
+	std::vector<Entity*> preUnits;
+	// Search unit and select later unit
 	for (auto unit : units)
-	{
-		if (discovered)
+		if (discovered && unit->getState() != EntityState::acted)
 		{
-			movePosition(unit->getPosition().x, unit->getPosition().y);
+			movePosition(unit);
 			return Vec2(unit->getTag() / (int)(getMapSize().y), unit->getTag() % (int)(getMapSize().y));
 		}
-		if (unit == nowUnit)
+		else if (unit == nowUnit)
 			discovered = true;
-	}
-	movePosition(units.front()->getPosition().x, units.front()->getPosition().y);
-	return Vec2(units.front()->getTag() / (int)(getMapSize().y), units.front()->getTag() % (int)(getMapSize().y));
+		else
+			preUnits.push_back(unit);
+	// Select former unit
+	for (auto unit : preUnits)
+		if (discovered && unit->getState() != EntityState::acted)
+		{
+			movePosition(unit);
+			return Vec2(unit->getTag() / (int)(getMapSize().y), unit->getTag() % (int)(getMapSize().y));
+		}
+
+	// All acted, return 0, 0
+	return Vec2(0, 0);
 }
 
 std::vector<StageTile*> Stage::moveCheck(Entity * entity)

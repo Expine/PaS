@@ -50,8 +50,11 @@ bool Game::init(Stage* stage)
 	};
 	stage->onDoubleTap = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
 	{
-		stage->onTap(v, tiles);
 		auto unit = stage->getUnit(v);
+		bool isSameUnit = _selectUnit == unit;
+
+		stage->onTap(v, tiles);
+
 		switch (menu->getMenuMode())
 		{
 		case MenuMode::none:
@@ -68,8 +71,13 @@ bool Game::init(Stage* stage)
 				case EntityState::moved:
 					if (command::isEnable(Command::attack, _selectUnit, _selectTiles))
 						menu->getFunction(Command::attack)();
+					else if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
+						menu->getFunction(Command::occupation)();
+					else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
+						menu->getFunction(Command::wait)();
 					break;
 				case EntityState::acted:
+					menu->getFunction(Command::nextUnit)();
 					break;
 				}
 			// If double tap on enemy unit
@@ -88,8 +96,19 @@ bool Game::init(Stage* stage)
 			break;
 		}
 		case MenuMode::move:
+			if (isSameUnit)
+			{
+				menu->getFunction(Command::move_end)();
+				if (command::isEnable(Command::attack, _selectUnit, _selectTiles))
+					menu->getFunction(Command::attack)();
+				else if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
+					menu->getFunction(Command::occupation)();
+				else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
+					menu->getFunction(Command::wait)();
+				break;
+			}
 			// If double tap on movable tile, start process
-			if (util::find(_selectArea, tiles.back()))
+			else if (util::find(_selectArea, tiles.back()))
 				menu->getFunction(Command::move_start)();
 			else
 				menu->getFunction(Command::move_end)();
@@ -106,7 +125,16 @@ bool Game::init(Stage* stage)
 			}
 			break;
 		case MenuMode::attack:
-			if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
+			if (isSameUnit)
+			{
+				menu->getFunction(Command::attack_end)();
+				if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
+					menu->getFunction(Command::occupation)();
+				else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
+					menu->getFunction(Command::wait)();
+				break;
+			}
+			else if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
 				menu->getFunction(Command::attack_target)();
 			else if (!util::find(_selectArea, tiles.back()))
 				menu->getFunction(Command::attack_end)();
@@ -116,6 +144,18 @@ bool Game::init(Stage* stage)
 				menu->getFunction(Command::attack_start)();
 			else if (!util::find(_selectArea, tiles.back()))
 				menu->getFunction(Command::attack_cancel)();
+			break;
+		case MenuMode::occupy:
+			if (isSameUnit)
+				menu->getFunction(Command::occupation_start)();
+			else
+				menu->getFunction(Command::occupation_end)();
+			break;
+		case MenuMode::wait:
+			if (isSameUnit)
+				menu->getFunction(Command::wait_start)();
+			else
+				menu->getFunction(Command::wait_end)();
 			break;
 		}
 	};
@@ -153,18 +193,20 @@ bool Game::init(Stage* stage)
 	{
 		if (menu->getMenuMode() != MenuMode::none)
 		{
-			stage->movePosition(_selectUnit->getPosition());
+			stage->movePosition(_selectUnit);
 			return;
 		}
 
-		setCursol(stage, menu, stage->nextUnit(Owner::player, _selectUnit));
+		auto pos = stage->nextUnit(Owner::player, _selectUnit);
+		if(pos != Vec2(0, 0))
+			setCursol(stage, menu, pos);
 	});
 
 	//Move function
 	menu->setFunction(Command::move, [this, stage, menu] 
 	{
 		_selectArea = stage->moveCheck(_selectUnit);
-		stage->movePosition(_selectUnit->getPosition());
+		stage->movePosition(_selectUnit);
 		for (auto tile : _selectArea)
 			stage->blinkTile(tile, Color3B::WHITE);
 		menu->setMenuMode(MenuMode::move, _selectUnit, _selectTiles);
@@ -201,7 +243,7 @@ bool Game::init(Stage* stage)
 	menu->setFunction(Command::attack, [this, stage, menu] 
 	{
 		menu->showWeaponFrame(_selectUnit);
-		stage->movePosition(_selectUnit->getPosition());
+		stage->movePosition(_selectUnit);
 	});
 	menu->attack_decision = [this, stage, menu](WeaponData* data)
 	{
@@ -294,7 +336,6 @@ bool Game::init(Stage* stage)
 	// Occupation function
 	menu->setFunction(Command::occupation, [this, stage, menu] 
 	{
-		stage->movePosition(_selectUnit->getPosition());
 		menu->setMenuMode(MenuMode::occupy, _selectUnit, _selectTiles);
 		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
 	});
@@ -314,7 +355,6 @@ bool Game::init(Stage* stage)
 	// Wait function
 	menu->setFunction(Command::wait, [this, stage, menu] 
 	{
-		stage->movePosition(_selectUnit->getPosition());
 		menu->setMenuMode(MenuMode::wait, _selectUnit, _selectTiles);
 		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
 	});
