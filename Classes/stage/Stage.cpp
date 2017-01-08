@@ -159,7 +159,7 @@ Stage * Stage::parseStage(const std::string file)
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
 	bool check = true;
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 100; i++)
 	{
 		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
 		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
@@ -209,7 +209,7 @@ bool Stage::init()
 		{
 			auto cor = getTileCoordinate(v);
 			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor.x, cor.y))
+			for (auto tile : getTiles(cor))
 				if (tile->getId() != 0)
 					tiles.push_back(tile);
 			onTap(cor, tiles);
@@ -221,7 +221,7 @@ bool Stage::init()
 		{
 			auto cor = getTileCoordinate(v);
 			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor.x, cor.y))
+			for (auto tile : getTiles(cor))
 				if (tile->getId() != 0)
 					tiles.push_back(tile);
 			onDoubleTap(cor, tiles);
@@ -260,12 +260,9 @@ bool Stage::init()
 		{
 			auto cor = getTileCoordinate(v);
 			std::vector<StageTile*> tiles;
-			for (int i = 0; i < 3; i++)
-			{
-				auto tile = getTile(i, cor.x, cor.y);
-				if (tile->getId() != 0)
+			for (auto tile : getTiles(cor))
+				if (tile->getId())
 					tiles.push_back(tile);
-			}
 			onLongTapBegan(cor, tiles);
 		}
 	};
@@ -276,12 +273,9 @@ bool Stage::init()
 		{
 			auto cor = getTileCoordinate(v);
 			std::vector<StageTile*> tiles;
-			for (int i = 0; i < 3; i++)
-			{
-				auto tile = getTile(i, cor.x, cor.y);
-				if (tile->getId() != 0)
+			for (auto tile : getTiles(cor))
+				if (tile->getId())
 					tiles.push_back(tile);
-			}
 			onLongTapEnd(cor, tiles);
 		}
 	};

@@ -163,19 +163,19 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	{
 	// Unit Command
 	case Command::supply:
-		return unit && unit->getState() != EntityState::acted;
+		return unit && unit->getAffiliation() == Owner::player && unit->getState() != EntityState::acted;
 	case Command::move:
-		return unit && unit->getState() < EntityState::moved;
+		return unit && unit->getAffiliation() == Owner::player && unit->getState() < EntityState::moved;
 	case Command::attack:
 	{
-		if (!unit || unit->getState() == EntityState::acted)
+		if (!unit || unit->getState() == EntityState::acted || unit->getAffiliation() != Owner::player)
 			return false;
 
 		return unit->isAttakable();
 	}
 	case Command::occupation:
 	{
-		if (!unit || unit->getState() == EntityState::acted)
+		if (!unit || unit->getState() == EntityState::acted || unit->getAffiliation() != Owner::player)
 			return false;
 
 		auto stage = unit->getStage();
@@ -190,7 +190,7 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	case Command::spec:
 		return true;
 	case Command::wait:
-		return unit && unit->getState() != EntityState::acted;
+		return unit && unit->getAffiliation() == Owner::player && unit->getState() != EntityState::acted;
 
 	// City Command
 	case Command::city_supply:

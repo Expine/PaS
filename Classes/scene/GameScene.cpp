@@ -48,6 +48,15 @@ bool Game::init(Stage* stage)
 
 		setCursol(stage, menu, v);
 	};
+	stage->onLongTapBegan = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
+	{
+		auto unit = stage->getUnit(v);
+		if (unit)
+		{
+			stage->onTap(v, tiles);
+			menu->getFunction(Command::spec)();
+		}
+	};
 	stage->onDoubleTap = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
 	{
 		auto unit = stage->getUnit(v);
@@ -350,6 +359,12 @@ bool Game::init(Stage* stage)
 		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
 		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
 		setCursol(stage, menu, _selectUnit->getTileCoordinate());
+	});
+
+	// Spec function
+	menu->setFunction(Command::spec, [this, stage, menu] 
+	{
+		menu->showSpecFrame(_selectUnit);
 	});
 
 	// Wait function

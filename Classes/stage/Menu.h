@@ -116,8 +116,11 @@ public:
 	void hideEnemyUnit();
 
 	void showWeaponFrame(Entity* unit);
-	void renderWeapon(Entity* unit, WeaponData* weapon, int no);
+	void showWeapon(cocos2d::Node* target, Entity* unit, cocos2d::Color3B color, bool checkUsable = true);
+	void renderWeapon(cocos2d::Node* target, Entity* unit, WeaponData* weapon, int no, cocos2d::Color3B color, bool checkUsable = true);
 	void hideWeaponFrame();
+
+	void showSpecFrame(Entity* unit);
 
 	std::function<void(WeaponData*)> attack_decision;
 	std::function<void(WeaponData*)> attack_cancel;

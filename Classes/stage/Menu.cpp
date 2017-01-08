@@ -313,13 +313,8 @@ void MenuLayer::setUnit(Node * target, std::vector<StageTile*> tiles, Entity * u
 	// If unit frame, check command
 	if (target == _unit)
 	{
-		if (unit->getAffiliation() == Owner::player)
-		{
-			checkUnitCommand(unit, tiles);
-			moveUnitCommand();
-		}
-		else
-			hideUnitCommand();
+		checkUnitCommand(unit, tiles);
+		moveUnitCommand();
 	}
 }
 
@@ -956,34 +951,10 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	weapon->setTag(1000);
 	this->addChild(weapon);
 
-	// Set info
-	auto height = weapon->getContentSize().height - 10 - INFO_SIZE;
-	auto name = Label::createWithSystemFont(u8"装備名", JP_FONT, INFO_SIZE);
-	name->setColor(Color3B::BLACK);
-	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
-	name->setPosition(70, height);
-	weapon->addChild(name);
-	auto x = 160;
-	for (auto item : { u8"対人", u8"対魔", u8"対炎", u8"対氷", u8"対雷", u8"対土", u8"命中", u8"範囲" })
-	{
-		if(item == u8"範囲")
-			x += 30;
-		auto label = Label::createWithSystemFont(item, JP_FONT, INFO_SIZE);
-		label->setColor(Color3B::BLACK);
-		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
-		label->setPosition(x, height);
-		weapon->addChild(label);
-		x += 60;
-	}
-
-	// Set weapon data
-	auto no = 0;
-	for (auto weapon : unit->getWeaponsByRef())
-		if(weapon)
-			renderWeapon(unit, weapon, no++);
+	showWeapon(weapon, unit, Color3B::BLACK);
 
 	// Set frame
-	no = 0;
+	auto no = 0;
 	for (auto weapon : unit->getWeaponsByRef())
 	{
 		if (weapon && weapon->isUsable(unit))
@@ -1069,46 +1040,158 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, weapon);
 }
 
+void MenuLayer::showWeapon(Node * target, Entity * unit, Color3B color, bool checkUsable)
+{
+	// Set info
+	auto height = target->getContentSize().height - 10 - INFO_SIZE;
+	auto name = Label::createWithSystemFont(u8"装備名", JP_FONT, INFO_SIZE);
+	name->setColor(color);
+	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	name->setPosition(70, height);
+	target->addChild(name);
+	auto x = 160;
+	for (auto item : { u8"対人", u8"対魔", u8"対炎", u8"対氷", u8"対雷", u8"対土", u8"命中", u8"範囲" })
+	{
+		if (item == u8"範囲")
+			x += 30;
+		auto label = Label::createWithSystemFont(item, JP_FONT, INFO_SIZE);
+		label->setColor(color);
+		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+		label->setPosition(x, height);
+		target->addChild(label);
+		x += 60;
+	}
+
+	// Set weapon data
+	auto no = 0;
+	for (auto weapon : unit->getWeaponsByRef())
+		if (weapon)
+			renderWeapon(target, unit, weapon, no++, color, checkUsable);
+}
+
 /*
  * Render a weapon information
  */
-void MenuLayer::renderWeapon(Entity *unit, WeaponData * weapon, int no)
+void MenuLayer::renderWeapon(Node* target, Entity *unit, WeaponData * weapon, int no, Color3B color, bool checkUsable)
 {
-	auto frame = this->getChildByTag(1000);
-	auto height = frame->getContentSize().height - 15 - 50 * no - MENU_SIZE - 30;
-	auto usable = weapon->isUsable(unit);
+	auto height = target->getContentSize().height - 15 - 50 * no - MENU_SIZE - 30;
+	auto usable = !checkUsable || weapon->isUsable(unit);
 
 	// Set name
 	auto name = Label::createWithSystemFont(weapon->getName(), JP_FONT, MENU_SIZE);
-	name->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
+	name->setColor(usable ? color : Color3B::GRAY);
 	name->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	name->setPosition(70, height);
 	name->setTag(no);
-	frame->addChild(name);
+	target->addChild(name);
 
 	// Set info
 	auto x = 160;
 	for (auto item : { weapon->getAntiPersonnel(), weapon->getAntiWizard(), weapon->getAntiFire(), weapon->getAntiIce(), weapon->getAntiThunder(), weapon->getAntiGround(), weapon->getAccuracy() })
 	{
 		auto label = Label::createWithSystemFont(StringUtils::format("%d", item), EN_FONT, INFO_SIZE);
-		label->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
+		label->setColor(usable ? color : Color3B::GRAY);
 		label->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 		label->setPosition(x, height);
-		frame->addChild(label);
+		target->addChild(label);
 		x += 60;
 	}
 
 	// Set range
 	x += 30;
 	auto range = Label::createWithSystemFont(WeaponInformation::getInstance()->getRangeName(weapon->getRange()), JP_FONT, INFO_SIZE);
-	range->setColor(usable ? Color3B::BLACK : Color3B::GRAY);
+	range->setColor(usable ? color : Color3B::GRAY);
 	range->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
 	range->setPosition(x, height);
-	frame->addChild(range);
+	target->addChild(range);
 }
 
 void MenuLayer::hideWeaponFrame()
 {
 	if(this->getChildByTag(1000))
 		this->getChildByTag(1000)->removeFromParentAndCleanup(true);
+}
+
+/*
+ * Show specframe
+ */
+void MenuLayer::showSpecFrame(Entity * unit)
+{
+	auto winSize = Director::getInstance()->getWinSize();
+
+	// Set main frame
+	auto frame = util::createCutSkin(FRAME, 800, 600, 0);
+	frame->setAnchorPoint(Vec2::ANCHOR_MIDDLE);
+	frame->setPosition(winSize / 2);
+	frame->setTag(1000);
+	this->addChild(frame);
+
+	// Set margin
+	auto right = Sprite::create("image/window_side_right_2.png");
+	right->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	right->setPosition(frame->getContentSize().width, 0);
+	frame->addChild(right);
+	auto left = Sprite::create("image/window_side_left_2.png");
+	left->setAnchorPoint(Vec2::ANCHOR_BOTTOM_RIGHT);
+	left->setPosition(0, 0);
+	frame->addChild(left);
+
+	// Set information
+	// Set unit image
+	auto unitImage = Sprite::create("image/unit.png", Rect(0, static_cast<int>(unit->getType()) * 32, 32, 32));
+	unitImage->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	unitImage->setPosition(20, 580);
+	unitImage->setScale(2.5f);
+	frame->addChild(unitImage);
+
+	// Set unit color
+	auto color = Sprite::create();
+	color->setTextureRect(Rect(0, 0, 30, 30));
+	color->setColor(OwnerInformation::getInstance()->getColor(unit->getAffiliation()));
+	color->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	color->setPosition(110, 580);
+	frame->addChild(color);
+
+	// Set unit name
+	auto name = Label::createWithSystemFont(unit->getName(), JP_FONT, INFO_SIZE);
+	name->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+	name->setPosition(150, 575);
+	name->setColor(Color3B::BLACK);
+	frame->addChild(name);
+
+	// Set unit ability
+	auto count = 0;
+	for (auto i : {
+		StringUtils::format(u8"残存兵力 %d / %d", unit->getDurability(), unit->getMaxDurability()),
+		StringUtils::format(u8"残存物資 %d / %d", unit->getMaterial(), unit->getMaxMaterial()),
+		StringUtils::format(u8"索敵能力 %d", unit->getSearchingAbility()),
+		StringUtils::format(u8"移動能力 %d", unit->getMobility()), 
+		StringUtils::format(u8"防護装甲 %d", unit->getDefence())
+	})
+	{
+		auto item = Label::createWithSystemFont(i, JP_FONT, INFO_SIZE);
+		item->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+		item->setPosition(130, 540 - count * (INFO_SIZE + 10));
+		item->setColor(Color3B::BLACK);
+		frame->addChild(item);
+		count++;
+	}
+
+	// Set weapon frame
+	auto h = unit->getWeaponsByRef().size() * 50 + 30 + 30;
+	auto weapon = util::createCutSkin(COMMAND_FRAME, 750, h, 0);
+	weapon->setAnchorPoint(Vec2::ANCHOR_MIDDLE_BOTTOM);
+	weapon->setPosition(400, 10);
+	frame->addChild(weapon);
+
+	showWeapon(weapon, unit, Color3B::WHITE, false);
+
+	// Set listener
+	auto lis = SingleTouchListener::create();
+	lis->setSwallowTouches(true);
+	lis->onTap = [this, frame] (Touch* touch, Event* event)
+	{
+		frame->removeFromParentAndCleanup(true);
+	};
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, frame);
 }
