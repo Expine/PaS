@@ -54,10 +54,26 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	case 12:tile = Mountain::create();	break;
 	case 13:tile = Bridge::create();	break;
 	case 14:tile = Bridge::create();	break;
-	case 16:tile = Capital::create();	util::instance<Capital>(tile)->setOwner(Owner::player); break;
-	case 17:tile = City::create();		util::instance<City>(tile)->setOwner(Owner::player);	break;
-	case 24:tile = Capital::create();	util::instance<Capital>(tile)->setOwner(Owner::enemy);	break;
-	case 25:tile = City::create();		util::instance<City>(tile)->setOwner(Owner::enemy);		break;
+	case 16:tile = Capital::create();	
+		util::instance<Capital>(tile)->setOwner(Owner::player); 
+		util::instance<Capital>(tile)->setMaxDurability(200);
+		util::instance<Capital>(tile)->setDurability(100);
+		break;
+	case 17:tile = City::create();		
+		util::instance<City>(tile)->setOwner(Owner::player);	
+		util::instance<City>(tile)->setMaxDurability(200);
+		util::instance<City>(tile)->setDurability(100);
+		break;
+	case 24:tile = Capital::create();	
+		util::instance<Capital>(tile)->setOwner(Owner::enemy);	
+		util::instance<Capital>(tile)->setMaxDurability(200);
+		util::instance<Capital>(tile)->setDurability(100);
+		break;
+	case 25:tile = City::create();
+		util::instance<City>(tile)->setOwner(Owner::enemy);		
+		util::instance<City>(tile)->setMaxDurability(200);
+		util::instance<City>(tile)->setDurability(100);
+		break;
 	default:tile = None::create();		break;
 	}
 

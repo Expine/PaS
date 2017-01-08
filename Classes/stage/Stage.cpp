@@ -638,7 +638,7 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 		point += Vec2((int)(point.y) % 2 - 1, 1);
 	}
 	// Up left
-	else if (diff.x > 0 && diff.y < 0)
+	else if (diff.x > 0 && diff.y <= 0)
 	{
 		intrusion = Vec2(1, 1);
 		point += Vec2(((int)(point.y) % 2) - 1, -1);
@@ -650,7 +650,7 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 		point += Vec2((int)(point.y) % 2, 1);
 	}
 	// Up right
-	else if (diff.x < 0 && diff.y < 0)
+	else if (diff.x < 0 && diff.y <= 0)
 	{
 		intrusion = Vec2(-1, 1);
 		point += Vec2((int)(point.y) % 2, -1);
@@ -913,6 +913,7 @@ void Stage::blinkUnit(Entity * unit)
 	auto inner = Sprite::createWithTexture(unit->getTexture(), Rect(32, static_cast<int>(unit->getType()) * 32, 32, 32));
 	inner->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	inner->setOpacity(0);
+	inner->setTag(0);
 	inner->runAction(RepeatForever::create(Sequence::create(
 		EaseExponentialIn::create(FadeTo::create(0.5f, 100)),
 		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
@@ -925,7 +926,8 @@ void Stage::blinkUnit(Entity * unit)
  */
 void Stage::blinkOffUnit(Entity * unit)
 {
-	unit->removeAllChildren();
+	if(unit->getChildByTag(0))
+		unit->removeChildByTag(0);
 }
 
 

@@ -218,6 +218,8 @@ protected:
 public:
 	CREATE_FUNC(City);
 	CC_SYNTHESIZE(Owner, _owner, Owner);
+	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
+	CC_SYNTHESIZE(int, _Durability, Durability);
 };
 
 class Capital : public City

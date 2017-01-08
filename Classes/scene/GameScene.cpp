@@ -291,6 +291,45 @@ bool Game::init(Stage* stage)
 		}
 	});
 
+	// Occupation function
+	menu->setFunction(Command::occupation, [this, stage, menu] 
+	{
+		stage->movePosition(_selectUnit->getPosition());
+		menu->setMenuMode(MenuMode::occupy, _selectUnit, _selectTiles);
+		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
+	});
+	menu->setFunction(Command::occupation_start, [this, stage, menu]
+	{
+		_selectUnit->setState(EntityState::acted);
+		_selectUnit->occupy(util::instance<City>(_selectTiles.back()));
+		menu->getFunction(Command::occupation_end)();
+	});
+	menu->setFunction(Command::occupation_end, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
+		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
+		setCursol(stage, menu, _selectUnit->getTileCoordinate());
+	});
+
+	// Wait function
+	menu->setFunction(Command::wait, [this, stage, menu] 
+	{
+		stage->movePosition(_selectUnit->getPosition());
+		menu->setMenuMode(MenuMode::wait, _selectUnit, _selectTiles);
+		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
+	});
+	menu->setFunction(Command::wait_start, [this, stage, menu]
+	{
+		_selectUnit->setState(EntityState::acted);
+		menu->getFunction(Command::wait_end)();
+	});
+	menu->setFunction(Command::wait_end, [this, stage, menu]
+	{
+		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
+		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
+		setCursol(stage, menu, _selectUnit->getTileCoordinate());
+	});
+
 	stage->initTileSearched(Owner::player);
 
     return true;
@@ -329,6 +368,10 @@ void Game::setCursol(Stage * stage, MenuLayer * menu, cocos2d::Vec2 tileCoordina
 		break;
 	case MenuMode::attacking:
 		break;
+	case MenuMode::occupy:
+		break;
+	case MenuMode::wait:
+		break;
 	}
 }
 
@@ -338,21 +381,18 @@ void Game::setCursol(Stage * stage, MenuLayer * menu, cocos2d::Vec2 tileCoordina
  */
 void Game::setSelectTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*> tiles)
 {
-	_selectTiles = tiles;
-	menu->setTile(_selectTiles, _selectUnit);
-
 	switch (menu->getMenuMode())
 	{
 	case MenuMode::none:
-		break;
 	case MenuMode::move:
-		menu->checkUnitCommand(_selectUnit, _selectTiles, util::find(_selectArea, tiles.back()));
-		break;
 	case MenuMode::moving:
-		break;
 	case MenuMode::attack:
-		break;
 	case MenuMode::attacking:
+	case MenuMode::wait:
+		_selectTiles = tiles;
+		menu->setTile(_selectTiles, _selectUnit);
+		break;
+	case MenuMode::occupy:
 		break;
 	}
 }
@@ -405,6 +445,10 @@ void Game::setSelectUnit(Stage * stage, MenuLayer * menu, Entity * unit)
 		_selectEnemy = unit;
 		break;
 	case MenuMode::attacking:
+		break;
+	case MenuMode::occupy:
+		break;
+	case MenuMode::wait:
 		break;
 	}
 }

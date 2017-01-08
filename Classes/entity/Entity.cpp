@@ -2,6 +2,7 @@
 #include "Weapon.h"
 
 #include "stage/Stage.h"
+#include "stage/Tile.h"
 #include "util/Util.h"
 #include "stage/Command.h"
 
@@ -234,4 +235,34 @@ void Entity::attack(Entity * enemy, WeaponData* weapon)
 	particle->setPosition(enemy->getPosition());
 	particle->setScale(0.2f);
 	getStage()->addChild(particle);
+}
+
+void Entity::occupy(City * city)
+{
+	util::initRand();
+	city->setDurability(util::getRand(30, 60));
+
+	auto particle = ParticleSystemQuad::create("particle/ice.plist");
+	particle->setAutoRemoveOnFinish(true);
+	particle->resetSystem();
+	particle->setPosition(city->getPosition());
+	particle->setScale(0.2f);
+	getStage()->addChild(particle);
+}
+
+void Entity::setState(EntityState state)
+{
+	_state = state;
+	if (state == EntityState::acted)
+	{
+		auto size = getTexture()->getPixelsHigh();
+		auto acted = Sprite::createWithTexture(getTexture(), Rect(0, size-32, 32, 32));
+		acted->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+//		acted->setScale(0.5f);
+		this->addChild(acted);
+	}
+	else if (state == EntityState::none)
+	{
+		this->removeAllChildren();
+	}
 }

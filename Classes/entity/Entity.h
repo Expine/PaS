@@ -8,6 +8,7 @@
 class Stage;
 class WeaponData;
 class UnitLayer;
+class City;
 enum class Command;
 
 
@@ -87,7 +88,7 @@ public:
 	CREATE_FUNC(Entity);
 	CC_SYNTHESIZE(Owner, _affiliation, Affiliation);
 	inline Entity* setAffiliationRetThis(Owner owner) { _affiliation = owner; return this; };
-	CC_SYNTHESIZE(EntityState, _state, State);
+	CC_SYNTHESIZE_READONLY(EntityState, _state, State);
 	CC_SYNTHESIZE(EntityType, _type, Type);
 	CC_SYNTHESIZE(Department, _department, Department);
 	CC_SYNTHESIZE(std::string, _name, EntityName);
@@ -101,11 +102,17 @@ public:
 	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 	UnitLayer* getUnitLayer();
+
 	Stage* getStage();
 	cocos2d::Vec2 getTileCoordinate();
 	inline std::vector<WeaponData*>& getWeaponsByRef() { return _weapons; };
+
 	bool isAttakable();
+
 	void attack(Entity* enemy, WeaponData* weapon);
+	void occupy(City* city);
+
+	void setState(EntityState state);
 };
 
 /*********************************************************/

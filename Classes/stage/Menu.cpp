@@ -17,6 +17,8 @@
 #define MENU_SIZE 30
 #define MODIFY 40
 
+constexpr int DURABILITY_SPLIT = 20;
+
 USING_NS_CC;
 
 /*
@@ -171,6 +173,8 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 		_map->removeChildByTag(0);
 		_map->removeChildByTag(1);
 	}
+	if (_map->getChildByTag(2))
+		_map->removeChildByTag(2);
 
 	// Get last tile
 	StageTile* tile = nullptr;
@@ -201,6 +205,26 @@ void MenuLayer::setTile(std::vector<StageTile*> tiles, Entity* unit)
 	name->setColor(Color3B::BLACK);
 	name->setTag(1);
 	_map->addChild(name);
+
+	// Set durability
+	if (util::instanceof<City>(tile))
+	{
+		auto node = Node::create();
+		node->setAnchorPoint(Vec2::ANCHOR_TOP_LEFT);
+		node->setContentSize(Size(140, INFO_SIZE));
+		node->setPosition(145, 90);
+		node->setTag(2);
+		_map->addChild(node);
+		for (int i = 0; i < DURABILITY_SPLIT; i++)
+		{
+			auto sq = Sprite::create();
+			sq->setTextureRect(Rect(0, 0, 5, INFO_SIZE));
+			sq->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+			sq->setPosition(7 * i, 0);
+			sq->setColor(util::instance<City>(tile)->getDurability() > i * util::instance<City>(tile)->getMaxDurability() / DURABILITY_SPLIT ? Color3B::WHITE : Color3B::GRAY);
+			node->addChild(sq);
+		}
+	}
 
 	// Set unit to tile information
 	setUnitToTile(tiles, unit);
@@ -332,10 +356,10 @@ void MenuLayer::setInfo(int x, int y)
 void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
 {
 	// Remove pre-information
-	if (_map->getChildByTag(2) != NULL)
+	if (_map->getChildByTag(3))
 	{
-		_map->removeChildByTag(2);
 		_map->removeChildByTag(3);
+		_map->removeChildByTag(4);
 	}
 
 	// Check empty and null
@@ -356,7 +380,7 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
 	cost->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	cost->setPosition(90, 45);
 	cost->setColor(Color3B::BLACK);
-	cost->setTag(2);
+	cost->setTag(3);
 	_map->addChild(cost);
 
 	// Set effect
@@ -364,7 +388,7 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
 	effect->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	effect->setPosition(90, 15);
 	effect->setColor(Color3B::BLACK);
-	effect->setTag(3);
+	effect->setTag(4);
 	_map->addChild(effect);
 }
 
@@ -373,17 +397,11 @@ void MenuLayer::setUnitToTile(std::vector<StageTile*> tiles, Entity *unit)
  */
 void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, bool able)
 {
+	std::function<void(std::function<void(Command, int)>)> func = nullptr;
 	switch (_mode)
 	{
 	case MenuMode::none:
-		command::forUnit([this, entity, tiles](Command com, int i) 
-		{
-			// Whether this command is enable
-			if (command::isEnable(com, entity, tiles))
-				_commands[com]->setColor(Color3B::WHITE);
-			else
-				_commands[com]->setColor(Color3B::GRAY);
-		});
+		func = command::forUnit;
 		break;
 	case MenuMode::move:
 		_commands[Command::move]->setColor(Color3B::GRAY);
@@ -411,7 +429,7 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
 		_commands[Command::attack]->setColor(Color3B::GRAY);
 		command::forAttack([this, entity, tiles, able] (Command com, int i)
 		{
-			// If move start, check movable
+			// check targetable
 			if (com == Command::attack_target && !able)
 				_commands[com]->setColor(Color3B::GRAY);
 			// Whether this command is enable
@@ -423,9 +441,26 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
 		break;
 	case MenuMode::attacking:
 		break;
+	case MenuMode::occupy:
+		_commands[Command::occupation]->setColor(Color3B::GRAY);
+		func = command::forOccupation;
+		break;
+	case MenuMode::wait:
+		_commands[Command::wait]->setColor(Color3B::GRAY);
+		func = command::forWait;
+		break;
 	default:
 		break;
 	}
+	if(func)
+		func([this, entity, tiles](Command com, int i)
+		{
+			// Whether this command is enable
+			if (command::isEnable(com, entity, tiles))
+				_commands[com]->setColor(Color3B::WHITE);
+			else
+				_commands[com]->setColor(Color3B::GRAY);
+		});
 }
 
 /*
@@ -475,6 +510,20 @@ void MenuLayer::moveUnitCommand()
 			showUnitCommandByOne(i, 1, _commands[com]);
 		});
 		break;
+	case MenuMode::occupy:
+		showUnitCommandByOne(0, 0, _commands[Command::occupation]);
+		command::forOccupation([this](Command com, int i)
+		{
+			showUnitCommandByOne(i, 1, _commands[com]);
+		});
+		break;
+	case MenuMode::wait:
+		showUnitCommandByOne(0, 0, _commands[Command::wait]);
+		command::forWait([this](Command com, int i)
+		{
+			showUnitCommandByOne(i, 1, _commands[com]);
+		});
+		break;
 	}
 
 	_isShowedUnitCommand = true;
@@ -514,6 +563,14 @@ void MenuLayer::hideUnitCommand()
 		hideUnitCommandByOne(_commands[Command::attack]);
 		hideUnitCommandByOne(_commands[Command::attack_end]);
 		func = command::forAttack2;
+		break;
+	case MenuMode::occupy:
+		hideUnitCommandByOne(_commands[Command::occupation]);
+		func = command::forOccupation;
+		break;
+	case MenuMode::wait:
+		hideUnitCommandByOne(_commands[Command::wait]);
+		func = command::forWait;
 		break;
 	}
 
