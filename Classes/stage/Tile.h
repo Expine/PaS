@@ -67,7 +67,7 @@ public:
 	CC_SYNTHESIZE(std::string, _explanation, Explanation);
 	CC_SYNTHESIZE(bool, _searched, Searched);
 	CC_SYNTHESIZE(int, _remainCost, RemainCost);
-	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
+	cocos2d::Vec2 getTileCoordinate();
 	StageLayer* getStageLayer();
 	Stage* getStage();
 	static StageTile* create(const int id, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);

@@ -983,9 +983,23 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 		else if (util::isTouchInEvent(touch->getLocation(), cancel))
 			attack_cancel(unit->getWeaponsByRef().at(_selectWeapon));
 	};
+	lis->onDoubleTap = [this, unit, weapon] (Touch* touch, Event* event)
+	{
+		if (util::isTouchInEvent(touch->getLocation(), weapon))
+		{
+			auto pos = touch->getLocation() - (weapon->getPosition() - Vec2(weapon->getContentSize().width / 2, 0));
+			int no = (weapon->getContentSize().height - pos.y - 15 - 30 - MENU_SIZE / 2) / 50;
+			if (no >= 0 && weapon->getChildByTag(no)->getColor() == Color3B::BLACK)
+			{
+				_selectWeapon = no;
+				attack_decision(unit->getWeaponsByRef().at(_selectWeapon));
+			}
+		}
+
+	};
 	lis->onSwipe = [weapon](Vec2 v, Vec2 diff, float time)
 	{
-		if (util::isTouchInEvent(v, weapon) && util::isTouchInEvent(v, weapon))
+		if (util::isTouchInEvent(v, weapon))
 		{
 			auto winSize = Director::getInstance()->getWinSize();
 			auto size = weapon->getContentSize();

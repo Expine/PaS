@@ -379,9 +379,9 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto city : _cities[owner])
 	{
-		for (auto tile : startRecursiveTileSearch(city->getTileCoordinate(_mapSize.y), 1, EntityType::sight))
+		for (auto tile : startRecursiveTileSearch(city->getTileCoordinate(), 1, EntityType::sight))
 		{
-			auto cor = tile->getTileCoordinate(_mapSize.y);
+			auto cor = tile->getTileCoordinate();
 			tile->setSearched(true);
 			if (shadow->getTile(cor.x, cor.y) != nullptr)
 				shadow->removeTile(cor.x, cor.y);
@@ -393,9 +393,9 @@ void Stage::initTileSearched(Owner owner)
 
 	for (auto unit : _units[owner])
 	{
-		for (auto tile : startRecursiveTileSearch(unit->getTileCoordinate(_mapSize.y), unit->getSearchingAbility(), EntityType::sight))
+		for (auto tile : startRecursiveTileSearch(unit->getTileCoordinate(), unit->getSearchingAbility(), EntityType::sight))
 		{
-			auto cor = tile->getTileCoordinate(_mapSize.y);
+			auto cor = tile->getTileCoordinate();
 			tile->setSearched(true);
 			if (shadow->getTile(cor.x, cor.y) != nullptr)
 				shadow->removeTile(cor.x, cor.y);
@@ -617,8 +617,8 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 	std::vector<StageTile*> tiles;
 	Vec2 intrusion;
 	auto diff = executer->getPosition() - enemy->getPosition();
-	auto point = executer->getTileCoordinate(_mapSize.y);
-	auto enemy_point = enemy->getTileCoordinate(_mapSize.y);
+	auto point = executer->getTileCoordinate();
+	auto enemy_point = enemy->getTileCoordinate();
 	// Down
 	if (abs(diff.x) < elim && diff.y > 0)
 	{
@@ -679,9 +679,9 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 			tiles.push_back(tile);
 		break;
 	case DirectionRange::full:
-		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(_mapSize.y), weapon->getRange().FiringRange, EntityType::counter);
+		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(), weapon->getRange().FiringRange, EntityType::counter);
 
-		for (auto tile : getTiles(executer->getTileCoordinate(_mapSize.y)))
+		for (auto tile : getTiles(executer->getTileCoordinate()))
 		{
 			tile->setRemainCost(-1);
 			tiles.erase(std::remove(tiles.begin(), tiles.end(), tile), tiles.end());
@@ -698,7 +698,7 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 		for (auto tile : searchQueue.front()())
 		{
 			if (first && weapon->getRange().secondaryEffect > 0)
-				recursiveTileSearch(Vec2(0, 0), tile->getTileCoordinate(_mapSize.y), weapon->getRange().secondaryEffect, EntityType::counter);
+				recursiveTileSearch(Vec2(0, 0), tile->getTileCoordinate(), weapon->getRange().secondaryEffect, EntityType::counter);
 			tiles.push_back(tile);
 			first = false;
 		}
@@ -834,7 +834,7 @@ void Stage::selectTile(int x, int y)
 void Stage::blinkTile(StageTile* tile, Color3B color)
 {
 	Sprite* white;
-	auto cor = tile->getTileCoordinate(_mapSize.y);
+	auto cor = tile->getTileCoordinate();
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
 	// For unsearch area
@@ -872,7 +872,7 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
  */
 void Stage::blinkChange(StageTile* tile, cocos2d::Color3B color)
 {
-	auto cor = tile->getTileCoordinate(_mapSize.y);
+	auto cor = tile->getTileCoordinate();
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
 	if (shadow_tile)
@@ -887,7 +887,7 @@ void Stage::blinkChange(StageTile* tile, cocos2d::Color3B color)
  */
 void Stage::blinkOffTile(StageTile* tile)
 {
-	auto cor = tile->getTileCoordinate(_mapSize.y);
+	auto cor = tile->getTileCoordinate();
 	auto shadow = getShadowLayer();
 	auto shadow_tile = shadow->getTile(cor.x, cor.y);
 	if (shadow_tile)
@@ -955,13 +955,13 @@ Vec2 Stage::nextCity(Owner owner, StageTile* nowTile)
 		if (discovered)
 		{
 			movePosition(city->getPosition().x, city->getPosition().y);
-			return city->getTileCoordinate(getMapSize().y);
+			return city->getTileCoordinate();
 		}
 		if (city == nowTile)
 			discovered = true;
 	}
 	movePosition(cities.front()->getPosition().x, cities.front()->getPosition().y);
-	return cities.front()->getTileCoordinate(getMapSize().y);
+	return cities.front()->getTileCoordinate();
 }
 
 /*
@@ -989,7 +989,7 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 
 std::vector<StageTile*> Stage::moveCheck(Entity * entity)
 {
-	auto cor = entity->getTileCoordinate(_mapSize.y);
+	auto cor = entity->getTileCoordinate();
 	auto pos = entity->getPosition();
 
 	auto tiles = startRecursiveTileSearch(cor, entity->getMobility(), entity->getType());
@@ -1003,14 +1003,14 @@ std::vector<StageTile*> Stage::moveCheck(Entity * entity)
  */
 std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * tile)
 {
-	auto root = startRecursiveTileSearchForMove(tile->getTileCoordinate(_mapSize.y), entity->getTileCoordinate(_mapSize.y), entity->getMobility(), entity->getType());
+	auto root = startRecursiveTileSearchForMove(tile->getTileCoordinate(), entity->getTileCoordinate(), entity->getMobility(), entity->getType());
 	Vector<FiniteTimeAction*> acts;
 	auto i = 0;
 	for (auto t : root)
 	{
 		if (i > 0)
 		{
-			auto cor = t->getTileCoordinate(_mapSize.y);
+			auto cor = t->getTileCoordinate();
 			auto pos = this->getCoordinateByTile(cor.x, cor.y);
 			acts.pushBack(Sequence::create(
 				MoveTo::create(0.5f, pos + Vec2(getChipSize().x / 2, 0)),
@@ -1019,8 +1019,8 @@ std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * 
 		i++;
 	}
 	entity->runAction(Sequence::create(acts));
-	_preProvisionalPos = entity->getTileCoordinate(_mapSize.y);
-	auto point = root.back()->getTileCoordinate(_mapSize.y);
+	_preProvisionalPos = entity->getTileCoordinate();
+	auto point = root.back()->getTileCoordinate();
 	entity->setTag(point.x * _mapSize.y + point.y);
 	return root;
 }
@@ -1032,7 +1032,7 @@ void Stage::provisionalMoveCancel(Entity * entity)
 {
 	entity->setTag(_preProvisionalPos.x * _mapSize.y + _preProvisionalPos.y);
 	entity->stopAllActions();
-	entity->setPosition(getCoordinateByTile(entity->getTileCoordinate(_mapSize.y)) +  Vec2(getChipSize().x / 2, 0));
+	entity->setPosition(getCoordinateByTile(entity->getTileCoordinate()) +  Vec2(getChipSize().x / 2, 0));
 }
 
 /*
@@ -1043,9 +1043,9 @@ void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
 	auto shadow = getShadowLayer();
 	for (auto tile : tiles)
 	{
-		for (auto t : startRecursiveTileSearch(tile->getTileCoordinate(_mapSize.y), entity->getSearchingAbility(), EntityType::sight))
+		for (auto t : startRecursiveTileSearch(tile->getTileCoordinate(), entity->getSearchingAbility(), EntityType::sight))
 		{
-			auto cor = t->getTileCoordinate(_mapSize.y);
+			auto cor = t->getTileCoordinate();
 			t->setSearched(true);
 			if (shadow->getTile(cor.x, cor.y) != nullptr)
 				shadow->removeTile(cor.x, cor.y);
@@ -1054,7 +1054,7 @@ void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
 				unit->setOpacity(255);
 		}
 	}
-	auto point = tiles.back()->getTileCoordinate(_mapSize.y);
+	auto point = tiles.back()->getTileCoordinate();
 	entity->setTag(point.x * _mapSize.y + point.y);
 	entity->setState(EntityState::moved);
 }

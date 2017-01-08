@@ -102,9 +102,10 @@ public:
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 	UnitLayer* getUnitLayer();
 	Stage* getStage();
-	inline cocos2d::Vec2 getTileCoordinate(int mapy) { return cocos2d::Vec2(getTag() / mapy, getTag() % mapy); };
+	cocos2d::Vec2 getTileCoordinate();
 	inline std::vector<WeaponData*>& getWeaponsByRef() { return _weapons; };
 	bool isAttakable();
+	void attack(Entity* enemy, WeaponData* weapon);
 };
 
 /*********************************************************/

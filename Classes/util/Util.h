@@ -58,6 +58,12 @@ namespace util
 				return true;
 		return false;
 	};
+
+	void initRand();
+
+	int getRand(int min, int max);
+
+	double getRand(double min, double max);
 }
 
 #endif // __UTIL_H__

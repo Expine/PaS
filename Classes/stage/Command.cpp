@@ -179,7 +179,7 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 			return false;
 
 		auto stage = unit->getStage();
-		auto pos = unit->getTileCoordinate(stage->getMapSize().y);
+		auto pos = unit->getTileCoordinate();
 		auto tiles = stage->getTiles(pos.x, pos.y);
 		for (auto t : tiles)
 			if (t->getTerrainType() == TerrainType::city || t->getTerrainType() == TerrainType::capital)
@@ -200,7 +200,7 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 			if(t && t->getId() != 0)
 				tile = t;
 		auto stage = tile->getStage();
-		auto pos = tile->getTileCoordinate(stage->getMapSize().y);
+		auto pos = tile->getTileCoordinate();
 		auto unit = stage->getUnit(pos.x, pos.y);
 		if (unit && unit->getAffiliation() == Owner::player)
 			return true;

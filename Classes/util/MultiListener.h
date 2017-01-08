@@ -296,6 +296,8 @@ private:
 	cocos2d::Vec2 _movePos;
 	struct timeval _moveTime;
 	State _state;
+	CC_SYNTHESIZE_RETAIN(cocos2d::Touch*, _reserve_touch, ReserveTouch);
+	CC_SYNTHESIZE_RETAIN(cocos2d::Event*, _reserve_event, ReserveEvent);
 protected:
 	SingleTouchListener()
 		: _longTapThreshold(DefaultLongTapThreshold), _doubleTapThreshold(DefaultDoubleTapThreshold)
@@ -303,6 +305,7 @@ protected:
 		, onTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onDoubleTap(nullptr)
 		, onSwipe(nullptr)
 		, onTouchBeganChecking(nullptr), onTouchEndedChecking(nullptr)
+		, _reserve_touch(nullptr), _reserve_event(nullptr)
 	{
 	};
 	~SingleTouchListener() 
@@ -313,6 +316,8 @@ protected:
 		onSwipe = nullptr;
 		onTouchBeganChecking = nullptr;
 		onTouchEndedChecking = nullptr;
+		CC_SAFE_RELEASE_NULL(_reserve_touch);
+		CC_SAFE_RELEASE_NULL(_reserve_event);
 	};
 	/*
 	 * Initialize
@@ -371,13 +376,34 @@ protected:
 		{
 			struct timeval time;
 			gettimeofday(&time, NULL);
+			Sequence* action;
+			setReserveTouch(touch);
+			setReserveEvent(new Event(Event::Type::TOUCH));
+			getReserveEvent()->release();
+			getReserveEvent()->setCurrentTarget(event->getCurrentTarget());
 			auto diff_time = (float)(time.tv_sec - _startTime.tv_sec) + (float)(time.tv_usec - _startTime.tv_usec) / 1000000;
 			//
 			switch (_state)
 			{
 			case SingleTouchListener::State::check:
 			case SingleTouchListener::State::tap:
-				if (onTap) onTap(touch, event);
+				if (Director::getInstance()->getRunningScene()->getActionByTag(1000))
+				{
+					Director::getInstance()->getRunningScene()->stopActionByTag(1000);
+					if (onDoubleTap)
+						onDoubleTap(touch, event);
+					break;
+				}
+				touch->retain();
+				action = Sequence::create(
+					DelayTime::create(getDoubleTapThreshold()),
+					CallFunc::create([this] {
+						if (onTap)
+							onTap(getReserveTouch(), getReserveEvent());
+					}),
+				NULL);
+				action->setTag(1000);
+				Director::getInstance()->getRunningScene()->runAction(action);
 				break;
 			case SingleTouchListener::State::longtap:
 				if (onLongTapEnd) onLongTapEnd(touch, event);

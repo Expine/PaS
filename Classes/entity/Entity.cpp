@@ -7,6 +7,8 @@
 
 USING_NS_CC;
 
+constexpr int DAMAGE_SPLIT = 10;
+
 /*
  * Initialize entity information
  */
@@ -169,10 +171,67 @@ Stage * Entity::getStage()
 	return util::instance<Stage>(getUnitLayer()->getParent());
 }
 
+Vec2 Entity::getTileCoordinate()
+{
+	int mapy = getStage()->getMapSize().y;
+	return Vec2(getTag() / mapy, getTag() % mapy);
+}
+
 bool Entity::isAttakable()
 {
 	for (auto weapon : _weapons)
 		if (weapon->isUsable(this))
 			return true;
 	return false;
+}
+
+void Entity::attack(Entity * enemy, WeaponData* weapon)
+{
+	float damage = 0.0f;
+	switch (enemy->getDepartment())
+	{
+	case Department::soldier:	damage = weapon->getAntiPersonnel();	break;
+	case Department::wizard:	damage = weapon->getAntiWizard();		break;
+		break;
+	}
+	switch (enemy->getType())
+	{
+	case EntityType::fire:		
+	case EntityType::king:
+		damage += weapon->getAntiFire();
+		break;
+	case EntityType::ice:
+	case EntityType::dark:
+		damage += weapon->getAntiIce();
+		break;
+	case EntityType::thunder:
+	case EntityType::light:
+		damage += weapon->getAntiThunder();
+		break;
+	case EntityType::ground:
+	case EntityType::guardian:
+		damage += weapon->getAntiGround();
+		break;
+	case EntityType::relief:
+		break;
+	}
+
+	damage -= enemy->getDefence();
+
+	auto damageUnit = damage / DAMAGE_SPLIT;
+	damage = 0.0f;
+	util::initRand();
+	for (int i = 0; i < DAMAGE_SPLIT; i++)
+		if (util::getRand(0, 99) < weapon->getAccuracy())
+			damage += damageUnit;
+
+	enemy->setDurability(enemy->getDurability() - (int)damage);
+	_material -= weapon->getConsumption();
+
+	auto particle = ParticleSystemQuad::create("particle/ice.plist");
+	particle->setAutoRemoveOnFinish(true);
+	particle->resetSystem();
+	particle->setPosition(enemy->getPosition());
+	particle->setScale(0.2f);
+	getStage()->addChild(particle);
 }

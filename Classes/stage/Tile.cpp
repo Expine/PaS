@@ -78,6 +78,12 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	return tile;
 }
 
+cocos2d::Vec2 StageTile::getTileCoordinate()
+{
+	int mapy = getStage()->getMapSize().y;
+	return cocos2d::Vec2(getTag() / mapy, getTag() % mapy);
+}
+
 /*
  * Get Stage layer
  */

@@ -67,6 +67,8 @@ std::string WeaponInformation::getRangeName(RangeType type)
 		return u8"全方位";
 	case DirectionRange::select:
 		return u8"選択";
+	default:
+		return "ERROR";
 	}
 }
 
@@ -75,12 +77,12 @@ bool WeaponData::isUsable(Entity * unit)
 	auto stage = unit->getStage();
 	std::vector <StageTile*> tiles;
 	if (_range.directionRange == DirectionRange::liner)
-		tiles = stage->startRecursiveTileSearchForLiner(unit->getTileCoordinate(stage->getMapSize().y), _range.FiringRange);
+		tiles = stage->startRecursiveTileSearchForLiner(unit->getTileCoordinate(), _range.FiringRange);
 	else
-		tiles = stage->startRecursiveTileSearch(unit->getTileCoordinate(stage->getMapSize().y), _range.FiringRange, EntityType::counter);
+		tiles = stage->startRecursiveTileSearch(unit->getTileCoordinate(), _range.FiringRange, EntityType::counter);
 	for (auto tile : tiles)
 	{
-		auto target = stage->getUnit(tile->getTileCoordinate(stage->getMapSize().y));
+		auto target = stage->getUnit(tile->getTileCoordinate());
 		if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
 			return true;
 	}

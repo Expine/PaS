@@ -77,8 +77,8 @@ bool Game::init(Stage* stage)
 			{
 				for (auto tile : stage->startRecursiveTileSearch(v, 1, EntityType::counter))
 				{
-					auto around_unit = stage->getUnit(tile->getTileCoordinate(stage->getMapSize().y));
-					if (around_unit && around_unit->getAffiliation() == Owner::player && command::isEnable(Command::attack, around_unit, stage->getTiles(tile->getTileCoordinate(stage->getMapSize().y))))
+					auto around_unit = stage->getUnit(tile->getTileCoordinate());
+					if (around_unit && around_unit->getAffiliation() == Owner::player && command::isEnable(Command::attack, around_unit, stage->getTiles(tile->getTileCoordinate())))
 					{
 						setSelectUnit(stage, menu, around_unit);
 						menu->getFunction(Command::attack)();
@@ -106,8 +106,16 @@ bool Game::init(Stage* stage)
 			}
 			break;
 		case MenuMode::attack:
+			if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
+				menu->getFunction(Command::attack_target)();
+			else if (!util::find(_selectArea, tiles.back()))
+				menu->getFunction(Command::attack_end)();
 			break;
 		case MenuMode::attacking:
+			if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
+				menu->getFunction(Command::attack_start)();
+			else if (!util::find(_selectArea, tiles.back()))
+				menu->getFunction(Command::attack_cancel)();
 			break;
 		}
 	};
@@ -175,7 +183,7 @@ bool Game::init(Stage* stage)
 		_selectArea.clear();
 		_moveRoot.clear();
 		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		setCursol(stage, menu, _selectUnit->getTileCoordinate(stage->getMapSize().y));
+		setCursol(stage, menu, _selectUnit->getTileCoordinate());
 	});
 	menu->setFunction(Command::move_decision, [this, stage, menu] 
 	{
@@ -203,13 +211,13 @@ bool Game::init(Stage* stage)
 		_selectArea.clear();
 		// Liner check
 		if (data->getRange().directionRange == DirectionRange::liner)
-			_selectArea = stage->startRecursiveTileSearchForLiner(_selectUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange);
+			_selectArea = stage->startRecursiveTileSearchForLiner(_selectUnit->getTileCoordinate(), data->getRange().FiringRange);
 		// If full, should not select enemy
 		else if (data->getRange().directionRange == DirectionRange::full)
 		{
-			for (auto tile : stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange, EntityType::counter))
+			for (auto tile : stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(), data->getRange().FiringRange, EntityType::counter))
 			{
-				auto target = stage->getUnit(tile->getTileCoordinate(stage->getMapSize().y));
+				auto target = stage->getUnit(tile->getTileCoordinate());
 				if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
 				{
 					_selectEnemy = target;
@@ -221,7 +229,7 @@ bool Game::init(Stage* stage)
 			return;
 		}
 		else
-			_selectArea = stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(stage->getMapSize().y), data->getRange().FiringRange, EntityType::counter);
+			_selectArea = stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(), data->getRange().FiringRange, EntityType::counter);
 		// Blink tile
 		for (auto tile : _selectArea)
 			stage->blinkTile(tile, Color3B::YELLOW);
@@ -258,18 +266,29 @@ bool Game::init(Stage* stage)
 		if (_selectEnemy)
 			stage->blinkOffUnit(_selectEnemy);
 		_selectEnemy = nullptr;
-		setCursol(stage, menu, _selectUnit->getTileCoordinate(stage->getMapSize().y));
+		setCursol(stage, menu, _selectUnit->getTileCoordinate());
 	});
 	menu->setFunction(Command::attack_start, [this, stage, menu] 
 	{
-		menu->getFunction(Command::attack_end)();
+		for (auto tile : _selectArea)
+		{
+			auto unit = stage->getUnit(tile->getTileCoordinate());
+			if (unit && unit->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), Owner::player))
+				_selectUnit->attack(unit, _weapon);
+		}
 		_selectUnit->setState(EntityState::acted);
+		menu->getFunction(Command::attack_end)();
 		menu->checkUnitCommand(_selectUnit, _selectTiles);
 	});	
 	menu->setFunction(Command::attack_cancel, [this, stage, menu] 
 	{
-		menu->getFunction(Command::attack_end)();
-		menu->attack_decision(_weapon);
+		if (_weapon->getRange().directionRange == DirectionRange::full)
+			menu->getFunction(Command::attack_end)();
+		else
+		{
+			menu->getFunction(Command::attack_end)();
+			menu->attack_decision(_weapon);
+		}
 	});
 
 	stage->initTileSearched(Owner::player);

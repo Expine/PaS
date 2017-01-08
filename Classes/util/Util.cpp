@@ -1,5 +1,9 @@
 #include "Util.h"
 
+#include <random>
+
+static std::mt19937 _mt;
+
 /*
  * Load text file
  */
@@ -472,4 +476,22 @@ Node* util::createCutSkinAndAnimation(const std::string &file, int w, int h, int
 
 	//return node
 	return node;
+}
+
+void util::initRand()
+{
+	std::random_device rndDev;
+	_mt = std::mt19937(rndDev());
+}
+
+int util::getRand(int min, int max)
+{
+	std::uniform_int_distribution<int> dist(min, max);
+	return dist(_mt);
+}
+
+double util::getRand(double min, double max)
+{
+	std::uniform_real_distribution<double> dist(min, max);
+	return dist(_mt);
 }
