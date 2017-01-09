@@ -351,18 +351,24 @@ Vec2 Stage::getCoordinateByTile(int x, int y)
 	return Vec2(x * (_chipSize.x + _gap) + (y % 2) * (_chipSize.x + _gap) / 2, (_mapSize.y - 1 - y) * _chipSize.y / 2);
 }
 
+/*
+ * Move for centering specify unit
+ */
 void Stage::movePosition(Entity * unit)
 {
 	movePosition(getCoordinateByTile(unit->getTileCoordinate()));
 }
 
+/*
+ * Move for centering specify tile
+ */
 void Stage::movePosition(StageTile * tile)
 {
 	movePosition(getCoordinateByTile(tile->getTileCoordinate()));
 }
 
 /*
- * Move for centering specify tile
+ * Move for centering specify coordinate
  */
 void Stage::movePosition(int x, int y)
 {
@@ -384,6 +390,7 @@ void Stage::initTileSearched(Owner owner)
 	// All black out
 	// All enemy hided
 	auto shadow = getShadowLayer();
+	shadow->getChildByTag(0)->removeAllChildren();
 	for (int x = 0; x < _mapSize.x; x++)
 	{
 		for (int y = 0; y < _mapSize.y; y++)
@@ -395,6 +402,8 @@ void Stage::initTileSearched(Owner owner)
 			auto unit = getUnit(x, y);
 			if (unit && unit->getAffiliation() != owner)
 				unit->setOpacity(0);
+			if (unit)
+				unit->setState(EntityState::none);
 		}
 	}
 
@@ -611,21 +620,33 @@ std::vector<StageTile*> Stage::recursiveTileSearchForMove(Vec2 goal, Vec2 intrus
 	return tiles;
 }
 
+/*
+ * Get turn right vector
+ */
 inline Vec2 getVecRight(Vec2 vec)
 {
 	return Vec2(vec.x == 0 ? -vec.y : vec.x == vec.y ? 0 : vec.x, vec.x + vec.y == 0 ? -vec.y : vec.y);
 }
 
+/*
+ * Get turn left vector
+ */
 inline Vec2 getVecLeft(Vec2 vec)
 {
 	return Vec2(vec.x == 0 ? vec.y : vec.x == vec.y ? vec.x : 0, vec.x == vec.y ? -vec.y : vec.y);
 }
 
+/*
+ * Get turn right position
+ */
 inline Vec2 getPosRight(Vec2 in, Vec2 pos)
 {
 	return pos + (in.x + in.y == 0 ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2, 1 - 2 * in.x) : Vec2((int)pos.y % 2 - 1, -2 * in.x - 1));
 }
 
+/*
+ * Get turn left position
+ */
 inline Vec2 getPosLeft(Vec2 in, Vec2 pos)
 {
 	return pos + (in.x == in.y ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2 - 1, 1 + 2 * in.x) : Vec2((int)pos.y % 2, 2 * in.x - 1));
@@ -732,6 +753,9 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
 	return tiles;
 }
 
+/*
+ * Start recursive liner search for all directon
+ */
 std::vector<StageTile*> Stage::startRecursiveTileSearchForLiner(cocos2d::Vec2 point, int remainCost)
 {
 	std::vector<StageTile*> tiles;
@@ -877,7 +901,7 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
 	}
 
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-	white->setOpacity(200);
+	white->setOpacity(150);
 	white->setColor(color);
 	/*
 	white->setOpacity(0);
@@ -1041,6 +1065,9 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 	return Vec2(0, 0);
 }
 
+/*
+ * Move checking
+ */
 std::vector<StageTile*> Stage::moveCheck(Entity * entity)
 {
 	auto cor = entity->getTileCoordinate();
@@ -1111,4 +1138,14 @@ void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
 	auto point = tiles.back()->getTileCoordinate();
 	entity->setTag(point.x * _mapSize.y + point.y);
 	entity->setState(EntityState::moved);
+}
+
+
+/*
+ * Render for AI Scene
+ */
+Node * Stage::renderForAIScene()
+{
+	Node* node = Node::create();
+	return node;
 }

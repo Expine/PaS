@@ -19,6 +19,7 @@ Scene* Game::createScene(Stage* stage)
 	CCLOG("GameScene Create");
 	auto scene = Scene::create();
     auto layer = Game::create(stage);
+	layer->setTag(0);
     scene->addChild(layer);
     return scene;
 }
@@ -185,6 +186,18 @@ bool Game::init(Stage* stage)
 				menu->getFunction(Command::wait_start)();
 			else
 				menu->getFunction(Command::wait_end)();
+			break;
+		case MenuMode::city_supply:
+			if (isSameUnit)
+				menu->getFunction(Command::city_supply_start)();
+			else
+				menu->getFunction(Command::city_supply_end)();
+			break;
+		case MenuMode::deploy:
+			if (isSameUnit)
+				menu->getFunction(Command::deploy_start)();
+			else
+				menu->getFunction(Command::deploy_end)();
 			break;
 		}
 	};

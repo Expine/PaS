@@ -180,6 +180,8 @@ public:
 	std::vector<StageTile*> provisionalMoveUnit(Entity *entity, StageTile *tile);
 	void provisionalMoveCancel(Entity *entity);
 	void moveUnit(Entity *entiy, std::vector<StageTile*> tiles);
+
+	cocos2d::Node* renderForAIScene();
 };
 
 #endif // __STAGE_H__

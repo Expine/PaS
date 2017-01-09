@@ -628,7 +628,8 @@ void MenuLayer::checkCityCommand(Entity* entity, std::vector<StageTile*> tiles, 
 	switch (_mode)
 	{
 	case MenuMode::city_supply:
-		command::forCitySupply([this, entity, tiles](Command com, int i) 
+		_commands[Command::city_supply]->setColor(Color3B::GRAY);
+		command::forCitySupply([this, entity, tiles](Command com, int i)
 		{
 			if (!command::isEnable(com, entity, tiles))
 				_commands[com]->setColor(Color3B::GRAY);
@@ -637,6 +638,7 @@ void MenuLayer::checkCityCommand(Entity* entity, std::vector<StageTile*> tiles, 
 		});
 		break;
 	case MenuMode::deploy:
+		_commands[Command::deployment]->setColor(Color3B::GRAY);
 		command::forDeploy([this, entity, tiles](Command com, int i)
 		{
 			if (!command::isEnable(com, entity, tiles))
@@ -646,6 +648,7 @@ void MenuLayer::checkCityCommand(Entity* entity, std::vector<StageTile*> tiles, 
 		});
 		break;
 	case MenuMode::dispatch:
+		_commands[Command::dispatch]->setColor(Color3B::GRAY);
 		command::forDispatch([this, entity, tiles](Command com, int i)
 		{
 			if (!command::isEnable(com, entity, tiles))
@@ -692,12 +695,15 @@ void MenuLayer::moveCityCommand()
 		func = command::forCity;
 		break;
 	case MenuMode::city_supply:
+		showCityCommandByOne(0, 1, _commands[Command::city_supply]);
 		func = command::forCitySupply;
 		break;
 	case MenuMode::deploy:
+		showCityCommandByOne(0, 1, _commands[Command::deployment]);
 		func = command::forDeploy;
 		break;
 	case MenuMode::dispatch:
+		showCityCommandByOne(0, 1, _commands[Command::dispatch]);
 		func = command::forDispatch;
 		break;
 	}
@@ -730,12 +736,15 @@ void MenuLayer::hideCityCommand()
 		break;
 	case MenuMode::city_supply:
 		func = command::forCitySupply;
+		hideCityCommandByOne(_commands[Command::city_supply]);
 		break;
 	case MenuMode::deploy:
 		func = command::forDeploy;
+		hideCityCommandByOne(_commands[Command::deployment]);
 		break;
 	case MenuMode::dispatch:
 		func = command::forDispatch;
+		hideCityCommandByOne(_commands[Command::dispatch]);
 		break;
 
 	}
