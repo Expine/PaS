@@ -44,6 +44,17 @@ StageTile * StageLayer::removeTile(int x, int y)
 
 /*
  * Set unit data
+ */
+void UnitLayer::setUnit(int x, int y, Entity * unit)
+{
+	auto stage = dynamic_cast<Stage*>(getParent());
+	unit->setPosition(stage->getCoordinateByTile(Vec2(x, y)) + Vec2(stage->getChipSize().x / 2, 0));
+	unit->setTag(x * stage->getMapSize().y + y);
+	_batch->addChild(unit);
+}
+
+/*
+ * Set unit data
  * And return this unit data
  */
 Entity* UnitLayer::setUnit(int x, int y, EntityType type)
@@ -182,8 +193,12 @@ Stage * Stage::parseStage(const std::string file)
 		check = true;
 	}
 	for (auto city : stage->_cities[Owner::player])
-		for(int i=0 ; i<city->getMaxDeployer() - 2; i++)
-			city->addDeoloyer(Entity::create(static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), 0, 0, stage->getUnitLayer()->getBatch(), stage));
+		for (int i = 0; i < city->getMaxDeployer() - 2; i++)
+		{
+			auto unit = Entity::create(static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), 0, 0, stage->getUnitLayer()->getBatch(), stage);
+			unit->setAffiliation(Owner::player);
+			city->addDeoloyer(unit);
+		}
 
 	return stage;
 }
@@ -862,7 +877,7 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
 	}
 
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-	white->setOpacity(100);
+	white->setOpacity(200);
 	white->setColor(color);
 	/*
 	white->setOpacity(0);
@@ -910,6 +925,25 @@ void Stage::blinkOffTile(StageTile* tile)
 void Stage::setUnit(int x, int y, EntityType type, const Owner owner)
 {
 	_units[owner].push_back(getUnitLayer()->setUnit(x, y, type)->setAffiliationRetThis(owner));
+}
+
+/*
+ * Set unit
+ */
+void Stage::setUnit(int x, int y, Entity * unit)
+{
+	_units[unit->getAffiliation()].push_back(unit);
+	getUnitLayer()->setUnit(x, y, unit);
+}
+
+/*
+ * Remove unit
+ */
+void Stage::removeUnit(Entity * unit)
+{
+	auto units = _units[unit->getAffiliation()];
+	units.erase(std::remove(units.begin(), units.end(), unit), units.end());
+	unit->removeFromParent();
 }
 
 /*

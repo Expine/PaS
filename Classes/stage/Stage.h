@@ -66,6 +66,7 @@ public:
 	CREATE_FUNC(UnitLayer);
 	CC_SYNTHESIZE(cocos2d::Vec2, _mapSize, MapSize);
 	CC_SYNTHESIZE(cocos2d::SpriteBatchNode*, _batch, Batch);
+	void setUnit(int x, int y, Entity *unit);
 	Entity* setUnit(int x, int y, EntityType type);
 	Entity* getUnit(int x, int y);
 };
@@ -136,9 +137,13 @@ public:
 
 	/** Set unit*/
 	void setUnit(int x, int y, EntityType type, const Owner owner);
+	void setUnit(int x, int y, Entity* unit);
+	inline void setUnit(cocos2d::Vec2 v, Entity* unit) { setUnit(v.x, v.y, unit); };
 	/** Get unit*/
 	inline Entity* getUnit(int x, int y) { return getUnitLayer()->getUnit(x, y); };
 	inline Entity* getUnit(cocos2d::Vec2 v) { return getUnit(v.x, v.y); };
+	/** Remove unit*/
+	void removeUnit(Entity* unit);
 	void blinkUnit(Entity* unit);
 	void blinkOffUnit(Entity* unit);
 

@@ -65,9 +65,9 @@ enum class Command
 	DEPLOY_END,
 	DISPATCH_START,
 
-	dispatch_start, dispatch_change, dispatch_cancel,
+	dispatch_start, dispatch_cancel,
 
-	DISPATCH_END
+	DISPATCH_END,
 };
 
 namespace command

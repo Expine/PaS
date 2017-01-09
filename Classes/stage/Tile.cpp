@@ -126,3 +126,13 @@ void City::addDeoloyer(Entity * entity)
 {
 	_deployers.pushBack(entity);
 }
+
+void City::removeDeployer(Entity * entity)
+{
+	_deployers.eraseObject(entity);
+}
+
+void City::supply(Entity * entity)
+{
+	entity->setMaterial(entity->getMaxMaterial());
+}

@@ -76,6 +76,11 @@ bool Game::init(Stage* stage)
 				switch (unit->getState())
 				{
 				case EntityState::none:
+					if (command::isEnable(Command::city_supply, _selectUnit, _selectTiles))
+					{
+						menu->getFunction(Command::city_supply)();
+						break;
+					}
 				case EntityState::supplied:
 					if (command::isEnable(Command::move, _selectUnit, _selectTiles))
 						menu->getFunction(Command::move)();
@@ -89,7 +94,10 @@ bool Game::init(Stage* stage)
 						menu->getFunction(Command::wait)();
 					break;
 				case EntityState::acted:
-					menu->getFunction(Command::nextUnit)();
+					if(command::isEnable(Command::deployment,_selectUnit, _selectTiles))
+						menu->getFunction(Command::deployment)();
+					else
+						menu->getFunction(Command::nextUnit)();
 					break;
 				}
 			// If double tap on enemy unit
@@ -104,6 +112,15 @@ bool Game::init(Stage* stage)
 						menu->getFunction(Command::attack)();
 					}
 				}
+			}
+			else if (!unit)
+			{
+				City* city = nullptr;
+				for (auto tile : tiles)
+					if (tile && tile->getId() && util::instanceof<City>(tile))
+						city = util::instance<City>(tile);
+				if (city && command::isEnable(Command::dispatch, _selectUnit, _selectTiles))
+					menu->getFunction(Command::dispatch)();
 			}
 			break;
 		}
@@ -396,6 +413,8 @@ bool Game::init(Stage* stage)
 	});
 	menu->setFunction(Command::city_supply_start, [this, stage, menu]
 	{
+		util::instance<City>(_selectTiles.back())->supply(_selectUnit);
+		_selectUnit->setState(EntityState::supplied);
 		menu->getFunction(Command::city_supply_end)();
 	});
 	menu->setFunction(Command::city_supply_end, [this, stage, menu]
@@ -410,12 +429,12 @@ bool Game::init(Stage* stage)
 	{
 		menu->setMenuMode(MenuMode::deploy, _selectUnit, _selectTiles);
 		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		menu->showDeployers(util::instance<City>(_selectTiles.back()));
+		menu->deploy(util::instance<City>(_selectTiles.back()));
 	});
 	menu->setFunction(Command::deploy_start, [this, stage, menu]
 	{
 		util::instance<City>(_selectTiles.back())->addDeoloyer(_selectUnit);
-		_selectUnit->removeFromParent();
+		stage->removeUnit(_selectUnit);
 		_selectUnit = nullptr;
 		menu->getFunction(Command::deploy_end)();
 	});
@@ -432,19 +451,21 @@ bool Game::init(Stage* stage)
 	{
 		menu->setMenuMode(MenuMode::dispatch, _selectUnit, _selectTiles);
 		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		menu->dispatch(util::instance<City>(_selectTiles.back()));
 	});
 	menu->setFunction(Command::dispatch_start, [this, stage, menu]
 	{
-		menu->getFunction(Command::dispatch_cancel)();
-	});
-	menu->setFunction(Command::dispatch_change, [this, stage, menu]
-	{
+		auto city = util::instance<City>(_selectTiles.back());
+		auto unit = city->getDeploter(menu->getSelectDeployer());
+		stage->setUnit(city->getTileCoordinate(), unit);
+		city->removeDeployer(unit);
 		menu->getFunction(Command::dispatch_cancel)();
 	});
 	menu->setFunction(Command::dispatch_cancel, [this, stage, menu]
 	{
 		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
 		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+		menu->hideDeployers();
 		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
 	});
 

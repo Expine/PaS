@@ -214,7 +214,10 @@ public:
 	CC_SYNTHESIZE(int, _maxDeployer, MaxDeployer);
 	cocos2d::Vector<Entity*> _deployers;
 	void addDeoloyer(Entity* entity);
+	void removeDeployer(Entity* entity);
+	inline Entity* getDeploter(int no) { return _deployers.at(no); };
 	inline const cocos2d::Vector<Entity*>& getDeployersByRef() { return _deployers; };
+	void supply(Entity* entity);
 };
 
 class Capital : public City

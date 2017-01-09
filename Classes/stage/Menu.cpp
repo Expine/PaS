@@ -1109,18 +1109,11 @@ void MenuLayer::showWeaponFrame(Entity* unit)
 		else if (util::isTouchInEvent(touch->getLocation(), cancel))
 			attack_cancel(unit->getWeaponsByRef().at(_selectWeapon));
 	};
-	lis->onDoubleTap = [this, unit, weapon] (Touch* touch, Event* event)
+	lis->onDoubleTap = [this, unit, weapon, lis] (Touch* touch, Event* event)
 	{
+		lis->onTap(touch, event);
 		if (util::isTouchInEvent(touch->getLocation(), weapon))
-		{
-			auto pos = touch->getLocation() - (weapon->getPosition() - Vec2(weapon->getContentSize().width / 2, 0));
-			int no = (weapon->getContentSize().height - pos.y - 15 - 30 - MENU_SIZE / 2) / 50;
-			if (no >= 0 && weapon->getChildByTag(no)->getColor() == Color3B::BLACK)
-			{
-				_selectWeapon = no;
-				attack_decision(unit->getWeaponsByRef().at(_selectWeapon));
-			}
-		}
+			attack_decision(unit->getWeaponsByRef().at(_selectWeapon));
 
 	};
 	lis->onSwipe = [weapon](Vec2 v, Vec2 diff, float time)
@@ -1294,7 +1287,45 @@ void MenuLayer::showSpecFrame(Entity * unit)
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, frame);
 }
 
-void MenuLayer::showDeployers(City * city)
+void MenuLayer::deploy(City * city)
+{
+	showDeployers(city);
+}
+
+void MenuLayer::dispatch(City * city)
+{
+	auto lis = showDeployers(city);
+	auto node = this->getChildByTag(1001)->getChildByTag(0);
+
+	// Add frame
+	_selectDeployer = 0;
+	auto frame = util::createCutSkinAndAnimation("image/frame_1.png", 380, 100, 6, 1, 0, 0.15f);
+	frame->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	frame->setPosition(10, node->getContentSize().height - 105);
+	node->addChild(frame);
+
+	// Set listener
+	lis->onTap = [this, city, frame](Touch *touch, Event *event)
+	{
+		auto node = event->getCurrentTarget();
+		auto pos = 600 - (touch->getLocation().y - node->getPosition().y + (600 - node->getContentSize().height));
+		int no = pos / 100;
+		if (no < city->getDeployersByRef().size())
+		{
+			_selectDeployer = no;
+			frame->stopAllActions();
+			frame->runAction(MoveTo::create(0.1f, Vec2(10, node->getContentSize().height - 100 * (no+1) - 5)));
+		}
+	};
+	lis->onDoubleTap = [this, city, frame, lis](Touch *touch, Event *event)
+	{
+		lis->onTap(touch, event);
+		getFunction(Command::dispatch_start)();
+	};
+
+}
+
+SingleTouchListener* MenuLayer::showDeployers(City * city)
 {
 	auto winSize = Director::getInstance()->getWinSize();
 
@@ -1310,6 +1341,7 @@ void MenuLayer::showDeployers(City * city)
 	node->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	node->setContentSize(Size(400, 100 * city->getDeployersByRef().size() + 20));
 	node->setPosition(0, 600 - node->getContentSize().height);
+	node->setTag(0);
 	frame->addChild(node);
 
 	// Set unit data
@@ -1321,7 +1353,7 @@ void MenuLayer::showDeployers(City * city)
 	// Set listener
 	auto lis = SingleTouchListener::create();
 	lis->setSwallowTouches(true);
-	lis->onTouchBeganChecking = [](Touch *touch, Event *event) {return util::isTouchInEvent(touch, event); };
+	lis->onTouchBeganChecking = [frame](Touch *touch, Event *event) {return util::isTouchInEvent(touch->getLocation(), frame); };
 	lis->onSwipe = [node](Vec2 v, Vec2 diff, float time)
 	{
 		if (600 < node->getContentSize().height)
@@ -1353,7 +1385,9 @@ void MenuLayer::showDeployers(City * city)
 			NULL));
 		}
 	};
-	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, frame);
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, node);
+
+	return lis;
 }
 
 void MenuLayer::renderDeployer(Node* target, Entity * unit, int y)

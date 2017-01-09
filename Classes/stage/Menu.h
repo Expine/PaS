@@ -8,12 +8,13 @@ class Entity;
 class StageTile;
 class City;
 class WeaponData;
+class SingleTouchListener;
 enum class Command;
 
 enum class MenuMode
 {
 	none, 
-	city_supply, deploy, dispatch,
+	city_supply, deploy, dispatch, dispatching,
 	move, moving, attack, attacking, occupy, wait,
 };
 
@@ -59,7 +60,7 @@ protected:
 		, _stage(nullptr)
 		, _isShowedCityCommand(false), _isShowedUnitCommand(false)
 		, _mode(MenuMode::none)
-		, _selectWeapon(0)
+		, _selectWeapon(0), _selectDeployer(0)
 		, attack_decision(nullptr), attack_cancel(nullptr)
 	{};
 	~MenuLayer()
@@ -69,7 +70,7 @@ protected:
 		_onUnitFrame = _onMapFrame = _onMenuFrame = false;
 		_stage = nullptr;
 		_isShowedCityCommand = _isShowedUnitCommand = false;
-		_selectWeapon = 0;
+		_selectWeapon = _selectDeployer = 0;
 		attack_decision = attack_cancel = nullptr;
 	};
 	virtual bool init();
@@ -79,6 +80,7 @@ public:
 	CC_SYNTHESIZE(bool, _onUnitFrame, OnUnitFrame);
 	CC_SYNTHESIZE(bool, _onMapFrame, OnMapFrame);
 	CC_SYNTHESIZE(bool, _onMenuFrame, OnMenuFrame);
+	CC_SYNTHESIZE(int, _selectDeployer, SelectDeployer);
 	void setTile(std::vector<StageTile*> tiles, Entity *unit);
 	void setUnit(Node* target, std::vector<StageTile*> tiles, Entity *unit);
 	inline void setUnit(std::vector<StageTile*> tiles, Entity *unit) { setUnit(_unit, tiles, unit); };
@@ -124,7 +126,9 @@ public:
 
 	void showSpecFrame(Entity* unit);
 
-	void showDeployers(City* city);
+	void deploy(City* city);
+	void dispatch(City* city);
+	SingleTouchListener* showDeployers(City* city);
 	void renderDeployer(cocos2d::Node* target, Entity* unit, int y);
 	void hideDeployers();
 
