@@ -402,6 +402,8 @@ void Stage::initTileSearched(Owner owner)
 			auto unit = getUnit(x, y);
 			if (unit && unit->getAffiliation() != owner)
 				unit->setOpacity(0);
+			else if(unit)
+				unit->setOpacity(255);
 			if (unit)
 				unit->setState(EntityState::none);
 		}
@@ -440,9 +442,9 @@ void Stage::initTileSearched(Owner owner)
 /*
 * Recursive search Start
 */
-std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCost, EntityType type)
+std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCost, EntityType type, bool isContainUnit)
 {
-	auto tiles = recursiveTileSearch(Vec2(0, 0), point, remainCost, type);
+	auto tiles = recursiveTileSearch(Vec2(0, 0), point, remainCost, type, isContainUnit);
 	while (!searchQueue.empty())
 	{
 		for (auto tile : searchQueue.front()())
@@ -464,7 +466,7 @@ std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCo
  * go ←↑: (1, 1)
  * go ←↓: (1, -1)
  */
-std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type)
+std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type, bool isContainUnit)
 {
 	// Out of range
 	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
@@ -484,10 +486,12 @@ std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, i
 	{
 		auto unit = getUnit(point.x, point.y);
 		if (unit)
-			if (intrusion != Vec2(0, 0))
-				return std::vector<StageTile*>();
-			else
+			if(intrusion == Vec2(0, 0))
 				tiles.clear();
+			else if (isContainUnit && unit->getOpacity() != 0)
+				return tiles;
+			else
+				return std::vector<StageTile*>();
 	}
 
 	bool clearFlag = false;
@@ -507,22 +511,22 @@ std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, i
 
 	//Up
 	if (intrusion.y >= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, 1), point + Vec2(0, -2), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, 1), point + Vec2(0, -2), remainCost, type, isContainUnit));
 	//Up right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type, isContainUnit));
 	//Up left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type, isContainUnit));
 	//Down
 	if (intrusion.y <= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, -1), point + Vec2(0, 2), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, -1), point + Vec2(0, 2), remainCost, type, isContainUnit));
 	//Down right
 	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type, isContainUnit));
 	//Down left
 	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type));
+		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type, isContainUnit));
 
 	return tiles;
 }
@@ -1148,4 +1152,12 @@ Node * Stage::renderForAIScene()
 {
 	Node* node = Node::create();
 	return node;
+}
+
+int Stage::getUnitNumber()
+{
+	auto size = 0;
+	for (auto pair : _units)
+		size += pair.second.size();
+	return size;
 }

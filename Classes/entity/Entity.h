@@ -11,6 +11,11 @@ class UnitLayer;
 class City;
 enum class Command;
 
+constexpr int UNIT_MAX_DURABILITY = 10000;
+constexpr int UNIT_MAX_MATERIAL = 10000;
+constexpr int UNIT_MAX_MOBILITY = 100;
+constexpr int UNIT_MAX_SEARCHING = 10;
+constexpr int UNIT_MAX_DEFENCE = 100;
 
 /*********************************************************/
 
@@ -79,6 +84,7 @@ protected:
 	Entity()
 		: _department(Department::soldier), _type(EntityType::infantry), _state(EntityState::none)
 		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0), _durability(0), _maxDurability(0)
+		, _searched(false)
 	{};
 	~Entity()
 	{
@@ -100,6 +106,7 @@ public:
 	CC_SYNTHESIZE(int, _defence, Defence);
 	CC_SYNTHESIZE(int, _durability, Durability);
 	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
+	CC_SYNTHESIZE(bool, _searched, Searched);
 	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
 	UnitLayer* getUnitLayer();
 

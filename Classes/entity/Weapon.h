@@ -5,6 +5,8 @@
 
 class Entity;
 
+constexpr int WEAPON_MAX_ATTACK = 1000;
+
 enum class DirectionRange
 {
 	liner, crescent, overHalf, full, select
@@ -55,6 +57,14 @@ public:
 	CC_SYNTHESIZE(int, _consumption, Consumption);
 
 	bool isUsable(Entity* unit);
+	inline int WeaponData::getMaxAttack()
+	{
+		return	(_antiPersonnel > _antiWizard) ? _antiPersonnel : _antiWizard
+			+	(_antiFire > _antiIce && _antiFire > _antiThunder && _antiFire > _antiGround) ? _antiFire
+			:	(_antiIce > _antiThunder && _antiIce > _antiGround) ? _antiIce
+			:	(_antiThunder > _antiGround) ? _antiThunder
+			:	_antiGround;
+	}
 };
 
 /********************************************************************/

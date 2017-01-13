@@ -165,8 +165,8 @@ public:
 	inline void movePosition(cocos2d::Vec2 v) { movePosition(v.x, v.y); };
 
 	void initTileSearched(Owner owner);
-	std::vector<StageTile*> startRecursiveTileSearch(cocos2d::Vec2 point, int remainCost, EntityType type);
-	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type);
+	std::vector<StageTile*> startRecursiveTileSearch(cocos2d::Vec2 point, int remainCost, EntityType type, bool isContainUnit = false);
+	std::vector<StageTile*> recursiveTileSearch(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type, bool isContainUnit = false);
 	std::vector<StageTile*> startRecursiveTileSearchForMove(cocos2d::Vec2 goal, cocos2d::Vec2 point, int remainCost, EntityType type);
 	std::vector<StageTile*> recursiveTileSearchForMove(cocos2d::Vec2 goal, cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost, EntityType type, std::vector<StageTile*> result);
 	std::vector<StageTile*> startRecursiveTileSearchForWeapon(Entity* executer, Entity* enemy, WeaponData* weapon);
@@ -182,6 +182,12 @@ public:
 	void moveUnit(Entity *entiy, std::vector<StageTile*> tiles);
 
 	cocos2d::Node* renderForAIScene();
+
+	inline auto& getCities(Owner owner) { return _cities[owner]; };
+	inline std::map<Owner, std::vector<City*>>& getCities() { return _cities; }
+	inline std::vector<Entity*>& getUnits(Owner owner) { return _units[owner]; }
+	inline std::map<Owner, std::vector<Entity*>>& getUnits() { return _units; }
+	int getUnitNumber();
 };
 
 #endif // __STAGE_H__

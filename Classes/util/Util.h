@@ -42,6 +42,9 @@ namespace util
 	Node* createCutSkin(const std::string &file, int w, int h, int cut_mask, int opacity = 255);
 	Node* createCutSkinAndAnimation(const std::string &file, int w, int h, int wnum, int hnum, int cut_mask, float duration, int opacity = 255);
 
+	/*
+	 * Find element in vec. If vec has element, return true.
+	 */
 	template<typename V>
 	bool find(const std::vector<V>& vec, V element)
 	{
@@ -50,6 +53,9 @@ namespace util
 				return true;
 		return false;
 	};
+	/*
+	* Find element in vec. If vec has element satisfying func, return true.
+	*/
 	template<typename V, typename T>
 	bool find(const std::vector<V>& vec, T element, std::function<bool(V, T)> func)
 	{
@@ -57,6 +63,25 @@ namespace util
 			if(func(comp, element))
 				return true;
 		return false;
+	};
+
+	/*
+	 * Sort map by value
+	 */
+	template<typename V, typename T>
+	std::vector<std::pair<V, T>> sortMap(const std::map<V, T>& map, bool isGreater = true)
+	{
+		std::vector<std::pair<V, T>> arr;
+		
+		for (std::pair<V, T> pair : map)
+			arr.push_back(pair);
+
+		if (isGreater)
+			std::sort(arr.begin(), arr.end(), [](const std::pair<V, T>& left, const std::pair<V, T> right) {return left.second > right.second; });
+		else
+			std::sort(arr.begin(), arr.end(), [](const std::pair<V, T>& left, const std::pair<V, T> right) {return left.second < right.second; });
+
+		return arr;
 	};
 
 	void initRand();

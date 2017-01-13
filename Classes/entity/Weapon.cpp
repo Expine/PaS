@@ -88,3 +88,4 @@ bool WeaponData::isUsable(Entity * unit)
 	}
 	return false;
 }
+

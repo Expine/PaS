@@ -1,6 +1,7 @@
 ﻿#include "GameScene.h"
 
 #include "ai/Owner.h"
+#include "ai/Ai.h"
 #include "stage/Menu.h"
 #include "stage/Stage.h"
 #include "stage/Tile.h"
@@ -243,6 +244,40 @@ bool Game::init(Stage* stage)
 		if(pos != Vec2(0, 0))
 			setCursol(stage, menu, pos);
 	});
+	auto ai = PlayerAI::create();
+	ai->initialize(stage, Owner::player);
+	ai->retain();
+	menu->setFunction(Command::talkStaff, [this, stage, menu, ai]
+	{
+		ai->evaluate();
+	});
+	menu->setFunction(Command::save, [this, stage, menu, ai] 
+	{
+		if (_selectUnit)
+		{
+			auto field = ai->getAdvanceBattleField(_selectUnit);
+			auto city = ai->getAdvanceCity(_selectUnit);
+			auto unit = ai->getAdvanceUnit(_selectUnit);
+			auto winSize = Director::getInstance()->getWinSize();
+			auto color = Sprite::create();
+			color->setColor(field->_color);
+			color->setTextureRect(Rect(0, 0, 100, 100));
+			color->setPosition(winSize.width / 2, winSize.height / 2);
+			color->setTag(1000);
+			if (this->getChildByTag(1000))
+				this->removeChildByTag(1000);
+			this->addChild(color);
+
+			menu->showEnemyUnit(unit);
+			stage->blinkOffUnit(unit);
+			auto label = Label::createWithSystemFont(StringUtils::format("%f\n%f", ai->getCityEval(city), ai->getBattleFieldEval(field)), "Arial", 20);
+			label->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+			color->addChild(label);
+
+			for (auto tile : field->_tiles)
+				stage->blinkTile(tile);
+		}
+	});
 
 	//Move function
 	menu->setFunction(Command::move, [this, stage, menu] 
@@ -483,7 +518,7 @@ bool Game::init(Stage* stage)
 	});
 
 
-	stage->initTileSearched(Owner::player);
+//	stage->initTileSearched(Owner::player);
 
     return true;
 }
