@@ -26,7 +26,30 @@ Scene* Game::createScene(Stage* stage)
 }
 
 /*
+ * Constructor
+ */
+Game::Game()
+	: _stage(nullptr), _menu(nullptr)
+	, _select_unit(nullptr), _select_enemy(nullptr), _select_weapon(nullptr)
+	, _end_function(nullptr)
+{}
+
+/*
+ * Destructor
+ */
+Game::~Game()
+{
+	_stage = nullptr;
+	_menu = nullptr;
+	_select_unit = _select_enemy = nullptr;
+	_select_weapon = nullptr;
+	_end_function = nullptr;
+}
+
+
+/*
  * Initialize
+ * Set stage and menu listener
  */
 bool Game::init(Stage* stage)
 {
@@ -35,541 +58,505 @@ bool Game::init(Stage* stage)
 
 	// Set stage
 	this->addChild(stage);
+	_stage = stage;
 
 	// Set menu
-	auto menu = MenuLayer::create();
-	menu->setStage(stage);
-	this->addChild(menu, 10);
+	_menu = MenuLayer::create();
+	_menu->setStage(stage);
+	this->addChild(_menu, 10);
 
-	// Set stgae listener
-	stage->onTap = [this, menu, stage](Vec2 v, std::vector<StageTile*> tiles)
-	{
-		// If running menu action, do nothing
-		if (menu->isRunningAction())
-			return;
-
-		setCursol(stage, menu, v);
-	};
-	stage->onLongTapBegan = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
-	{
-		auto unit = stage->getUnit(v);
-		if (unit)
-		{
-			stage->onTap(v, tiles);
-			auto preUnit = _selectUnit;
-			_selectUnit = unit;
-			menu->getFunction(Command::spec)();
-			_selectUnit = preUnit;
-		}
-	};
-	stage->onDoubleTap = [this, stage, menu](Vec2 v, std::vector<StageTile*> tiles)
-	{
-		auto unit = stage->getUnit(v);
-		bool isSameUnit = _selectUnit == unit;
-
-		stage->onTap(v, tiles);
-
-		switch (menu->getMenuMode())
-		{
-		case MenuMode::none:
-		{
-			// If double tap on unit, move process
-			if (unit && unit->getAffiliation() == Owner::player)
-				switch (unit->getState())
-				{
-				case EntityState::none:
-					if (command::isEnable(Command::city_supply, _selectUnit, _selectTiles))
-					{
-						menu->getFunction(Command::city_supply)();
-						break;
-					}
-				case EntityState::supplied:
-					if (command::isEnable(Command::move, _selectUnit, _selectTiles))
-						menu->getFunction(Command::move)();
-					break;
-				case EntityState::moved:
-					if (command::isEnable(Command::attack, _selectUnit, _selectTiles))
-						menu->getFunction(Command::attack)();
-					else if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
-						menu->getFunction(Command::occupation)();
-					else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
-						menu->getFunction(Command::wait)();
-					break;
-				case EntityState::acted:
-					if(command::isEnable(Command::deployment,_selectUnit, _selectTiles))
-						menu->getFunction(Command::deployment)();
-					else
-						menu->getFunction(Command::nextUnit)();
-					break;
-				}
-			// If double tap on enemy unit
-			else if (unit && unit->getOpacity() != 0 && OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), Owner::player))
-			{
-				for (auto tile : stage->startRecursiveTileSearch(v, 1, EntityType::counter))
-				{
-					auto around_unit = stage->getUnit(tile->getTileCoordinate());
-					if (around_unit && around_unit->getAffiliation() == Owner::player && command::isEnable(Command::attack, around_unit, stage->getTiles(tile->getTileCoordinate())))
-					{
-						setSelectUnit(stage, menu, around_unit);
-						menu->getFunction(Command::attack)();
-					}
-				}
-			}
-			else if (!unit)
-			{
-				City* city = nullptr;
-				for (auto tile : tiles)
-					if (tile && tile->getId() && util::instanceof<City>(tile))
-						city = util::instance<City>(tile);
-				if (city && command::isEnable(Command::dispatch, _selectUnit, _selectTiles))
-					menu->getFunction(Command::dispatch)();
-			}
-			break;
-		}
-		case MenuMode::move:
-			if (isSameUnit)
-			{
-				menu->getFunction(Command::move_end)();
-				if (command::isEnable(Command::attack, _selectUnit, _selectTiles))
-					menu->getFunction(Command::attack)();
-				else if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
-					menu->getFunction(Command::occupation)();
-				else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
-					menu->getFunction(Command::wait)();
-				break;
-			}
-			// If double tap on movable tile, start process
-			else if (util::find(_selectArea, tiles.back()))
-				menu->getFunction(Command::move_start)();
-			else
-				menu->getFunction(Command::move_end)();
-			break;
-		case MenuMode::moving:
-			// If double tap on end tile, end process
-			if (util::find(tiles, _moveRoot.back()))
-				menu->getFunction(Command::move_decision)();
-			// If double tap on movable tile, restart process
-			else if (util::find(_selectArea, tiles.back()))
-			{
-				menu->getFunction(Command::move_cancel)();
-				menu->getFunction(Command::move_start)();
-			}
-			break;
-		case MenuMode::attack:
-			if (isSameUnit)
-			{
-				menu->getFunction(Command::attack_end)();
-				if (command::isEnable(Command::occupation, _selectUnit, _selectTiles))
-					menu->getFunction(Command::occupation)();
-				else if (command::isEnable(Command::wait, _selectUnit, _selectTiles))
-					menu->getFunction(Command::wait)();
-				break;
-			}
-			else if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
-				menu->getFunction(Command::attack_target)();
-			else if (!util::find(_selectArea, tiles.back()))
-				menu->getFunction(Command::attack_end)();
-			break;
-		case MenuMode::attacking:
-			if (unit && util::find<StageTile*, Entity*>(_selectArea, unit, [](StageTile* tile, Entity *unit) { return tile->getTileCoordinate() == unit->getTileCoordinate(); }))
-				menu->getFunction(Command::attack_start)();
-			else if (!util::find(_selectArea, tiles.back()))
-				menu->getFunction(Command::attack_cancel)();
-			break;
-		case MenuMode::occupy:
-			if (isSameUnit)
-				menu->getFunction(Command::occupation_start)();
-			else
-				menu->getFunction(Command::occupation_end)();
-			break;
-		case MenuMode::wait:
-			if (isSameUnit)
-				menu->getFunction(Command::wait_start)();
-			else
-				menu->getFunction(Command::wait_end)();
-			break;
-		case MenuMode::city_supply:
-			if (isSameUnit)
-				menu->getFunction(Command::city_supply_start)();
-			else
-				menu->getFunction(Command::city_supply_end)();
-			break;
-		case MenuMode::deploy:
-			if (isSameUnit)
-				menu->getFunction(Command::deploy_start)();
-			else
-				menu->getFunction(Command::deploy_end)();
-			break;
-		}
-	};
-	// if menu action, swipe is disable
-	stage->onSwipeCheck = [menu] (Vec2 v, Vec2 diff, float time)
-	{
-		return menu->checkAllAction(diff);
-	};
-	// if menu action, swipe is disable
-	stage->onFlickCheck = [menu](Vec2 v, Vec2 diff, float time)
-	{
-		auto result = menu->checkAllAction(diff);
-		menu->resetOnFrame();
-		return result;
-	};
-
-	//Set menu listener
-	//End phase
-	menu->setFunction(Command::endPhase, [this] 
-	{
-		_endFunction();
-	});
-	//Next city
-	menu->setFunction(Command::nextCity, [this, stage, menu]
-	{
-		StageTile* tile = nullptr;
-		//Get top tile
-		for (auto t : _selectTiles)
-			if (t->getId())
-				tile = t;
-		setCursol(stage, menu, stage->nextCity(Owner::player, tile));
-	});
-	//Next unit
-	menu->setFunction(Command::nextUnit, [this, stage, menu]
-	{
-		if (menu->getMenuMode() != MenuMode::none)
-		{
-			stage->movePosition(_selectUnit);
-			return;
-		}
-
-		auto pos = stage->nextUnit(Owner::player, _selectUnit);
-		if(pos != Vec2(0, 0))
-			setCursol(stage, menu, pos);
-	});
+	// For debug
 	auto ai = PlayerAI::create();
 	ai->initialize(stage, Owner::player);
 	ai->retain();
-	menu->setFunction(Command::talkStaff, [this, stage, menu, ai]
-	{
-		ai->evaluate();
-	});
-	menu->setFunction(Command::save, [this, stage, menu, ai] 
-	{
-		if (_selectUnit)
-		{
-			auto field = ai->getAdvanceBattleField(_selectUnit);
-			auto city = ai->getAdvanceCity(_selectUnit);
-			auto unit = ai->getAdvanceUnit(_selectUnit);
-			auto winSize = Director::getInstance()->getWinSize();
-			auto color = Sprite::create();
-			color->setColor(field->_color);
-			color->setTextureRect(Rect(0, 0, 100, 100));
-			color->setPosition(winSize.width / 2, winSize.height / 2);
-			color->setTag(1000);
-			if (this->getChildByTag(1000))
-				this->removeChildByTag(1000);
-			this->addChild(color);
 
-			menu->showEnemyUnit(unit);
-			stage->blinkOffUnit(unit);
-			auto label = Label::createWithSystemFont(StringUtils::format("%f\n%f", ai->getCityEval(city), ai->getBattleFieldEval(field)), "Arial", 20);
-			label->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-			color->addChild(label);
 
-			for (auto tile : field->_tiles)
-				stage->blinkTile(tile);
-		}
-	});
+	// Set stgae listener
+	stage->onTap = std::bind(&Game::onTap, this, std::placeholders::_1, std::placeholders::_2);
+	stage->onLongTapBegan = std::bind(&Game::onLongTapBagan, this, std::placeholders::_1, std::placeholders::_2);
+	stage->onDoubleTap = std::bind(&Game::onDoubleTap, this, std::placeholders::_1, std::placeholders::_2);
+	// If menu action, swipe is disable
+	stage->onSwipeCheck = [this](Vec2 v, Vec2 diff, float time) { return _menu->checkAllAction(diff); };
+	// If menu action, swipe is disable
+	stage->onFlickCheck = [this](Vec2 v, Vec2 diff, float time) { return _menu->checkAllAction(diff); };
+
+	//Set menu listener
+	_menu->setFunction(Command::endPhase, [this] { _end_function(); });
+	_menu->setFunction(Command::nextCity, [this] { if(!_select_tiles.empty())	setCursor(_stage->nextCity(Owner::player, _select_tiles.front())); });
+	// TODO IF MenuMode is not none, command change
+	_menu->setFunction(Command::nextUnit, [this] { setCursor(_stage->nextUnit(Owner::player, _select_unit)); });
+	// For debug
+	_menu->setFunction(Command::talkStaff, [this, ai] { ai->evaluate(); });
+	_menu->setFunction(Command::save, [this] {});
+	_menu->setFunction(Command::load, [this] {});
+	_menu->setFunction(Command::option, [this] {});
 
 	//Move function
-	menu->setFunction(Command::move, [this, stage, menu] 
-	{
-		_selectArea = stage->moveCheck(_selectUnit);
-		stage->movePosition(_selectUnit);
-		for (auto tile : _selectArea)
-			stage->blinkTile(tile, Color3B::WHITE);
-		menu->setMenuMode(MenuMode::move, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, util::find(_selectArea, _selectTiles.back()));
-	});
-	menu->setFunction(Command::move_start, [this, stage, menu] 
-	{
-		_moveRoot = stage->provisionalMoveUnit(_selectUnit, _selectTiles.back());
-		menu->setMenuMode(MenuMode::moving, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles);
-	});
-	menu->setFunction(Command::move_end, [this, stage, menu] 
-	{
-		for (auto tile : _selectArea)
-			stage->blinkOffTile(tile);
-		_selectArea.clear();
-		_moveRoot.clear();
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		setCursol(stage, menu, _selectUnit->getTileCoordinate());
-	});
-	menu->setFunction(Command::move_decision, [this, stage, menu] 
-	{
-		stage->moveUnit(_selectUnit, _moveRoot);
-		menu->getFunction(Command::move_end)();
-	});
-	menu->setFunction(Command::move_cancel, [this, stage, menu] 
-	{
-		stage->provisionalMoveCancel(_selectUnit);
-		menu->setMenuMode(MenuMode::move, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, util::find(_selectArea, _selectTiles.back()));
-	});
+	setMoveFunction();
 
 	//Attack function
-	menu->setFunction(Command::attack, [this, stage, menu] 
-	{
-		menu->showWeaponFrame(_selectUnit);
-		stage->movePosition(_selectUnit);
-	});
-	menu->attack_decision = [this, stage, menu](WeaponData* data)
-	{
-		_weapon = data;
-		menu->attack_cancel(data);
-		menu->setMenuMode(MenuMode::attack, _selectUnit, _selectTiles);
-		_selectArea.clear();
-		// Liner check
-		if (data->getRange().directionRange == DirectionRange::liner)
-			_selectArea = stage->startRecursiveTileSearchForLiner(_selectUnit->getTileCoordinate(), data->getRange().FiringRange);
-		// If full, should not select enemy
-		else if (data->getRange().directionRange == DirectionRange::full)
-		{
-			for (auto tile : stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(), data->getRange().FiringRange, EntityType::counter))
-			{
-				auto target = stage->getUnit(tile->getTileCoordinate());
-				if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
-				{
-					_selectEnemy = target;
-					menu->showEnemyUnit(_selectEnemy);
-					break;
-				}
-			}
-			menu->getFunction(Command::attack_target)();
-			return;
-		}
-		else
-			_selectArea = stage->startRecursiveTileSearch(_selectUnit->getTileCoordinate(), data->getRange().FiringRange, EntityType::counter);
-		// Blink tile
-		for (auto tile : _selectArea)
-			stage->blinkTile(tile, Color3B::YELLOW);
-	};
-	menu->attack_cancel = [this, menu] (WeaponData* data)
-	{
-		menu->hideEnemyUnit();
-		menu->hideWeaponFrame();
-	};
-	menu->setFunction(Command::attack_target, [this, stage, menu] 
-	{
-		// Remove blink
-		for (auto tile : _selectArea)
-			stage->blinkOffTile(tile);
-
-		menu->setMenuMode(MenuMode::attacking, _selectUnit, _selectTiles);
-		// Show attack range
-		_selectArea = stage->startRecursiveTileSearchForWeapon(_selectUnit, _selectEnemy, _weapon);
-		for (auto tile : _selectArea)
-			stage->blinkTile(tile, Color3B::RED);
-	});
-	menu->setFunction(Command::attack_change, [this, stage, menu] 
-	{
-		menu->getFunction(Command::attack_end)();
-		menu->getFunction(Command::attack)();
-	});
-	menu->setFunction(Command::attack_end, [this, stage, menu] 
-	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->hideEnemyUnit();
-		// Remove blink
-		for (auto tile : _selectArea)
-			stage->blinkOffTile(tile);
-		if (_selectEnemy)
-			stage->blinkOffUnit(_selectEnemy);
-		_selectEnemy = nullptr;
-		setCursol(stage, menu, _selectUnit->getTileCoordinate());
-	});
-	menu->setFunction(Command::attack_start, [this, stage, menu] 
-	{
-		for (auto tile : _selectArea)
-		{
-			auto unit = stage->getUnit(tile->getTileCoordinate());
-			if (unit && unit->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), Owner::player))
-				_selectUnit->attack(unit, _weapon);
-		}
-		_selectUnit->setState(EntityState::acted);
-		menu->getFunction(Command::attack_end)();
-		menu->checkUnitCommand(_selectUnit, _selectTiles);
-	});	
-	menu->setFunction(Command::attack_cancel, [this, stage, menu] 
-	{
-		if (_weapon->getRange().directionRange == DirectionRange::full)
-			menu->getFunction(Command::attack_end)();
-		else
-		{
-			menu->getFunction(Command::attack_end)();
-			menu->attack_decision(_weapon);
-		}
-	});
+	setAttackFunction();
 
 	// Occupation function
-	menu->setFunction(Command::occupation, [this, stage, menu] 
-	{
-		menu->setMenuMode(MenuMode::occupy, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
-	});
-	menu->setFunction(Command::occupation_start, [this, stage, menu]
-	{
-		_selectUnit->setState(EntityState::acted);
-		_selectUnit->occupy(util::instance<City>(_selectTiles.back()));
-		menu->getFunction(Command::occupation_end)();
-	});
-	menu->setFunction(Command::occupation_end, [this, stage, menu]
-	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
-		setCursol(stage, menu, _selectUnit->getTileCoordinate());
-	});
+	setOccupyFunction();
 
 	// Spec function
-	menu->setFunction(Command::spec, [this, stage, menu] 
-	{
-		menu->showSpecFrame(_selectUnit);
-	});
+	_menu->setFunction(Command::spec, [this] { _menu->showSpecFrame(_select_unit);});
 
 	// Wait function
-	menu->setFunction(Command::wait, [this, stage, menu] 
-	{
-		menu->setMenuMode(MenuMode::wait, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
+	_menu->setFunction(Command::wait, [this] { 
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::wait, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area); 
 	});
-	menu->setFunction(Command::wait_start, [this, stage, menu]
+	_menu->setFunction(Command::wait_start, [this]
 	{
-		_selectUnit->setState(EntityState::acted);
-		menu->getFunction(Command::wait_end)();
+		_select_unit->setState(EntityState::acted);
+		_menu->getFunction(Command::wait_end)();
 	});
-	menu->setFunction(Command::wait_end, [this, stage, menu]
+	_menu->setFunction(Command::wait_end, [this]
 	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
-		setCursol(stage, menu, _selectUnit->getTileCoordinate());
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		setCursor(_select_unit->getPositionAsTile());
 	});
 
 	// City supply function
-	menu->setFunction(Command::city_supply, [this, stage, menu]
-	{
-		menu->setMenuMode(MenuMode::city_supply, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
+	_menu->setFunction(Command::city_supply, [this] { 
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::city_supply, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
 	});
-	menu->setFunction(Command::city_supply_start, [this, stage, menu]
+	_menu->setFunction(Command::city_supply_start, [this]
 	{
-		util::instance<City>(_selectTiles.back())->supply(_selectUnit);
-		_selectUnit->setState(EntityState::supplied);
-		menu->getFunction(Command::city_supply_end)();
+		util::instance<City>(_select_tiles.back())->supply(_select_unit);
+		_select_unit->setState(EntityState::supplied);
+		_menu->getFunction(Command::city_supply_end)();
 	});
-	menu->setFunction(Command::city_supply_end, [this, stage, menu]
+	_menu->setFunction(Command::city_supply_end, [this]
 	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		setCursor(_select_tiles.back()->getPositionAsTile());
 	});
 
 	// Deploy function
-	menu->setFunction(Command::deployment, [this, stage, menu]
+	_menu->setFunction(Command::deployment, [this]
 	{
-		menu->setMenuMode(MenuMode::deploy, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		menu->deploy(util::instance<City>(_selectTiles.back()));
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::deploy, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_menu->deploy(util::instance<City>(_select_tiles.back()));
 	});
-	menu->setFunction(Command::deploy_start, [this, stage, menu]
+	_menu->setFunction(Command::deploy_start, [this]
 	{
-		util::instance<City>(_selectTiles.back())->addDeoloyer(_selectUnit);
-		stage->removeUnit(_selectUnit);
-		_selectUnit = nullptr;
-		menu->getFunction(Command::deploy_end)();
+		_stage->deployUnit(_select_unit, util::instance<City>(_select_tiles.back()));
+		_select_unit = nullptr;
+		_menu->getFunction(Command::deploy_end)();
 	});
-	menu->setFunction(Command::deploy_end, [this, stage, menu]
+	_menu->setFunction(Command::deploy_end, [this]
 	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		menu->hideDeployers();
-		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_menu->hideDeployers();
+		setCursor(_select_tiles.back()->getPositionAsTile());
 	});
 
 	// Dispatch function
-	menu->setFunction(Command::dispatch, [this, stage, menu]
+	_menu->setFunction(Command::dispatch, [this]
 	{
-		menu->setMenuMode(MenuMode::dispatch, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		menu->dispatch(util::instance<City>(_selectTiles.back()));
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::dispatch, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_menu->dispatch(util::instance<City>(_select_tiles.back()));
 	});
-	menu->setFunction(Command::dispatch_start, [this, stage, menu]
+	_menu->setFunction(Command::dispatch_start, [this]
 	{
-		auto city = util::instance<City>(_selectTiles.back());
-		auto unit = city->getDeploter(menu->getSelectDeployer());
-		stage->setUnit(city->getTileCoordinate(), unit);
-		city->removeDeployer(unit);
-		menu->getFunction(Command::dispatch_cancel)();
+		_stage->dispatchUnit(_menu->getSelectDeployer(), util::instance<City>(_select_tiles.back()));
+		_menu->getFunction(Command::dispatch_cancel)();
 	});
-	menu->setFunction(Command::dispatch_cancel, [this, stage, menu]
+	_menu->setFunction(Command::dispatch_cancel, [this]
 	{
-		menu->setMenuMode(MenuMode::none, _selectUnit, _selectTiles);
-		menu->checkCityCommand(_selectUnit, _selectTiles, util::instance<City>(_selectTiles.back()));
-		menu->hideDeployers();
-		setCursol(stage, menu, _selectTiles.back()->getTileCoordinate());
+		_menu->setModeWithCheckAndMoveForCity(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_menu->hideDeployers();
+		setCursor(_select_tiles.back()->getPositionAsTile());
 	});
 
-
-//	stage->initTileSearched(Owner::player);
+	stage->initStage(Owner::player);
 
     return true;
 }
 
+
 /*
- * Set cursol position
+ * Set move function
  */
-void Game::setCursol(Stage * stage, MenuLayer * menu, cocos2d::Vec2 tileCoordinate)
+void Game::setMoveFunction()
 {
-	// Select tile
-	stage->selectTile(tileCoordinate);
-
-	//Set unit and tile information
-	setSelectUnit(stage, menu, stage->getUnit(tileCoordinate));
-	setSelectTiles(stage, menu, stage->getTiles(tileCoordinate));
-
-	//Set base information
-	menu->setInfo(tileCoordinate);
-
-	// Check unit command
-	switch (menu->getMenuMode())
+	_menu->setFunction(Command::move, [this]
 	{
-	case MenuMode::none:
-		menu->checkUnitCommand(_selectUnit, _selectTiles, false);
-		break;
-	case MenuMode::move:
-	case MenuMode::moving:
-		menu->checkUnitCommand(_selectUnit, _selectTiles, util::find(_selectArea, _selectTiles.back()));
-		break;
-	case MenuMode::attack:
-		menu->checkUnitCommand(_selectUnit, _selectTiles, util::find<StageTile*, Entity*>(_selectArea, _selectEnemy, [stage](StageTile* tile, Entity *enemy) 
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_select_area = _stage->moveCheck(_select_unit);
+		_stage->moveView(_select_unit);
+		for (auto tile : _select_area)
+			_stage->blinkTile(tile, Color3B::WHITE);
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::move, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	});
+	_menu->setFunction(Command::move_start, [this]
+	{
+		_move_route = _stage->provisionalMoveUnit(_select_unit, _select_tiles.front());
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::moving, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	});
+	_menu->setFunction(Command::move_end, [this]
+	{
+		for (auto tile : _select_area)
+			_stage->blinkOffTile(tile);
+		_select_area.clear();
+		_move_route.clear();
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		setCursor(_select_unit->getPositionAsTile());
+	});
+	_menu->setFunction(Command::move_decision, [this]
+	{
+		_stage->moveUnit(_select_unit, _move_route);
+		_menu->getFunction(Command::move_end)();
+	});
+	_menu->setFunction(Command::move_cancel, [this]
+	{
+		_stage->provisionalMoveCancel(_select_unit);
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::move, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	});
+}
+
+/*
+ * Set attack function
+ */
+void Game::setAttackFunction()
+{
+	_menu->setFunction(Command::attack, [this]
+	{
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->showWeaponFrame(_select_unit);
+		_stage->moveView(_select_unit);
+	});
+	_menu->attack_decision = [this](WeaponData* data)
+	{
+		_select_weapon = data;
+		_menu->attack_cancel(data);
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::attack, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_select_area.clear();
+		// Liner check
+		if (data->getRange().direction_type == DirectionType::liner)
+			_select_area = _stage->startRecursiveTileSearchForLiner(_select_unit->getPositionAsTile(), data->getRange().firing_range);
+		// If full, should not select enemy
+		else if (data->getRange().direction_type == DirectionType::full)
 		{
-			return enemy && tile->getTag() == enemy->getTag();
-		}));
-		break;
-	case MenuMode::attacking:
-		break;
+			for (auto tile : _stage->startRecursiveTileSearch(_select_unit->getPositionAsTile(), data->getRange().firing_range, EntityType::counter))
+			{
+				auto target = _stage->getUnit(tile->getPositionAsTile());
+				if (target && target->isSelectableEnemy(Owner::player))
+				{
+					_select_enemy = target;
+					_menu->showEnemyUnit(_select_enemy);
+					break;
+				}
+			}
+			_menu->getFunction(Command::attack_target)();
+			return;
+		}
+		else
+			_select_area = _stage->startRecursiveTileSearch(_select_unit->getPositionAsTile(), data->getRange().firing_range, EntityType::counter);
+
+		// Blink tile
+		for (auto tile : _select_area)
+			_stage->blinkTile(tile, Color3B::YELLOW);
+	};
+	_menu->attack_cancel = [this](WeaponData* data)
+	{
+		_menu->hideEnemyUnit();
+		_menu->hideWeaponFrame();
+	};
+	_menu->setFunction(Command::attack_target, [this]
+	{
+		// Remove blink
+		for (auto tile : _select_area)
+			_stage->blinkOffTile(tile);
+
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::attacking, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		// Show attack range
+		_select_area = _stage->startRecursiveTileSearchForWeapon(_select_unit, _select_enemy, _select_weapon);
+		for (auto tile : _select_area)
+			_stage->blinkTile(tile, Color3B::RED);
+	});
+	_menu->setFunction(Command::attack_change, [this]
+	{
+		_menu->getFunction(Command::attack_end)();
+		_menu->getFunction(Command::attack)();
+	});
+	_menu->setFunction(Command::attack_end, [this]
+	{
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		_menu->hideEnemyUnit();
+		// Remove blink
+		for (auto tile : _select_area)
+			_stage->blinkOffTile(tile);
+		if (_select_enemy)
+			_stage->blinkOffUnit(_select_enemy);
+		_select_enemy = nullptr;
+		setCursor(_select_unit->getPositionAsTile());
+	});
+	_menu->setFunction(Command::attack_start, [this]
+	{
+		for (auto tile : _select_area)
+		{
+			auto unit = _stage->getUnit(tile->getPositionAsTile());
+			if (unit && unit->isSelectableEnemy(Owner::player))
+				_select_unit->attack(unit, _select_weapon);
+		}
+		_select_unit->setState(EntityState::acted);
+		_menu->getFunction(Command::attack_end)();
+	});
+	_menu->setFunction(Command::attack_cancel, [this]
+	{
+		if (_select_weapon->getRange().direction_type == DirectionType::full)
+			_menu->getFunction(Command::attack_end)();
+		else
+		{
+			_menu->getFunction(Command::attack_end)();
+			_menu->attack_decision(_select_weapon);
+		}
+	});
+}
+
+/*
+ * Set occupy function
+ */
+void Game::setOccupyFunction()
+{
+	_menu->setFunction(Command::occupation, [this]
+	{
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::occupy, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	});
+	_menu->setFunction(Command::occupation_start, [this]
+	{
+		_select_unit->setState(EntityState::acted);
+		_select_unit->occupy(util::instance<City>(_select_tiles.back()));
+		_menu->getFunction(Command::occupation_end)();
+	});
+	_menu->setFunction(Command::occupation_end, [this]
+	{
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		setCursor(_select_unit->getPositionAsTile());
+	});
+}
+
+/*
+ * On tap function
+ * Move cursor
+ */
+ void Game::onTap(cocos2d::Vec2 cor, std::vector<StageTile*> tiles)
+{
+	// If running menu action, do nothing
+	if (_menu->isRunningAction())
+		return;
+
+	setCursor(cor);
+}
+
+/*
+ * On long tap beganfunction
+ * Show spec
+ */
+ void Game::onLongTapBagan(Vec2 cor, std::vector<StageTile*> tiles)
+{
+	auto unit = _stage->getUnit(cor);
+	if (unit)
+	{
+		auto pre_unit = _select_unit;
+		_select_unit = unit;
+		callCommand(Command::spec);
+		_select_unit = pre_unit;
+	}
+}
+
+/*
+ * On double tap function
+ */
+ void Game::onDoubleTap(Vec2 cor, std::vector<StageTile*> tiles)
+{
+	// Check tap same unit
+	bool isSameUnit = _select_unit && _select_unit == _stage->getUnit(cor);
+
+	// Call on tap function, set unit and tile
+	_stage->onTap(cor, tiles);
+
+
+	switch (_menu->getMode())
+	{
+	case MenuMode::none: onDoubleTapByNone();				break;
+	case MenuMode::move: onDoubleTapByMove(isSameUnit);		break;
+	case MenuMode::moving:	onDoubleTapByMoving();			break;
+	case MenuMode::attack:	onDoubleTapByAttack(isSameUnit);break;
+	case MenuMode::attacking:	onDoubleTapByAttacking();	break;
 	case MenuMode::occupy:
+		callCommand(isSameUnit ? Command::occupation_start : Command::occupation_end);
 		break;
 	case MenuMode::wait:
+		callCommand(isSameUnit ? Command::wait_start : Command::wait_end);
+		break;
+	case MenuMode::city_supply:
+		callCommand(isSameUnit ? Command::city_supply_start : Command::city_supply_end);
+		break;
+	case MenuMode::deploy:
+		callCommand(isSameUnit ? Command::deploy_start : Command::deploy_end);
 		break;
 	}
 }
 
 /*
- * Set pretile data
- * And reset pretile data
+ * On double tap function when menu mode is none
  */
-void Game::setSelectTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*> tiles)
+void Game::onDoubleTapByNone()
 {
-	switch (menu->getMenuMode())
+	// When not select unit and select city, dispatch
+	if (!_select_unit && util::findElement<StageTile*>(_select_tiles, [](StageTile* tile){return util::instanceof<City>(tile);}))
+		callCommand(Command::dispatch);
+
+	// When select ally unit, change process
+	if(_select_unit && _select_unit->getAffiliation() == Owner::player)
+		switch (_select_unit->getState())
+		{
+		case EntityState::none:		if (callCommand(Command::city_supply))		break;
+		case EntityState::supplied:	if (callCommand(Command::move))				break;
+		case EntityState::moved:	if (callCommand(Command::attack))			break;
+									else if (callCommand(Command::occupation))	break;
+									else if (callCommand(Command::wait))		break;
+		case EntityState::acted:	if (callCommand(Command::deployment))		break;
+									else if (callCommand(Command::nextUnit))	break;
+		}
+
+	// When select enemy unit, attack process
+	// TODO double tap attack process is implement
+	if (_select_unit && _select_unit->isSelectableEnemy(Owner::player))
+	{
+	}
+}
+
+/*
+ * On double tap function when menu mode is move
+ */
+void Game::onDoubleTapByMove(bool isSameUnit)
+{
+	// When tap on same unit, change process
+	if (isSameUnit)
+	{
+		
+		callCommand(Command::move_end);
+		if (callCommand(Command::attack))			return;
+		else if (callCommand(Command::occupation))	return;
+		else if (callCommand(Command::wait))		return;
+		return;
+	}
+
+	// When tap on movable are, start to move. If not, stop to move.
+	if (util::find(_select_area, _select_tiles.front()))
+		callCommand(Command::move_start);
+	else
+		callCommand(Command::move_end);
+}
+
+/*
+ * On double tap function when menu mode is moving
+ */
+void Game::onDoubleTapByMoving()
+{
+	// If double tap on end tile, end process
+	if (util::find(_select_tiles, _move_route.back()))
+		callCommand(Command::move_decision);
+	// If double tap on movable tile, restart process
+	else if (util::find(_select_area, _select_tiles.front()))
+	{
+		callCommand(Command::move_cancel);
+		callCommand(Command::move_start);
+	}
+}
+
+/*
+ * On double tap function when menu mode is attack
+ */
+void Game::onDoubleTapByAttack(bool isSameUnit)
+{
+	// When tap on same unit, change process
+	if (isSameUnit)
+	{
+		callCommand(Command::attack_end);
+		if (callCommand(Command::occupation))	return;
+		else if (callCommand(Command::wait))	return;
+		return;
+	}
+
+	//When tap on targetable unit, targeting. If tap on out of range, end process
+	if (_select_unit && util::find<StageTile*, Entity*>(_select_area, _select_unit, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
+		callCommand(Command::attack_target);
+	else if (!util::find(_select_area, _select_tiles.front()))
+		callCommand(Command::attack_end);
+}
+
+/*
+ * On double tap function when menu mode is attacking
+ */
+void Game::onDoubleTapByAttacking()
+{
+	if (_select_unit && util::find<StageTile*, Entity*>(_select_area, _select_unit, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
+		callCommand(Command::attack_start);
+	else if (!util::find(_select_area, _select_tiles.front()))
+		callCommand(Command::attack_cancel);
+}
+
+/*
+ * Call command function with check
+ */
+bool Game::callCommand(Command com)
+{
+	if (!command::isEnable(com, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area))
+		return false;
+
+	_menu->getFunction(com)();
+	return true;
+}
+
+/*
+ * Set cursol position
+ */
+void Game::setCursor(Vec2 cor)
+{
+	// Check whether out of range
+	if (cor.x < 0 || cor.y < 0 || cor.x > _stage->getMapSize().x - 1 || cor.y > _stage->getMapSize().y - 1)
+		return;
+
+	// Select tile
+	_stage->selectTile(cor);
+
+	//Set unit and tile information
+	setSelectUnit(_stage->getUnit(cor));
+	setSelectTiles(_stage->getTiles(cor));
+
+	//Set base information
+	_menu->setCoordinateInformation(cor);
+
+	// Check unit command
+	_menu->checkUnitCommand(_select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	_menu->checkCityCommand(_select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+}
+
+/*
+ * Set select tile
+ * And set tile information
+ */
+void Game::setSelectTiles(std::vector<StageTile*> tiles)
+{
+	switch (_menu->getMode())
 	{
 	case MenuMode::none:
 	case MenuMode::move:
@@ -577,8 +564,8 @@ void Game::setSelectTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*
 	case MenuMode::attack:
 	case MenuMode::attacking:
 	case MenuMode::wait:
-		_selectTiles = tiles;
-		menu->setTile(_selectTiles, _selectUnit);
+		_select_tiles = tiles;
+		_menu->setTileInformation(_select_tiles, _select_unit);
 		break;
 	case MenuMode::occupy:
 	case MenuMode::city_supply:
@@ -588,30 +575,28 @@ void Game::setSelectTiles(Stage* stage, MenuLayer * menu, std::vector<StageTile*
 	}
 }
 
-void Game::setSelectUnit(Stage * stage, MenuLayer * menu, Entity * unit)
+/*
+ * Set select unit
+ * And set unit information
+ */
+//TODO BLINCK PROCESS
+void Game::setSelectUnit(Entity * unit)
 {
 	// If same unit, do nothing
-	if (unit && unit == _selectUnit)
+	if (unit && unit == _select_unit)
 		return;
+
 	// If invisible unit, not select
 	if (unit && unit->getOpacity() == 0)
 		unit = nullptr;
 
-	switch (menu->getMenuMode())
+	switch (_menu->getMode())
 	{
 	case MenuMode::none:
-		// Remove pre-unit's blink
-		if (_selectUnit)
-			stage->blinkOffUnit(_selectUnit);
-		// Blink
-		if(unit)
-			stage->blinkUnit(unit);
-
-		menu->setUnit(_selectTiles, unit);
-		_selectUnit = unit;
+		_select_unit = unit;
+		_menu->setUnitInformation(_select_tiles, _select_unit);
 		break;
 	case MenuMode::move:
-		break;
 	case MenuMode::moving:
 		break;
 	case MenuMode::attack:
@@ -619,21 +604,12 @@ void Game::setSelectUnit(Stage * stage, MenuLayer * menu, Entity * unit)
 		if (unit && OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), Owner::player))
 			unit = nullptr;
 
-		// Remove pre-unit's blink
-		if (_selectEnemy)
-			stage->blinkOffUnit(_selectEnemy);
-		// Blink
 		if (unit)
-		{
-			stage->blinkUnit(unit);
-			menu->showEnemyUnit(unit);
-		}
+			_menu->showEnemyUnit(unit);
 		else
-		{
-			menu->hideEnemyUnit();
-		}
+			_menu->hideEnemyUnit();
 
-		_selectEnemy = unit;
+		_select_enemy = unit;
 		break;
 	case MenuMode::attacking:
 	case MenuMode::occupy:
@@ -644,3 +620,4 @@ void Game::setSelectUnit(Stage * stage, MenuLayer * menu, Entity * unit)
 		break;
 	}
 }
+

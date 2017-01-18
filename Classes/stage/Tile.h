@@ -8,6 +8,7 @@
 class Stage;
 class StageLayer;
 class Entity;
+class Soldier;
 enum class Command;
 
 constexpr int STAGE_TILE_WHITE = 39;
@@ -18,9 +19,7 @@ constexpr int CITY_DEPLOY_MAX = 30;
 
 /*********************************************************/
 
-/*
- * Terrain type
- */
+/** Terrain type */
 enum class TerrainType
 {
 	none, 
@@ -29,23 +28,36 @@ enum class TerrainType
 
 	COUNT
 };
+
+/** Search state for A* algolism */
+enum class SearchState
+{
+	none, open, closed
+};
+
 /*********************************************************/
 
+/*
+ * Tile base data
+ */
 class TileInformation
 {
 private:
 	std::map<TerrainType, std::string> _name;
-	std::map<TerrainType, std::map<Command, bool>> _commands;
+	std::map<TerrainType, std::map<Command, bool>> _commands_enable;
 protected:
 	TileInformation();
 public:
+	/** Get instance for singleton*/
 	static TileInformation* getInstance()
 	{
 		static TileInformation info;
 		return &info;
 	};
+	/** Get name */
 	std::string getName(TerrainType type) { return _name[type]; };
-	bool getCommand(TerrainType type, Command com) { return _commands[type][com]; };
+	/** Check whether this command can be used*/
+	bool getCommandEnable(TerrainType type, Command com) { return _commands_enable[type].count(com) == 0 || _commands_enable[type][com]; };
 };
 
 /*********************************************************/
@@ -57,22 +69,42 @@ public:
 class StageTile : public cocos2d::Sprite
 {
 protected:
-	StageTile()
-		: _id(0), _terrain(TerrainType::none), _searched(false), _remainCost(-1)
-	{};
-	~StageTile()
-	{
-		_id = 0;
-	}
+	StageTile();
+	virtual ~StageTile();
 public:
 	CC_SYNTHESIZE(int, _id, Id);
 	CC_SYNTHESIZE(TerrainType, _terrain, TerrainType);
 	CC_SYNTHESIZE(bool, _searched, Searched);
-	CC_SYNTHESIZE(int, _remainCost, RemainCost);
-	cocos2d::Vec2 getTileCoordinate();
+	CC_SYNTHESIZE(SearchState, _search_state, SearchState);
+	CC_SYNTHESIZE(int, _actual_cost, ActualCost);
+	CC_SYNTHESIZE(int, _heuristic_cost, HeuristicCost);
+	CC_SYNTHESIZE(StageTile*, _parent_node, ParentNode);
+	static StageTile* create(const int id);
+	static StageTile* create(const int id, cocos2d::Vec2 cor, Stage* stage);
+
+	cocos2d::Vec2 getPositionAsTile();
 	StageLayer* getStageLayer();
 	Stage* getStage();
-	static StageTile* create(const int id, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
+};
+
+/** Tile pointer for priority queue*/
+class TilePointer
+{
+public:
+	TilePointer(StageTile* tile) { _pointer = tile; };
+	StageTile* _pointer;
+	bool operator < (const TilePointer& comp) const
+	{
+		auto a = _pointer->getActualCost() + _pointer->getHeuristicCost();
+		auto b = comp._pointer->getActualCost() + comp._pointer->getHeuristicCost();
+		return (a == b) ? _pointer->getActualCost() < comp._pointer->getActualCost() : a < b;
+	};
+	inline bool operator > (const TilePointer& comp) const
+	{
+		auto a = _pointer->getActualCost() + _pointer->getHeuristicCost();
+		auto b = comp._pointer->getActualCost() + comp._pointer->getHeuristicCost();
+		return (a == b) ? _pointer->getActualCost() > comp._pointer->getActualCost() : a > b;
+	};
 };
 
 /*********************************************************/
@@ -197,9 +229,12 @@ public:
 	CREATE_FUNC(Bridge);
 };
 
+/*********************************************************/
 class City : public StageTile
 {
 protected:
+	City();
+	virtual ~City();
 	virtual bool init()
 	{
 		if (!StageTile::init())
@@ -211,15 +246,24 @@ protected:
 public:
 	CREATE_FUNC(City);
 	CC_SYNTHESIZE(Owner, _owner, Owner);
-	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
-	CC_SYNTHESIZE(int, _Durability, Durability);
-	CC_SYNTHESIZE(int, _maxDeployer, MaxDeployer);
+	CC_SYNTHESIZE(int, _durability, Durability);
+	CC_SYNTHESIZE(int, _max_durability, MaxDurability);
+	CC_SYNTHESIZE(int, _max_deployer, MaxDeployer);
 	cocos2d::Vector<Entity*> _deployers;
+
 	void addDeoloyer(Entity* entity);
 	void removeDeployer(Entity* entity);
+	/** Get deployer by number */
 	inline Entity* getDeploter(int no) { return _deployers.at(no); };
-	inline const cocos2d::Vector<Entity*>& getDeployersByRef() { return _deployers; };
+	/** Get vector of deployers by reference */
+	inline cocos2d::Vector<Entity*>& getDeployersByRef() { return _deployers; };
+
+	bool isSuppliable();
+	bool isDeployable();
+	bool isDispatchable();
+
 	void supply(Entity* entity);
+	void damaged(Soldier* unit);
 };
 
 class Capital : public City

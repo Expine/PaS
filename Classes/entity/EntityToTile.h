@@ -19,12 +19,15 @@ private:
 protected:
 	EntityToTile();
 public:
-	static EntityToTile* getInstance() 
+	/** Get instance for singleton */
+	static EntityToTile* getInstance()
 	{ 
 		static EntityToTile instance;
 		return &instance; 
 	};
+	/** Get serach cost by terrain and unit*/
 	inline int getSearchCost(TerrainType terrain, EntityType entity) { return _search_cost[terrain][entity]; };
+	/** Get effect by terrain and unit*/
 	inline int getEffect(TerrainType terrain, EntityType entity) { return _effect[terrain][entity]; };
 };
 

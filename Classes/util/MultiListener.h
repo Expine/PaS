@@ -39,7 +39,7 @@ private:
 	cocos2d::Vec2 _multiPos;
 	float _multiDiff;
 	std::vector<State> _state;
-
+	cocos2d::Sequence* _tap_action;
 protected:
 	MultiTouchListener()
 		: _numberOfTouch(0)
@@ -48,6 +48,7 @@ protected:
 		, onTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onDoubleTap(nullptr)
 		, onSwipe(nullptr), pinchIn(nullptr), pinchOut(nullptr)
 		, onSwipeCheck(nullptr), onFlickCheck(nullptr)
+		, _tap_action(nullptr)
 	{
 		_startPos.resize(5);
 		_startTime.resize(5);
@@ -63,6 +64,7 @@ protected:
 		onSwipe = nullptr;
 		pinchIn = pinchOut = nullptr;
 		onSwipeCheck = onFlickCheck = nullptr;
+		_tap_action = nullptr;
 	};
 	/*
 	 * Initialize
@@ -186,28 +188,28 @@ protected:
 				gettimeofday(&time, NULL);
 				auto diff_time = (float)(time.tv_sec - _startTime[0].tv_sec) + (float)(time.tv_usec - _startTime[0].tv_usec) / 1000000;
 				auto locale = t->getLocation();
-				Sequence* action;
 				//
 				switch (_state[t->getID()])
 				{
 				case MultiTouchListener::State::check:
 				case MultiTouchListener::State::tap:
-					if (Director::getInstance()->getRunningScene()->getActionByTag(1000))
+					if(_tap_action)
 					{
-						Director::getInstance()->getRunningScene()->stopActionByTag(1000);
+						Director::getInstance()->getRunningScene()->stopAction(_tap_action);
 						if (onDoubleTap)
 							onDoubleTap(t->getLocation());
+						_tap_action = nullptr;
 						break;
 					}
-					action = Sequence::create(
+					_tap_action = Sequence::create(
 						DelayTime::create(getDoubleTapThreshold()),
 						CallFunc::create([this, locale] {
 							if (onTap)
 								onTap(locale);
+							_tap_action = nullptr;
 						}),
 					NULL);
-					action->setTag(1000);
-					Director::getInstance()->getRunningScene()->runAction(action);
+					Director::getInstance()->getRunningScene()->runAction(_tap_action);
 					break;
 				case MultiTouchListener::State::longtap:
 					if (onLongTapEnd) onLongTapEnd(t->getLocation());
@@ -296,6 +298,7 @@ private:
 	cocos2d::Vec2 _movePos;
 	struct timeval _moveTime;
 	State _state;
+	cocos2d::Sequence* _tap_action;
 	CC_SYNTHESIZE_RETAIN(cocos2d::Touch*, _reserve_touch, ReserveTouch);
 	CC_SYNTHESIZE_RETAIN(cocos2d::Event*, _reserve_event, ReserveEvent);
 protected:
@@ -305,6 +308,7 @@ protected:
 		, onTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onDoubleTap(nullptr)
 		, onSwipe(nullptr)
 		, onTouchBeganChecking(nullptr), onTouchEndedChecking(nullptr)
+		, _tap_action(nullptr)
 		, _reserve_touch(nullptr), _reserve_event(nullptr)
 	{
 	};
@@ -316,6 +320,7 @@ protected:
 		onSwipe = nullptr;
 		onTouchBeganChecking = nullptr;
 		onTouchEndedChecking = nullptr;
+		_tap_action = nullptr;
 		CC_SAFE_RELEASE_NULL(_reserve_touch);
 		CC_SAFE_RELEASE_NULL(_reserve_event);
 	};
@@ -376,7 +381,6 @@ protected:
 		{
 			struct timeval time;
 			gettimeofday(&time, NULL);
-			Sequence* action;
 			setReserveTouch(touch);
 			setReserveEvent(new Event(Event::Type::TOUCH));
 			getReserveEvent()->release();
@@ -387,23 +391,24 @@ protected:
 			{
 			case SingleTouchListener::State::check:
 			case SingleTouchListener::State::tap:
-				if (Director::getInstance()->getRunningScene()->getActionByTag(1000))
+				if(_tap_action)
 				{
-					Director::getInstance()->getRunningScene()->stopActionByTag(1000);
+					Director::getInstance()->getRunningScene()->stopAction(_tap_action);
 					if (onDoubleTap)
 						onDoubleTap(touch, event);
+					_tap_action = nullptr;
 					break;
 				}
 				touch->retain();
-				action = Sequence::create(
+				_tap_action = Sequence::create(
 					DelayTime::create(getDoubleTapThreshold()),
 					CallFunc::create([this] {
 						if (onTap)
 							onTap(getReserveTouch(), getReserveEvent());
+						_tap_action = nullptr;
 					}),
 				NULL);
-				action->setTag(1000);
-				Director::getInstance()->getRunningScene()->runAction(action);
+				Director::getInstance()->getRunningScene()->runAction(_tap_action);
 				break;
 			case SingleTouchListener::State::longtap:
 				if (onLongTapEnd) onLongTapEnd(touch, event);

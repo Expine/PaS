@@ -8,6 +8,8 @@ class StageTile;
 class Stage;
 class MenuLayer;
 class WeaponData;
+enum class MenuMode;
+enum class Command;
 
 /*
  * SLG Game scene
@@ -16,24 +18,36 @@ class WeaponData;
 class Game: public cocos2d::Layer
 {
 private:
-	std::vector<StageTile*> _selectTiles;
-	std::vector<StageTile*> _selectArea;
-	std::vector<StageTile*> _moveRoot;
-	Entity* _selectUnit;
-	Entity* _selectEnemy;
-	WeaponData* _weapon;
-	void setCursol(Stage* stage, MenuLayer* menu, cocos2d::Vec2 tileCoordinate);
-	void setSelectTiles(Stage* stage, MenuLayer* menu, std::vector<StageTile*> tiles);
-	void setSelectUnit(Stage* stage, MenuLayer* menu, Entity* unit);
+	Stage* _stage;
+	MenuLayer* _menu;
+	std::vector<StageTile*> _select_tiles;
+	std::vector<StageTile*> _select_area;
+	std::vector<StageTile*> _move_route;
+	Entity* _select_unit;
+	Entity* _select_enemy;
+	WeaponData* _select_weapon;
+
+	void setMoveFunction();
+	void setAttackFunction();
+	void setOccupyFunction();
+
+	bool callCommand(Command com);
+	void setCursor(cocos2d::Vec2 cor);
+	void setSelectTiles(std::vector<StageTile*> tiles);
+	void setSelectUnit(Entity* unit);
+
+	/** Tap event function **/
+	void onTap(cocos2d::Vec2 cor, std::vector<StageTile*> tiles);
+	void onLongTapBagan(cocos2d::Vec2 cor, std::vector<StageTile*> tiles);
+	void onDoubleTap(cocos2d::Vec2 cor, std::vector<StageTile*> tiles);
+	void onDoubleTapByNone();
+	void onDoubleTapByMove(bool isSameUnit);
+	void onDoubleTapByMoving();
+	void onDoubleTapByAttack(bool isSameUnit);
+	void onDoubleTapByAttacking();
 protected:
-	Game()
-		: _selectUnit(nullptr), _selectEnemy(nullptr), _weapon(nullptr)
-	{};
-	~Game()
-	{
-		_selectUnit = _selectEnemy = nullptr;
-		_weapon = nullptr;
-	}
+	Game();
+	virtual ~Game();
 	virtual bool init(Stage* stage);
 public:
 	static cocos2d::Scene* createScene(Stage* stage);
@@ -52,7 +66,7 @@ public:
 			return nullptr;
 		}
 	}
-	CC_SYNTHESIZE(std::function<void()>, _endFunction, EndFunction);
+	CC_SYNTHESIZE(std::function<void()>, _end_function, EndFunction);
 };
 
 #endif // __GAME_SCENE_H__

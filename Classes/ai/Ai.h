@@ -25,6 +25,55 @@ public:
 	cocos2d::Vec2 getCenter();
 };
 
+class BattleFieldEvaluation
+{
+public:
+	BattleFieldEvaluation(BattleField* field, float eval) { _pointer = field; _eval = eval; };
+	BattleField* _pointer;
+	float _eval;
+	inline bool operator < (const BattleFieldEvaluation& comp) const
+	{
+		return _eval < comp._eval;
+	};
+	inline bool operator > (const BattleFieldEvaluation& comp) const
+	{
+		return _eval > comp._eval;
+	};
+};
+
+class CityEvaluation
+{
+public:
+	CityEvaluation(City* city, float eval) { _pointer = city; _eval = eval; };
+	City* _pointer;
+	float _eval;
+	inline bool operator < (const CityEvaluation& comp) const
+	{
+		return _eval < comp._eval;
+	};
+	inline bool operator > (const CityEvaluation& comp) const
+	{
+		return _eval > comp._eval;
+	};
+};
+
+class UnitEvaluation
+{
+public:
+	UnitEvaluation(Entity* unit, float eval) { _pointer = unit; _eval = eval; };
+	Entity* _pointer;
+	float _eval;
+	inline bool operator < (const UnitEvaluation& comp) const
+	{
+		return _eval < comp._eval;
+	};
+	inline bool operator > (const UnitEvaluation& comp) const
+	{
+		return _eval > comp._eval;
+	};
+};
+
+
 class PlayerAI : public cocos2d::Ref
 {
 private:
@@ -91,6 +140,12 @@ public:
 	CC_SYNTHESIZE(float, _unit_importance_dependence, UnitImportantDependence);
 	CC_SYNTHESIZE(float, _unit_evaluation_level, UnitEvaluationLevel);
 
+	/** Guard Evaluation */
+	/** [0, Åá) number of unit for protecting city. Default value is 1.0.*/
+	CC_SYNTHESIZE(float, _city_guard_number, CityGuardNumber);
+	/** [0, Åá) area for protecting city. Default value is 3.*/
+	CC_SYNTHESIZE(int, _city_guard_area, CityGuardArea);
+
 	/** Battlefield Importance */
 	/** [mid, 1] Priority of battlefield having large number unit. Default value is 1.0.*/
 	CC_SYNTHESIZE(float, _large_battle_priority, LargeBattlePriority);
@@ -148,19 +203,25 @@ public:
 	std::map<EntityType, float> _unit_type_coefficient;
 public:
 	static PlayerAI* createAI(const std::string file);
+	std::vector<StageTile*> getRoute(Entity* unit, BattleField* field);
+	std::vector<StageTile*> getRoute(Entity* unit, Entity* enemy);
+	std::vector<StageTile*> getRoute(Entity* unit, City* city);
 	float getMapMaxLength();
 	City* getCapital(Owner owner);
 	void initialize(Stage* stage, Owner owner) { _stage = stage; _owner = owner; };
 	void searchBattleField();
 	void recursiveSearchForBattleField(Entity* unit, BattleField* field);
+	void execute();
 	void evaluate();
 	float evaluateSupply(Entity* unit);
 	float evaluateBattleFieldAdvance(Entity* unit);
 	float evaluateUnitAdvance(Entity* unit);
 	float evaluateCityAdvance(Entity* unit);
+	float evaluateGuard(Entity* unit, City* city);
 	float evaluateBattleField(BattleField* field);
 	float evaluateBattleFieldSituation(BattleField* field);
 	float evaluateCity(City* city);
+	float evaluateCityGuard(City* city);
 	float evaluateUnit(Entity* unit);
 	float evaluateUnitSpec(Entity* unit);
 };

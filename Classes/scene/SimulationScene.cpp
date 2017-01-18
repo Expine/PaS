@@ -16,16 +16,26 @@ Scene * SimulationScene::createScene()
 	CCLOG("SimulationScene is created");
 	auto scene = Scene::create();
 	auto layer = SimulationScene::create();
-	layer->setTag(0);
 	scene->addChild(layer);
 	return scene;
 }
 
+/*
+ * Constructor
+ */
+SimulationScene::SimulationScene()
+	: _stage(nullptr)
+	, _game_scene(nullptr), _ai_scene(nullptr)
+{}
+
+/*
+ * Destructor
+ */
 SimulationScene::~SimulationScene()
 {
 	CC_SAFE_RELEASE_NULL(_stage);
-	CC_SAFE_RELEASE_NULL(_gameScene);
-	CC_SAFE_RELEASE_NULL(_aiScene);
+	CC_SAFE_RELEASE_NULL(_game_scene);
+	CC_SAFE_RELEASE_NULL(_ai_scene);
 }
 
 /*
@@ -41,16 +51,15 @@ bool SimulationScene::init()
 	_stage = Stage::parseStage("stage/test.mps");
 	CC_SAFE_RETAIN(_stage);
 
-//	setGameScene(Game::createScene(_stage));
-//	setAiScene(AIScene::createScene(_stage));
-//	util::instance<Game>(_gameScene)->setEndFunction(std::bind(&SimulationScene::nextTurn, this, Owner::player));
+	// Set player
+	addPlayer(Owner::player);
+	addPlayer(Owner::enemy);
 
-	// Delay push initial scene
+	// Delay call nect turn
 	runAction(Sequence::create(
 		DelayTime::create(0.1f),
 		CallFunc::create([this] {
-//			Director::getInstance()->pushScene(_gameScene);
-			nextTurn(Owner::enemy);
+			nextTurn(true);
 		}),
 	NULL));
 
@@ -61,23 +70,27 @@ bool SimulationScene::init()
 /*
  * Next turn
  */
-void SimulationScene::nextTurn(Owner owner)
+void SimulationScene::nextTurn(bool init)
 {
-	if(!util::instanceof<SimulationScene>(Director::getInstance()->getRunningScene()->getChildByTag(0)))
+	if(!init)
 		Director::getInstance()->popScene();
 
 	_stage->removeFromParentAndCleanup(true);
 
+	auto owner = _players.front();
+	_players.pop();
+	_players.push(owner);
+
 	if (owner == Owner::player)
 	{
-		auto scene = AIScene::createScene(_stage);
-		util::instance<AIScene>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, Owner::enemy));
+		auto scene = Game::createScene(_stage);
+		util::instance<Game>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
 	else
 	{
-		auto scene = Game::createScene(_stage);
-		util::instance<Game>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, Owner::player));
+		auto scene = AIScene::createScene(_stage);
+		util::instance<AIScene>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
 }

@@ -10,8 +10,7 @@
 class TitleScene : public cocos2d::Layer
 {
 protected:
-	TitleScene()
-	{};
+	TitleScene() {};
 	virtual bool init();
 public:
 	CREATE_FUNC(TitleScene);

@@ -14,22 +14,20 @@ class SimulationScene : public cocos2d::Layer
 {
 private:
 	Stage* _stage;
-	std::vector<Owner> _players;
+	std::queue<Owner> _players;
 protected:
-	SimulationScene()
-		: _stage(nullptr)
-		, _gameScene(nullptr), _aiScene(nullptr)
-	{};
-	~SimulationScene();
+	SimulationScene();
+	virtual ~SimulationScene();
 	virtual bool init();
 public:
 	CREATE_FUNC(SimulationScene);
-	CC_SYNTHESIZE_RETAIN(cocos2d::Scene*, _gameScene, GameScene);
-	CC_SYNTHESIZE_RETAIN(cocos2d::Scene*, _aiScene, AiScene);
+	CC_SYNTHESIZE_RETAIN(cocos2d::Scene*, _game_scene, GameScene);
+	CC_SYNTHESIZE_RETAIN(cocos2d::Scene*, _ai_scene, AiScene);
 	static cocos2d::Scene* createScene();
-	void nextTurn(Owner owner);
+	void nextTurn(bool init = false);
 public:
-	inline void addPlayer(const Owner player) { _players.push_back(player); };
+	/** Add player*/
+	inline void addPlayer(const Owner player) { _players.push(player); };
 };
 
 #endif // __SIMULATION_SCENE_H__

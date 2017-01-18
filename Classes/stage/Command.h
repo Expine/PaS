@@ -5,6 +5,7 @@
 
 class Entity;
 class StageTile;
+class WeaponData;
 
 enum class Command
 {
@@ -18,11 +19,6 @@ enum class Command
 	supply, move, attack, occupation, spec, wait,
 
 	UNIT_END,
-	CITY_START,
-
-	city_supply, deployment, dispatch,
-
-	CITY_END,
 	MOVE_START,
 
 	move_start, move_end,
@@ -53,6 +49,11 @@ enum class Command
 	wait_start, wait_end,
 
 	WAIT_END,
+	CITY_START,
+
+	city_supply, deployment, dispatch,
+
+	CITY_END,
 	CITY_SUPPLY_START,
 
 	city_supply_start, city_supply_end,
@@ -95,7 +96,12 @@ namespace command
 
 	const std::string getName(Command com);
 
-	bool isEnable(Command com, Entity *unit, std::vector<StageTile*> tile);
+	/** Check whether unit command*/
+	inline bool isUnitCommand(Command com) { return com < Command::WAIT_END && com > Command::UNIT_START; };
+	/** Check whether city command*/
+	inline bool isCityCommand(Command com) { return com < Command::DISPATCH_END && com > Command::CITY_START; };
+
+	bool isEnable(Command com, Entity *unit, std::vector<StageTile*> tile, Entity* enemy, WeaponData* weapon, std::vector<StageTile*> area);
 };
 
 

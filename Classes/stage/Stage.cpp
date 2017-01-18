@@ -9,15 +9,36 @@
 
 USING_NS_CC;
 
-constexpr float elim = 0.0000001f;
+/*
+ * Constructor of stage layer
+ */
+StageLayer::StageLayer()
+	: _batch(nullptr)
+{}
+
+/*
+ * Destructor of stage layer
+ */
+StageLayer::~StageLayer()
+{
+	_batch = nullptr;
+}
+
+/*
+ * Get stage instance by get parent
+ */
+Stage * StageLayer::getStage()
+{
+	return dynamic_cast<Stage*>(getParent());
+}
 
 /*
  * Set tile data
  * And return this tile data
  */
-StageTile* StageLayer::setTile(int x, int y, int id)
+StageTile* StageLayer::setTile(Vec2 cor, int id)
 {
-	auto tile = StageTile::create(id, x, y, _batch, dynamic_cast<Stage*>(getParent()));
+	auto tile = StageTile::create(id, cor, getStage());
 	_batch->addChild(tile);
 	return tile;
 }
@@ -27,41 +48,64 @@ StageTile* StageLayer::setTile(int x, int y, int id)
 */
 StageTile * StageLayer::getTile(int x, int y)
 {
-	return dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
-};
+	return util::instance<StageTile>(getChildByTag(0)->getChildByTag(x * _map_size.y + y));
+}
 
 /*
  * Remove tile data
  */
 StageTile * StageLayer::removeTile(int x, int y)
 {
-	auto remove = dynamic_cast<StageTile*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
-	getChildByTag(0)->removeChildByTag(x * _mapSize.y + y);
+	auto remove = util::instance<StageTile>(getChildByTag(0)->getChildByTag(x * _map_size.y + y));
+	getChildByTag(0)->removeChild(remove);
 	return remove;
 };
 
-/*********************************************************/
+/***********************************************************************************************/
 
 /*
- * Set unit data
+ * Constructor of unit layer
  */
-void UnitLayer::setUnit(int x, int y, Entity * unit)
+UnitLayer::UnitLayer()
+	: _batch(nullptr)
+{}
+
+/*
+ * Destructor of unit layer
+ */
+UnitLayer::~UnitLayer()
 {
-	auto stage = dynamic_cast<Stage*>(getParent());
-	unit->setPosition(stage->getCoordinateByTile(Vec2(x, y)) + Vec2(stage->getChipSize().x / 2, 0));
-	unit->setTag(x * stage->getMapSize().y + y);
-	_batch->addChild(unit);
+	_batch = nullptr;
+}
+
+/*
+ * Get stage instance by getParent
+ */
+Stage * UnitLayer::getStage()
+{
+	return dynamic_cast<Stage*>(getParent());
 }
 
 /*
  * Set unit data
  * And return this unit data
  */
-Entity* UnitLayer::setUnit(int x, int y, EntityType type)
+Entity* UnitLayer::setUnit(Vec2 cor, EntityType type)
 {
-	auto entity = Entity::create(type, x, y, _batch, dynamic_cast<Stage*>(getParent()));
+	auto entity = Entity::create(type, cor, getStage());
 	_batch->addChild(entity);
 	return entity;
+}
+
+/*
+ * Set unit data
+ */
+void UnitLayer::setUnit(Vec2 cor, Entity * unit)
+{
+	auto stage = getStage();
+	unit->setPosition(stage->getPositionAsTile(cor) + Vec2(stage->getChipSize().x / 2, 0));
+	unit->setTag(cor.x * _map_size.y + cor.y);
+	_batch->addChild(unit);
 }
 
 /*
@@ -69,10 +113,20 @@ Entity* UnitLayer::setUnit(int x, int y, EntityType type)
  */
 Entity * UnitLayer::getUnit(int x, int y)
 {
-	return dynamic_cast<Entity*>(getChildByTag(0)->getChildByTag(x * _mapSize.y + y));
+	return util::instance<Entity>(getChildByTag(0)->getChildByTag(x * _map_size.y + y));
 }
 
-/*********************************************************/
+/*
+ * Remove unit data
+ */
+Entity * UnitLayer::removeUnit(int x, int y)
+{
+	auto remove = util::instance<Entity>(getChildByTag(0)->getChildByTag(x * _map_size.y + y));
+	getChildByTag(0)->removeChild(remove);
+	return remove;
+}
+
+/********************************************************************************/
 
 /*
  * Static Method
@@ -94,53 +148,44 @@ Stage * Stage::parseStage(const std::string file)
 	stage->setBackGround(fLine[5]);
 	stage->setBGM(fLine[6]);
 	stage->setTileFile(fLine[7]);
+	stage->setTileBatch(SpriteBatchNode::create("TileSet/" + stage->getTileFile()));
+	stage->setUnitBatch(SpriteBatchNode::create("image/unit.png"));
 
 	//Set Layerdata
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 5; i++)
 	{
+		if (i == 3) continue;
 		auto layer = StageLayer::create();
 		layer->setTag(i);
 		layer->setMapSize(stage->getMapSize());
+		layer->setBatch(util::cloneBatch(stage->getTileBatch(), 0));
+		layer->addChild(layer->getBatch());
 		stage->addChild(layer);
 	}
-
-	// Set shadow layer
-	auto shadow = StageLayer::create();
-	shadow->setTag(4);
-	shadow->setMapSize(stage->getMapSize());
-	auto batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
-	batch->setTag(0);
-	shadow->setBatch(batch);
-	shadow->addChild(batch);
-	stage->addChild(shadow);
 
 	// Set unit layer
 	auto layer = UnitLayer::create();
 	layer->setTag(3);
 	layer->setMapSize(stage->getMapSize());
-	batch = SpriteBatchNode::create("image/unit.png");
-	batch->setTag(0);
-	layer->setBatch(batch);
-	layer->addChild(batch);
+	layer->setBatch(util::cloneBatch(stage->getUnitBatch(), 0));
+	layer->addChild(layer->getBatch());
 	stage->addChild(layer);
 
 	//Set chip data
 	int count = 0;
 	for (int l = 0; l < 3; l++)
 	{
-		auto batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
-		batch->setTag(0);
 		auto layer = stage->getStageLayer(l);
-		layer->setBatch(batch);
-		layer->addChild(batch);
 		for (int x = 0; x < stage->getMapSize().x; x++)
 		{
 			for (int y = 0; y < stage->getMapSize().y; y++)
 			{
+				// If consume all element, break
 				if (sLine.size() == count)
 					break;
 
 				auto id = std::atoi(sLine[count++].c_str());
+				// id == 0 is no tile
 				if (id == 0)
 					continue;
 
@@ -153,54 +198,76 @@ Stage * Stage::parseStage(const std::string file)
 	}
 
 	// Add selector
-	batch = SpriteBatchNode::create("TileSet/" + stage->getTileFile());
-	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / stage->getChipSize().x);
-	stage->selector = Sprite::createWithTexture(batch->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y));
+	auto wnum = stage->getHorizontalChipNumber();
+	stage->selector = Sprite::createWithTexture(stage->getTileBatch()->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y));
 	stage->selector->setOpacity(0);
 	stage->selector->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+	// Add animation
 	auto animation = Animation::create();
-	animation->addSpriteFrame(SpriteFrame::createWithTexture(batch->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
-	animation->addSpriteFrame(SpriteFrame::createWithTexture(batch->getTexture(), Rect(((STAGE_TILE_FRAME + 1) % wnum) * stage->getChipSize().x, ((STAGE_TILE_FRAME + 1) / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
+	animation->addSpriteFrame(SpriteFrame::createWithTexture(stage->getTileBatch()->getTexture(), Rect((STAGE_TILE_FRAME % wnum) * stage->getChipSize().x, (STAGE_TILE_FRAME / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
+	animation->addSpriteFrame(SpriteFrame::createWithTexture(stage->getTileBatch()->getTexture(), Rect(((STAGE_TILE_FRAME + 1) % wnum) * stage->getChipSize().x, ((STAGE_TILE_FRAME + 1) / wnum) * stage->getChipSize().y, stage->getChipSize().x, stage->getChipSize().y)));
 	animation->setDelayPerUnit(0.1f);
 	animation->setRestoreOriginalFrame(true);
 	stage->selector->runAction(RepeatForever::create(Animate::create(animation)));
 	stage->addChild(stage->selector, 100);
 
+	stage->addUnitForDebug();
+
+	return stage;
+}
+
+/*
+ * Add unti for debug
+ */
+void Stage::addUnitForDebug()
+{
 	// for debug 
 	Owner names[] = { Owner::player, Owner::enemy };
 	std::vector<Vec2> poses;
-	bool check = true;
 	for (int i = 0; i < 100; i++)
 	{
-		auto pos = Vec2(std::rand() % (int)(stage->getMapSize().x), std::rand() % (int)(stage->getMapSize().y));
-		auto type = stage->getTile(0, pos.x, pos.y)->getTerrainType();
+		auto pos = Vec2(std::rand() % (int)(getMapSize().x), std::rand() % (int)(getMapSize().y));
+		auto type = getTile(0, pos.x, pos.y)->getTerrainType();
 		if (type == TerrainType::ocean)
 			continue;
 		if (type == TerrainType::river)
 			continue;
-		for (auto p : poses)
-			if (p.x == pos.x && p.y == pos.y)
-			{
-				check = false;
-			}
-		if (check)
+		if (!util::find(poses, pos))
 		{
-			stage->setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 2]);
+			setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 2]);
 			if (i % 2)
-				stage->getUnit(pos.x, pos.y)->setColor(Color3B::RED);
+				getUnit(pos.x, pos.y)->setColor(Color3B::RED);
 			poses.push_back(pos);
 		}
-		check = true;
 	}
-	for (auto city : stage->_cities[Owner::player])
+	for (auto city : _cities[Owner::player])
 		for (int i = 0; i < city->getMaxDeployer() - 2; i++)
 		{
-			auto unit = Entity::create(static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), 0, 0, stage->getUnitLayer()->getBatch(), stage);
-			unit->setAffiliation(Owner::player);
-			city->addDeoloyer(unit);
+			auto unit = setUnit(city->getPositionAsTile(), static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), city->getOwner());
+			deployUnit(unit, city);
 		}
+}
 
-	return stage;
+/*
+ * Constructor of stage
+ */
+Stage::Stage()
+	: _gap(0), _tile_batch(nullptr), _unit_batch(nullptr)
+	, onTap(nullptr), onDoubleTap(nullptr), onLongTapBegan(nullptr), onLongTapEnd(nullptr), onSwipeCheck(nullptr), onFlickCheck(nullptr)
+	, selector(nullptr)
+{}
+
+/*
+ * Destructor of stage
+ */
+Stage::~Stage()
+{
+	_gap = 0;
+	onTap = onDoubleTap = onLongTapBegan = onLongTapEnd = nullptr;
+	onSwipeCheck = onFlickCheck = nullptr;
+	selector = nullptr;
+	CC_SAFE_RELEASE_NULL(_tile_batch);
+	CC_SAFE_RELEASE_NULL(_unit_batch);
 }
 
 /*
@@ -225,11 +292,8 @@ bool Stage::init()
 	{
 		if (onTap)
 		{
-			auto cor = getTileCoordinate(v);
-			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor))
-				if (tile->getId() != 0)
-					tiles.push_back(tile);
+			auto cor = getPositionAsTile(v);
+			auto tiles = util::collect<StageTile*>(getTiles(cor), [](StageTile* tile) {return tile->getId(); });
 			onTap(cor, tiles);
 		}
 	};
@@ -237,11 +301,8 @@ bool Stage::init()
 	{
 		if (onDoubleTap)
 		{
-			auto cor = getTileCoordinate(v);
-			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor))
-				if (tile->getId() != 0)
-					tiles.push_back(tile);
+			auto cor = getPositionAsTile(v);
+			auto tiles = util::collect<StageTile*>(getTiles(cor), [](StageTile* tile) {return tile->getId(); });
 			onDoubleTap(cor, tiles);
 		}
 	};
@@ -256,6 +317,7 @@ bool Stage::init()
 	// When flicking, move position by inertia
 	listener->onFlick = [this](Vec2 v, Vec2 diff, float time)
 	{
+		// Spawn move and adjust position
 		runAction(Spawn::create(
 			Sequence::create(
 				EaseSineOut::create(MoveBy::create(0.5f, diff / time / 3)),
@@ -276,11 +338,8 @@ bool Stage::init()
 	{
 		if (onLongTapBegan)
 		{
-			auto cor = getTileCoordinate(v);
-			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor))
-				if (tile->getId())
-					tiles.push_back(tile);
+			auto cor = getPositionAsTile(v);
+			auto tiles = util::collect<StageTile*>(getTiles(cor), [](StageTile* tile) {return tile->getId(); });
 			onLongTapBegan(cor, tiles);
 		}
 	};
@@ -289,11 +348,8 @@ bool Stage::init()
 	{
 		if (onLongTapEnd)
 		{
-			auto cor = getTileCoordinate(v);
-			std::vector<StageTile*> tiles;
-			for (auto tile : getTiles(cor))
-				if (tile->getId())
-					tiles.push_back(tile);
+			auto cor = getPositionAsTile(v);
+			auto tiles = util::collect<StageTile*>(getTiles(cor), [](StageTile* tile) {return tile->getId(); });
 			onLongTapEnd(cor, tiles);
 		}
 	};
@@ -330,523 +386,57 @@ bool Stage::init()
 	return true;
 }
 
+/********************************************************************************/
+
 /*
- * Get coordinate on tile
+ * Adjust position from min to max
  */
-Vec2 Stage::getTileCoordinate(Vec2 cor)
+cocos2d::Vec2 Stage::adjustArea(cocos2d::Vec2 v)
 {
-	auto fix = (cor - getPosition()) / getScale();
-	fix.y = getHeight() - fix.y;
-	auto even = (int)fix.x % (int)(_chipSize.x + _gap) <= (_chipSize.x + _gap) / 2;
-	auto x = (int)(fix.x / (_chipSize.x + _gap));
-	auto y = (int)((fix.y - (even ? 0 : _chipSize.y / 2)) / _chipSize.y) * 2 + (even ? 0 : 1);
+	auto maxWidth = getActualMapWidth() * getScale() - cocos2d::Director::getInstance()->getWinSize().width;
+	auto maxHeight = getActualMapHeight() * getScale() - cocos2d::Director::getInstance()->getWinSize().height;
+	return cocos2d::Vec2(
+		(maxWidth < 0) ? 0 : std::max(-maxWidth, std::min(v.x, 0.0f)),
+		(maxHeight < 0) ? 0 : std::max(-maxHeight, std::min(v.y, 0.0f)));
+};
+
+/*
+ * Get position on tile
+ */
+Vec2 Stage::getPositionAsTile(Vec2 pos)
+{
+	auto fix = (pos - getPosition()) / getScale();
+	fix.y = getActualMapHeight() - fix.y;
+	auto even = (int)fix.x % (int)(_chip_size.x + _gap) <= (_chip_size.x + _gap) / 2;
+	auto x = (int)(fix.x / (_chip_size.x + _gap));
+	auto y = (int)((fix.y - (even ? 0 : _chip_size.y / 2)) / _chip_size.y) * 2 + (even ? 0 : 1);
 	return Vec2(x, y);
 }
 
 /*
 * Get coordinate by tile coordinate
 */
-Vec2 Stage::getCoordinateByTile(int x, int y)
+Vec2 Stage::getPositionByTile(int x, int y)
 {
-	return Vec2(x * (_chipSize.x + _gap) + (y % 2) * (_chipSize.x + _gap) / 2, (_mapSize.y - 1 - y) * _chipSize.y / 2);
+	return Vec2(x * (_chip_size.x + _gap) + (y % 2) * (_chip_size.x + _gap) / 2, (_map_size.y - 1 - y) * _chip_size.y / 2);
 }
 
+
 /*
- * Move for centering specify unit
+ * Get all unit number
  */
-void Stage::movePosition(Entity * unit)
+int Stage::getUnitNumber()
 {
-	movePosition(getCoordinateByTile(unit->getTileCoordinate()));
+	auto size = 0;
+	for (auto pair : _units)
+		size += pair.second.size();
+	return size;
 }
 
-/*
- * Move for centering specify tile
- */
-void Stage::movePosition(StageTile * tile)
-{
-	movePosition(getCoordinateByTile(tile->getTileCoordinate()));
-}
+/********************************************************************************/
 
 /*
- * Move for centering specify coordinate
- */
-void Stage::movePosition(int x, int y)
-{
-	// Stop pre move
-	if (this->getActionByTag(0))
-		this->stopActionByTag(0);
-
-	auto winSize = Director::getInstance()->getWinSize();
-	auto action = MoveTo::create(0.1f, adjustArea(Vec2(winSize.width / 2 - (getChipSize().x + getGap()) / 2, winSize.height / 2 - getChipSize().y / 2) - Vec2(x, y) * getScale()));
-	action->setTag(0);
-	this->runAction(action);
-}
-
-/*
- * Initialize searched property
- */
-void Stage::initTileSearched(Owner owner)
-{
-	// All black out
-	// All enemy hided
-	auto shadow = getShadowLayer();
-	shadow->getChildByTag(0)->removeAllChildren();
-	for (int x = 0; x < _mapSize.x; x++)
-	{
-		for (int y = 0; y < _mapSize.y; y++)
-		{
-			for (auto tile : getTiles(x, y))
-				tile->setSearched(false);
-			if (shadow->getTile(x, y) == nullptr)
-				shadow->setTile(x, y, STAGE_TILE_DARK);
-			auto unit = getUnit(x, y);
-			if (unit && unit->getAffiliation() != owner)
-				unit->setOpacity(0);
-			else if(unit)
-				unit->setOpacity(255);
-			if (unit)
-				unit->setState(EntityState::none);
-		}
-	}
-
-
-	for (auto city : _cities[owner])
-	{
-		for (auto tile : startRecursiveTileSearch(city->getTileCoordinate(), 1, EntityType::sight))
-		{
-			auto cor = tile->getTileCoordinate();
-			tile->setSearched(true);
-			if (shadow->getTile(cor.x, cor.y) != nullptr)
-				shadow->removeTile(cor.x, cor.y);
-			auto unit = getUnit(cor.x, cor.y);
-			if (unit && unit->getAffiliation() != owner)
-				unit->setOpacity(255);
-		}
-	}
-
-	for (auto unit : _units[owner])
-	{
-		for (auto tile : startRecursiveTileSearch(unit->getTileCoordinate(), unit->getSearchingAbility(), EntityType::sight))
-		{
-			auto cor = tile->getTileCoordinate();
-			tile->setSearched(true);
-			if (shadow->getTile(cor.x, cor.y) != nullptr)
-				shadow->removeTile(cor.x, cor.y);
-			auto unit = getUnit(cor.x, cor.y);
-			if (unit && unit->getAffiliation() != owner)
-				unit->setOpacity(255);
-		}
-	}
-}
-
-/*
-* Recursive search Start
-*/
-std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCost, EntityType type, bool isContainUnit)
-{
-	auto tiles = recursiveTileSearch(Vec2(0, 0), point, remainCost, type, isContainUnit);
-	while (!searchQueue.empty())
-	{
-		for (auto tile : searchQueue.front()())
-			tiles.push_back(tile);
-		searchQueue.pop();
-	}
-	for (auto tile : tiles)
-		tile->setRemainCost(-1);
-	return tiles;
-}
-
-/*
- * Recursive search
- * Intrusion
- * go ↑: (0, 1)
- * go ↓: (0, -1)
- * go →↑: (-1, 1)
- * go →↓: (-1, -1)
- * go ←↑: (1, 1)
- * go ←↓: (1, -1)
- */
-std::vector<StageTile*> Stage::recursiveTileSearch(Vec2 intrusion, Vec2 point, int remainCost, EntityType type, bool isContainUnit)
-{
-	// Out of range
-	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
-		return std::vector<StageTile*>();
-
-	auto cost = 0;
-	auto tiles = getTiles(point.x, point.y);
-	for (auto tile : tiles)
-		cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), type);
-
-	// If consume all cost, process end
-	if (intrusion != Vec2(0, 0) && (remainCost -= cost) < 0)
-		return std::vector<StageTile*>();
-
-	// Already exist unit
-	if (type != EntityType::sight && type != EntityType::counter)
-	{
-		auto unit = getUnit(point.x, point.y);
-		if (unit)
-			if(intrusion == Vec2(0, 0))
-				tiles.clear();
-			else if (isContainUnit && unit->getOpacity() != 0)
-				return tiles;
-			else
-				return std::vector<StageTile*>();
-	}
-
-	bool clearFlag = false;
-	// Check cost
-	for (auto tile : tiles)
-		if (tile->getRemainCost() == -1)
-			tile->setRemainCost(remainCost);
-		else if (tile->getRemainCost() < remainCost)
-		{
-			tile->setRemainCost(remainCost);
-			clearFlag = true;
-		}
-		else
-			return std::vector<StageTile*>();
-	if (clearFlag)
-		tiles.clear();
-
-	//Up
-	if (intrusion.y >= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, 1), point + Vec2(0, -2), remainCost, type, isContainUnit));
-	//Up right
-	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type, isContainUnit));
-	//Up left
-	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type, isContainUnit));
-	//Down
-	if (intrusion.y <= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(0, -1), point + Vec2(0, 2), remainCost, type, isContainUnit));
-	//Down right
-	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type, isContainUnit));
-	//Down left
-	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearch, this, Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type, isContainUnit));
-
-	return tiles;
-}
-
-/*
- * Recursive search
- */
-std::vector<StageTile*> Stage::startRecursiveTileSearchForMove(Vec2 goal, Vec2 point, int remainCost, EntityType type)
-{
-	searchCost = -1;
-	_searchResult.clear();
-	auto tiles = recursiveTileSearchForMove(goal, Vec2(0, 0), point, remainCost, type, std::vector<StageTile*>());
-	while (!searchQueue.empty())
-	{
-		for (auto tile : searchQueue.front()())
-			tiles.push_back(tile);
-		searchQueue.pop();
-	}
-	for (auto tile : tiles)
-		tile->setRemainCost(-1);
-	return _searchResult;
-}
-
-/*
- * Recursive search
- */
-std::vector<StageTile*> Stage::recursiveTileSearchForMove(Vec2 goal, Vec2 intrusion, Vec2 point, int remainCost, EntityType type, std::vector<StageTile*> result)
-{
-	// Out of range
-	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
-		return std::vector<StageTile*>();
-
-	auto cost = 0;
-	auto tiles = getTiles(point.x, point.y);
-	for (auto tile : tiles)
-		cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), type);
-
-	// If consume all cost, process end
-	if (intrusion != Vec2(0, 0) && (remainCost -= cost) < 0)
-		return std::vector<StageTile*>();
-
-	// Goal check
-	if (searchCost >= remainCost)
-		return std::vector<StageTile*>();
-
-	result.push_back(tiles.back());
-
-	if (point == goal)
-	{
-		if (searchCost < remainCost)
-		{
-			_searchResult = result;
-			searchCost = remainCost;
-		}
-		return std::vector<StageTile*>();
-	}
-
-	// Already exist unit
-	if (type != EntityType::sight)
-	{
-		auto unit = getUnit(point.x, point.y);
-		if (unit)
-			if (intrusion != Vec2(0, 0))
-				return std::vector<StageTile*>();
-			else
-				tiles.clear();
-	}
-
-	// Check cost
-	for (auto tile : tiles)
-		if (tile->getRemainCost() < remainCost)
-			tile->setRemainCost(remainCost);
-		else
-			return std::vector<StageTile*>();
-
-	//Up
-	if (intrusion.y >= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(0, 1), point + Vec2(0, -2), remainCost, type, result));
-	//Up right
-	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost, type, result));
-	//Up left
-	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost, type, result));
-	//Down
-	if (intrusion.y <= 0)
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(0, -1), point + Vec2(0, 2), remainCost, type, result));
-	//Down right
-	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost, type, result));
-	//Down left
-	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
-		searchQueue.push(std::bind(&Stage::recursiveTileSearchForMove, this, goal, Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost, type, result));
-
-	return tiles;
-}
-
-/*
- * Get turn right vector
- */
-inline Vec2 getVecRight(Vec2 vec)
-{
-	return Vec2(vec.x == 0 ? -vec.y : vec.x == vec.y ? 0 : vec.x, vec.x + vec.y == 0 ? -vec.y : vec.y);
-}
-
-/*
- * Get turn left vector
- */
-inline Vec2 getVecLeft(Vec2 vec)
-{
-	return Vec2(vec.x == 0 ? vec.y : vec.x == vec.y ? vec.x : 0, vec.x == vec.y ? -vec.y : vec.y);
-}
-
-/*
- * Get turn right position
- */
-inline Vec2 getPosRight(Vec2 in, Vec2 pos)
-{
-	return pos + (in.x + in.y == 0 ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2, 1 - 2 * in.x) : Vec2((int)pos.y % 2 - 1, -2 * in.x - 1));
-}
-
-/*
- * Get turn left position
- */
-inline Vec2 getPosLeft(Vec2 in, Vec2 pos)
-{
-	return pos + (in.x == in.y ? Vec2(0, 2 * in.y) : in.y == 1 ? Vec2((int)pos.y % 2 - 1, 1 + 2 * in.x) : Vec2((int)pos.y % 2, 2 * in.x - 1));
-}
-
-/*
- * Recursive search Start
- */
-std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* executer, Entity* enemy, WeaponData* weapon)
-{
-	std::vector<StageTile*> tiles;
-	Vec2 intrusion;
-	auto diff = executer->getPosition() - enemy->getPosition();
-	auto point = executer->getTileCoordinate();
-	auto enemy_point = enemy->getTileCoordinate();
-	// Down
-	if (abs(diff.x) < elim && diff.y > 0)
-	{
-		intrusion = Vec2(0, -1);
-		point += Vec2(0, 2);
-	}
-	// Up
-	else if (abs(diff.x) < elim && diff.y < 0)
-	{
-		intrusion = Vec2(0, 1);
-		point += Vec2(0, -2);
-	}
-	// Down left
-	else if (diff.x > 0 && diff.y > 0)
-	{
-		intrusion = Vec2(1, -1);
-		point += Vec2((int)(point.y) % 2 - 1, 1);
-	}
-	// Up left
-	else if (diff.x > 0 && diff.y <= 0)
-	{
-		intrusion = Vec2(1, 1);
-		point += Vec2(((int)(point.y) % 2) - 1, -1);
-	}
-	// Down right
-	else if (diff.x < 0 && diff.y > 0)
-	{
-		intrusion = Vec2(-1, -1);
-		point += Vec2((int)(point.y) % 2, 1);
-	}
-	// Up right
-	else if (diff.x < 0 && diff.y <= 0)
-	{
-		intrusion = Vec2(-1, 1);
-		point += Vec2((int)(point.y) % 2, -1);
-	}
-	switch (weapon->getRange().directionRange)
-	{
-	case DirectionRange::liner:
-		tiles = recursiveTileSearchForLiner(intrusion, point, weapon->getRange().FiringRange);
-		break;
-	case DirectionRange::crescent:
-		tiles = recursiveTileSearchForLiner(getVecRight(intrusion), getPosRight(intrusion, point), weapon->getRange().FiringRange);
-		for (auto tile : recursiveTileSearchForLiner(getVecLeft(intrusion), getPosLeft(intrusion, point), weapon->getRange().FiringRange))
-			tiles.push_back(tile);
-		for(auto tile : recursiveTileSearch(intrusion, point, weapon->getRange().FiringRange, EntityType::counter))
-			tiles.push_back(tile);
-		break;
-	case DirectionRange::overHalf:
-		tiles = recursiveTileSearchForLiner(getVecRight(getVecRight(intrusion)), getPosRight(getVecRight(intrusion), getPosRight(intrusion, point)), weapon->getRange().FiringRange);
-		for (auto tile : recursiveTileSearchForLiner(getVecLeft(getVecLeft(intrusion)), getPosLeft(getVecLeft(intrusion), getPosLeft(intrusion, point)), weapon->getRange().FiringRange))
-			tiles.push_back(tile);
-		for (auto tile : recursiveTileSearch(intrusion, point, weapon->getRange().FiringRange, EntityType::counter))
-			tiles.push_back(tile);
-		for (auto tile : recursiveTileSearch(getVecRight(intrusion), getPosRight(intrusion, point), weapon->getRange().FiringRange, EntityType::counter))
-			tiles.push_back(tile);
-		for (auto tile : recursiveTileSearch(getVecLeft(intrusion), getPosLeft(intrusion, point), weapon->getRange().FiringRange, EntityType::counter))
-			tiles.push_back(tile);
-		break;
-	case DirectionRange::full:
-		tiles = recursiveTileSearch(Vec2(0, 0), executer->getTileCoordinate(), weapon->getRange().FiringRange, EntityType::counter);
-
-		for (auto tile : getTiles(executer->getTileCoordinate()))
-		{
-			tile->setRemainCost(-1);
-			tiles.erase(std::remove(tiles.begin(), tiles.end(), tile), tiles.end());
-		}
-		break;
-	case DirectionRange::select:
-		for(auto tile : getTiles(enemy_point.x, enemy_point.y))
-			tiles.push_back(tile);
-		break;
-	}
-	bool first = true;
-	while (!searchQueue.empty())
-	{
-		for (auto tile : searchQueue.front()())
-		{
-			if (first && weapon->getRange().secondaryEffect > 0)
-				recursiveTileSearch(Vec2(0, 0), tile->getTileCoordinate(), weapon->getRange().secondaryEffect, EntityType::counter);
-			tiles.push_back(tile);
-			first = false;
-		}
-		searchQueue.pop();
-		first = true;
-	}
-	for (auto tile : tiles)
-		tile->setRemainCost(-1);
-	return tiles;
-}
-
-/*
- * Start recursive liner search for all directon
- */
-std::vector<StageTile*> Stage::startRecursiveTileSearchForLiner(cocos2d::Vec2 point, int remainCost)
-{
-	std::vector<StageTile*> tiles;
-	//Up
-	for (auto tile : recursiveTileSearchForLiner(Vec2(0, 1), point + Vec2(0, -2), remainCost))
-		tiles.push_back(tile);
-	//Up right
-	for (auto tile : recursiveTileSearchForLiner(Vec2(-1, 1), point + Vec2((int)(point.y) % 2, -1), remainCost))
-		tiles.push_back(tile);
-	//Up left
-	for (auto tile : recursiveTileSearchForLiner(Vec2(1, 1), point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost))
-		tiles.push_back(tile);
-	//Down
-	for (auto tile : recursiveTileSearchForLiner(Vec2(0, -1), point + Vec2(0, 2), remainCost))
-		tiles.push_back(tile);
-	//Down right
-	for (auto tile : recursiveTileSearchForLiner(Vec2(-1, -1), point + Vec2((int)(point.y) % 2, 1), remainCost))
-		tiles.push_back(tile);
-	//Down left
-	for (auto tile : recursiveTileSearchForLiner(Vec2(1, -1), point + Vec2((int)(point.y) % 2 - 1, 1), remainCost))
-		tiles.push_back(tile);
-
-	for (auto tile : tiles)
-		tile->setRemainCost(-1);
-	return tiles;
-}
-
-
-/*
-* Recursive search
-*/
-std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 point, int remainCost)
-{
-	// Out of range
-	if (point.x < 0 || point.y < 0 || point.x > _mapSize.x - 1 || point.y > _mapSize.y - 1)
-		return std::vector<StageTile*>();
-
-	// If consume all cost, process end
-	if ((remainCost -= 1) < 0)
-		return std::vector<StageTile*>();
-
-	bool clearFlag = false;
-	// Check cost
-	auto tiles = getTiles(point.x, point.y);
-	for (auto tile : tiles)
-		if (tile->getRemainCost() == -1)
-			tile->setRemainCost(remainCost);
-		else if (tile->getRemainCost() < remainCost)
-		{
-			tile->setRemainCost(remainCost);
-			clearFlag = true;
-		}
-		else
-			return std::vector<StageTile*>();
-	if (clearFlag)
-		tiles.clear();
-
-	//Up
-	if (intrusion == Vec2(0, 1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2(0, -2), remainCost))
-			tiles.push_back(tile);
-	//Up right
-	if (intrusion == Vec2(-1, 1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2((int)(point.y) % 2, -1), remainCost))
-			tiles.push_back(tile);
-	//Up left
-	if (intrusion == Vec2(1, 1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2(((int)(point.y) % 2) - 1, -1), remainCost))
-			tiles.push_back(tile);
-	//Down
-	if (intrusion == Vec2(0, -1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2(0, 2), remainCost))
-			tiles.push_back(tile);
-	//Down right
-	if (intrusion == Vec2(-1, -1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2((int)(point.y) % 2, 1), remainCost))
-			tiles.push_back(tile);
-	//Down left
-	if (intrusion == Vec2(1, -1))
-		for (auto tile : recursiveTileSearchForLiner(intrusion, point + Vec2((int)(point.y) % 2 - 1, 1), remainCost))
-			tiles.push_back(tile);
-
-	return tiles;
-}
-
-/*
- * Get tiles by x, y
+ * Get tiles by coordinate
  */
 std::vector<StageTile*> Stage::getTiles(int x, int y)
 {
@@ -875,46 +465,41 @@ void Stage::selectTile(int x, int y)
 	}
 
 	selector->setOpacity(255);
-	selector->setPosition(getCoordinateByTile(x, y));
+	selector->setPosition(getPositionByTile(x, y));
 }
 
 /*
  * Blink tile
+ * Implement by adding shadow layer
  */
 void Stage::blinkTile(StageTile* tile, Color3B color)
 {
 	Sprite* white;
-	auto cor = tile->getTileCoordinate();
+	auto cor = tile->getPositionAsTile();
 	auto shadow = getShadowLayer();
-	auto shadow_tile = shadow->getTile(cor.x, cor.y);
+	auto shadow_tile = shadow->getTile(cor);
 	// For unsearch area
 	if (shadow_tile && shadow_tile->getId() == STAGE_TILE_DARK)
 	{
 		//Already blinking, resert
 		shadow_tile->removeAllChildren();
+		// Make new sprite
 		auto tex = tile->getTexture();
-		white = Sprite::createWithTexture(tex, Rect(tex->getContentSize().width - _chipSize.x, tex->getContentSize().height - _chipSize.y, _chipSize.x, _chipSize.y));
+		white = Sprite::createWithTexture(tex, Rect(tex->getContentSize().width - _chip_size.x, tex->getContentSize().height - _chip_size.y, _chip_size.x, _chip_size.y));
 		shadow_tile->addChild(white);
 	}
 	else
 	{
+		//Already blinking, resert
 		if (shadow_tile)
 			shadow_tile->removeFromParent();
 
-		white = shadow->setTile(cor.x, cor.y, STAGE_TILE_WHITE);
+		white = shadow->setTile(cor, STAGE_TILE_WHITE);
 	}
 
 	white->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
 	white->setOpacity(150);
 	white->setColor(color);
-	/*
-	white->setOpacity(0);
-	white->setColor(color);
-	white->runAction(RepeatForever::create(Sequence::create(
-		EaseExponentialIn::create(FadeTo::create(0.5f, 200)),
-		EaseExponentialOut::create(FadeTo::create(0.5f, 0)),
-		NULL)));
-	*/
 }
 
 /*
@@ -922,24 +507,20 @@ void Stage::blinkTile(StageTile* tile, Color3B color)
  */
 void Stage::blinkChange(StageTile* tile, cocos2d::Color3B color)
 {
-	auto cor = tile->getTileCoordinate();
-	auto shadow = getShadowLayer();
-	auto shadow_tile = shadow->getTile(cor.x, cor.y);
+	auto shadow_tile = getShadowLayer()->getTile(tile->getPositionAsTile());
 	if (shadow_tile)
 		if (shadow_tile->getId() == STAGE_TILE_WHITE)
 			shadow_tile->setColor(color);
-		else if(shadow_tile->getChildrenCount() == 1)
+		else if (shadow_tile->getChildrenCount() == 1)
 			shadow_tile->getChildren().at(0)->setColor(color);
 }
 
 /*
- * Stop to blink tile
- */
+* Stop to blink tile
+*/
 void Stage::blinkOffTile(StageTile* tile)
 {
-	auto cor = tile->getTileCoordinate();
-	auto shadow = getShadowLayer();
-	auto shadow_tile = shadow->getTile(cor.x, cor.y);
+	auto shadow_tile = getShadowLayer()->getTile(tile->getPositionAsTile());
 	if (shadow_tile)
 		if (shadow_tile->getId() == STAGE_TILE_WHITE)
 			shadow_tile->removeFromParent();
@@ -947,21 +528,28 @@ void Stage::blinkOffTile(StageTile* tile)
 			shadow_tile->removeAllChildren();
 }
 
+/********************************************************************************/
+
 /*
- * Set unit
+ * Set unit by creating instance
  */
-void Stage::setUnit(int x, int y, EntityType type, const Owner owner)
+Entity* Stage::setUnit(int x, int y, EntityType type, const Owner owner)
 {
-	_units[owner].push_back(getUnitLayer()->setUnit(x, y, type)->setAffiliationRetThis(owner));
+	auto unit = getUnitLayer()->setUnit(x, y, type);
+	unit->setAffiliation(owner);
+	_units[owner].push_back(unit);
+	return unit;
 }
 
 /*
- * Set unit
+ * Set unit position with setting tag
+ * If only set tag, do not move position
  */
-void Stage::setUnit(int x, int y, Entity * unit)
+void Stage::moveUnitPositionAsTile(Vec2 cor, Entity * unit, bool isOnlySetTag)
 {
-	_units[unit->getAffiliation()].push_back(unit);
-	getUnitLayer()->setUnit(x, y, unit);
+	if(!isOnlySetTag)
+		unit->setPosition(getPositionByTile(cor) + Vec2(getChipSize().x / 2, 0));
+	unit->setTag(cor.x * getMapSize().y + cor.y);
 }
 
 /*
@@ -995,22 +583,439 @@ void Stage::blinkUnit(Entity * unit)
  */
 void Stage::blinkOffUnit(Entity * unit)
 {
-	if(unit->getChildByTag(0))
+	if (unit->getChildByTag(0))
 		unit->removeChildByTag(0);
+}
+
+/********************************************************************************/
+
+/*
+ * Move for centering specify coordinate
+ */
+void Stage::moveView(int x, int y)
+{
+	// Stop pre move
+	if (this->getActionByTag(0))
+		this->stopActionByTag(0);
+
+	auto winSize = Director::getInstance()->getWinSize();
+	auto action = MoveTo::create(0.1f, adjustArea(Vec2(winSize.width / 2 - (getChipSize().x + getGap()) / 2, winSize.height / 2 - getChipSize().y / 2) - Vec2(x, y) * getScale()));
+	action->setTag(0);
+	this->runAction(action);
+}
+
+/*
+ * Move for centering specify unit
+ */
+void Stage::moveView(Entity * unit)
+{
+	moveView(getPositionByTile(unit->getPositionAsTile()));
+}
+
+/*
+ * Move for centering specify tile
+ */
+void Stage::moveView(StageTile * tile)
+{
+	moveView(getPositionByTile(tile->getPositionAsTile()));
 }
 
 
 /*
- * Adjust position
+ * Initialize searched property
  */
-cocos2d::Vec2 Stage::adjustArea(cocos2d::Vec2 v)
+void Stage::initStage(Owner owner)
 {
-	auto maxWidth = getWidth() * getScale() - cocos2d::Director::getInstance()->getWinSize().width;
-	auto maxHeight = getHeight() * getScale() - cocos2d::Director::getInstance()->getWinSize().height;
-	return cocos2d::Vec2(
-		(maxWidth < 0) ? 0 : max(-maxWidth, min(v.x, 0)),
-		(maxHeight < 0) ? 0 : max(-maxHeight, min(v.y, 0)));
-};
+	auto shadow = getShadowLayer();
+	shadow->getChildByTag(0)->removeAllChildren();
+	for (int x = 0; x < _map_size.x; x++)
+	{
+		for (int y = 0; y < _map_size.y; y++)
+		{
+			for (auto tile : getTiles(x, y))
+				tile->setSearched(false);
+
+			// All black out
+			shadow->setTile(x, y, STAGE_TILE_DARK);
+
+			// All enemy hided
+			auto unit = getUnit(x, y);
+			if (unit)
+			{
+				if (unit->getAffiliation() == owner)
+					unit->setOpacity(255);
+				else
+					unit->setOpacity(0);
+				unit->setState(EntityState::none);
+
+			}
+		}
+	}
+
+
+	for (auto city : _cities[owner])
+	{
+		discoverTile(city);
+		for (auto tile : startRecursiveTileSearch(city->getPositionAsTile(), 1, EntityType::sight))
+			discoverTile(tile);
+	}
+
+	for (auto unit : _units[owner])
+	{
+		discoverTile(getTile(0, unit->getPositionAsTile()));
+		for (auto tile : startRecursiveTileSearch(unit->getPositionAsTile(), unit->getSearchingAbility(), EntityType::sight))
+			discoverTile(tile);
+	}
+}
+
+/*
+ * Set searched and open insight, enemy
+ */
+void Stage::discoverTile(StageTile * tile)
+{
+	auto shadow = getShadowLayer();
+	auto cor = tile->getPositionAsTile();
+	tile->setSearched(true);
+	if (shadow->getTile(cor))
+		shadow->removeTile(cor);
+	auto unit = getUnit(cor);
+	if (unit && unit->getOpacity() == 0)
+		unit->setOpacity(255);
+}
+
+/********************************************************************************/
+
+/*
+ * Recursive search Start
+ * isBlockByUnit is true, do not move throuhgh tile on unit
+ * isContainUnit is false, do not contains visible unit. And visible unit tile is not moved
+ * Tile of lower layer is listing.
+ */
+std::vector<StageTile*> Stage::startRecursiveTileSearch(Vec2 point, int remainCost, EntityType type, bool isBlockByUnit, bool isContainTileOnUnit)
+{
+	std::vector<StageTile*> result;
+	std::queue<std::function<StageTile*(EntityType, bool, bool)>> queue;
+	auto ori = recursiveTileSearch(queue, Vec2(0, 0), point, remainCost, type, isBlockByUnit, isContainTileOnUnit);
+	while (!queue.empty())
+	{
+		auto tile = queue.front()(type, isBlockByUnit, isContainTileOnUnit);
+		if(tile)
+			result.push_back(tile);
+		queue.pop();
+	}
+	for (auto tile : result)
+		tile->setActualCost(0);
+	if(ori)
+		ori->setActualCost(0);
+	return result;
+}
+
+/*
+ * Recursive search
+ * Intrusion
+ * go ↑: (0, 1)
+ * go ↓: (0, -1)
+ * go →↑: (-1, 1)
+ * go →↓: (-1, -1)
+ * go ←↑: (1, 1)
+ * go ←↓: (1, -1)
+ *
+ * isBlockByUnit is true, do not move throuhgh tile on unit 
+ * isContainUnit is false, do not contains visible unit. And visible unit tile is not moved
+ */
+StageTile* Stage::recursiveTileSearch(std::queue<std::function<StageTile*(EntityType, bool, bool)>> &queue, Vec2 intrusion, Vec2 point, int remainCost, EntityType type, bool isBlockByUnit, bool isContainTileOnUnit)
+{
+	// Out of range
+	if (point.x < 0 || point.y < 0 || point.x > _map_size.x - 1 || point.y > _map_size.y - 1)
+		return nullptr;
+
+	auto cost = 0;
+	auto tiles = getTiles(point);
+	auto result = tiles.front();
+	for (auto tile : tiles)
+		cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), type);
+
+	// If consume all cost, process end
+	if (intrusion != Vec2(0, 0) && (remainCost -= cost) < 0)
+		return nullptr;
+
+	// Already exist unit
+	if (intrusion != Vec2(0, 0) && isBlockByUnit && type != EntityType::sight && type != EntityType::counter)
+	{
+		auto unit = getUnit(point);
+		if (unit && unit->getOpacity() != 0)
+			if (isContainTileOnUnit)
+				return result;
+			else
+				return nullptr;
+	}
+
+	// Check cost 
+	if (result->getActualCost() > remainCost)
+		return nullptr;
+	else if (result->getActualCost() == 0)
+		result->setActualCost(remainCost);
+	else
+	{
+		result->setActualCost(remainCost);
+		result = nullptr;
+	}
+
+	//Up
+	if (intrusion.y >= 0)
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(0, 1), util::getHexUp(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//Up right
+	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != -1))
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(-1, 1), util::getHexUpRight(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//Up left
+	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != -1))
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(1, 1), util::getHexUpLeft(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//Down
+	if (intrusion.y <= 0)
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(0, -1), util::getHexDown(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//Down right
+	if (intrusion.x == -1 || (intrusion.x == 0 && intrusion.y != 1))
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(-1, -1), util::getHexDownRight(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//Down left
+	if (intrusion.x == 1 || (intrusion.x == 0 && intrusion.y != 1))
+		queue.push(std::bind(&Stage::recursiveTileSearch, this, std::ref(queue), Vec2(1, -1), util::getHexDownLeft(point), remainCost, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+	return result;
+}
+
+/*
+ * Start recursive liner search for all directon
+ */
+std::vector<StageTile*> Stage::startRecursiveTileSearchForLiner(cocos2d::Vec2 point, int remainCost)
+{
+	std::vector<StageTile*> tiles;
+	//Up
+	for (auto tile : recursiveTileSearchForLiner(Vec2(0, 1), util::getHexUp(point), remainCost))
+		tiles.push_back(tile);
+	//Up right
+	for (auto tile : recursiveTileSearchForLiner(Vec2(-1, 1), util::getHexUpRight(point), remainCost))
+		tiles.push_back(tile);
+	//Up left
+	for (auto tile : recursiveTileSearchForLiner(Vec2(1, 1), util::getHexUpLeft(point), remainCost))
+		tiles.push_back(tile);
+	//Down
+	for (auto tile : recursiveTileSearchForLiner(Vec2(0, -1), util::getHexDown(point), remainCost))
+		tiles.push_back(tile);
+	//Down right
+	for (auto tile : recursiveTileSearchForLiner(Vec2(-1, -1), util::getHexDownRight(point), remainCost))
+		tiles.push_back(tile);
+	//Down left
+	for (auto tile : recursiveTileSearchForLiner(Vec2(1, -1), util::getHexDownLeft(point), remainCost))
+		tiles.push_back(tile);
+
+	return tiles;
+}
+
+
+/*
+* Recursive search
+*/
+std::vector<StageTile*> Stage::recursiveTileSearchForLiner(Vec2 intrusion, Vec2 point, int remainCost)
+{
+	// Out of range
+	if (point.x < 0 || point.y < 0 || point.x > _map_size.x - 1 || point.y > _map_size.y - 1)
+		return std::vector<StageTile*>();
+
+	// If consume all cost, process end
+	if ((remainCost -= 1) < 0)
+		return std::vector<StageTile*>();
+
+	std::vector<StageTile*> result;
+	result.push_back(getTiles(point).front());
+
+	//Up
+	if (intrusion == Vec2(0, 1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexUp(point), remainCost))
+			result.push_back(tile);
+	//Up right
+	if (intrusion == Vec2(-1, 1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexUpRight(point), remainCost))
+			result.push_back(tile);
+	//Up left
+	if (intrusion == Vec2(1, 1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexUpLeft(point), remainCost))
+			result.push_back(tile);
+	//Down
+	if (intrusion == Vec2(0, -1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexDown(point), remainCost))
+			result.push_back(tile);
+	//Down right
+	if (intrusion == Vec2(-1, -1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexDownRight(point), remainCost))
+			result.push_back(tile);
+	//Down left
+	if (intrusion == Vec2(1, -1))
+		for (auto tile : recursiveTileSearchForLiner(intrusion, util::getHexDownLeft(point), remainCost))
+			result.push_back(tile);
+
+	return result;
+}
+
+
+/*
+ * Recursive search Start for weapon
+ */
+std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* executer, Entity* enemy, WeaponData* weapon)
+{
+	std::vector<StageTile*> tiles;
+	std::queue<std::function<StageTile*(EntityType, bool, bool)>> queue;
+	auto point = executer->getPositionAsTile();
+	auto enemy_point = enemy->getPositionAsTile();
+
+	auto intrusion = util::getDirection(executer->getPosition() - enemy->getPosition(), point);
+
+	switch (weapon->getRange().direction_type)
+	{
+	case DirectionType::liner:
+		tiles = recursiveTileSearchForLiner(intrusion, point, weapon->getRange().firing_range);
+		break;
+	case DirectionType::crescent:
+	{
+		for (auto tile : recursiveTileSearchForLiner(util::getVecRight(intrusion), util::getPosRight(intrusion, point), weapon->getRange().firing_range))
+			tiles.push_back(tile);
+		for (auto tile : recursiveTileSearchForLiner(util::getVecLeft(intrusion), util::getPosLeft(intrusion, point), weapon->getRange().firing_range))
+			tiles.push_back(tile);
+		auto tile = recursiveTileSearch(queue, intrusion, point, weapon->getRange().firing_range, EntityType::counter);
+		if (tile)
+			tiles.push_back(tile);
+		break;
+	}
+	case DirectionType::overHalf:
+	{
+		for (auto tile : recursiveTileSearchForLiner(util::getVecRight(util::getVecRight(intrusion)), util::getPosRight(util::getVecRight(intrusion), util::getPosRight(intrusion, point)), weapon->getRange().firing_range))
+			tiles.push_back(tile);
+		for (auto tile : recursiveTileSearchForLiner(util::getVecLeft(util::getVecLeft(intrusion)), util::getPosLeft(util::getVecLeft(intrusion), util::getPosLeft(intrusion, point)), weapon->getRange().firing_range))
+			tiles.push_back(tile);
+		auto tile = recursiveTileSearch(queue, intrusion, point, weapon->getRange().firing_range, EntityType::counter);
+		if (tile)
+			tiles.push_back(tile);
+		tile = recursiveTileSearch(queue, util::getVecRight(intrusion), util::getPosRight(intrusion, point), weapon->getRange().firing_range, EntityType::counter);
+		if (tile)
+			tiles.push_back(tile);
+		tile = recursiveTileSearch(queue, util::getVecLeft(intrusion), util::getPosLeft(intrusion, point), weapon->getRange().firing_range, EntityType::counter);
+		if (tile)
+			tiles.push_back(tile);
+		break;
+	}
+	case DirectionType::full:
+		recursiveTileSearch(queue, Vec2(0, 0), executer->getPositionAsTile(), weapon->getRange().firing_range, EntityType::counter);
+		break;
+	case DirectionType::select:
+		tiles.push_back(getTiles(enemy_point.x, enemy_point.y).front());
+		break;
+	}
+	while (!queue.empty())
+	{
+		auto tile = queue.front()(EntityType::counter, true, false);
+		if (tile)
+		{
+			tiles.push_back(tile);
+			if (weapon->getRange().secondary_effect > 0)
+				recursiveTileSearch(queue, Vec2(0, 0), tile->getPositionAsTile(), weapon->getRange().secondary_effect, EntityType::counter);
+		}
+		queue.pop();
+	}
+	for (auto tile : tiles)
+		tile->setActualCost(0);
+	return tiles;
+}
+
+/*
+ * Recursive search
+ * A* algolism
+ * return Start -> Goal route
+ */
+std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector<StageTile*>& goals, Vec2 start, int limit, EntityType type)
+{
+	// Calculate center position
+	auto center = Vec2::ZERO;
+	for (auto vec : goals)
+		center += vec->getPosition();
+	center = getPositionAsTile(center / goals.size());
+
+	// Get base data
+	auto openList = std::priority_queue<TilePointer, std::vector<TilePointer>, std::greater<TilePointer>>();
+	auto closeList = std::vector<StageTile*>();
+	auto tile = getTile(0, start.x, start.y);
+	tile->setActualCost(0);
+	tile->setHeuristicCost((tile->getPosition() - center).getLengthSq());
+	tile->setParentNode(nullptr);
+	tile->setSearchState(SearchState::closed);
+	openList.push(TilePointer(tile));
+
+	// Search by A star
+	while (!openList.empty())
+	{
+		auto pos = tile->getPositionAsTile();
+		for (auto tpos : {	pos + Vec2(0, -2), pos + Vec2((int)(pos.y) % 2, -1), pos + Vec2(((int)(pos.y) % 2) - 1, -1), 
+							pos + Vec2(0, 2),  pos + Vec2((int)(pos.y) % 2, 1),  pos + Vec2((int)(pos.y) % 2 - 1, 1) })
+		{
+			// Out of range
+			if (tpos.x < 0 || tpos.y < 0 || tpos.x > _map_size.x - 1 || tpos.y > _map_size.y - 1)
+				continue;
+			auto targets = getTiles(tpos);
+			if (!targets.empty())
+			{
+				auto target = targets.front();
+				if (target->getSearchState() == SearchState::none)
+				{
+					auto cost = 0;
+					auto dv = center - tile->getPositionAsTile();
+					int dx = (dv.x > 0) ? dv.x : -dv.x;
+					int dy = (dv.y > 0) ? dv.y : -dv.y;
+					for (auto t : targets)
+						cost += EntityToTile::getInstance()->getSearchCost(t->getTerrainType(), type);
+					target->setActualCost(cost + tile->getActualCost());
+					target->setHeuristicCost((dx > dy) ? dx : dy);
+					target->setParentNode(tile);
+					target->setSearchState(SearchState::open);
+					openList.push(TilePointer(target));
+				}
+			}
+		}
+
+		tile = openList.top()._pointer;
+		tile->setSearchState(SearchState::closed);
+		openList.pop();
+		closeList.push_back(tile);
+
+		if (util::find(goals, tile))
+			break;
+	}
+
+	// Initialize
+	for (auto t : closeList)
+	{
+		t->setSearchState(SearchState::none);
+		t->setActualCost(0);
+	}
+	while (!openList.empty())
+	{
+		openList.top()._pointer->setSearchState(SearchState::none);
+		openList.top()._pointer->setActualCost(0);
+		openList.pop();
+	}
+
+	auto result = std::vector<StageTile*>();
+	if (tile->getActualCost() > limit)
+		return result;
+
+	while (tile)
+	{
+		result.push_back(tile);
+		tile = tile->getParentNode();
+	}
+
+	std::reverse(result.begin(), result.end());
+	return result;
+}
+
+/********************************************************************************/
 
 /*
  * Move next city
@@ -1018,6 +1023,7 @@ cocos2d::Vec2 Stage::adjustArea(cocos2d::Vec2 v)
 Vec2 Stage::nextCity(Owner owner, StageTile* nowTile)
 {
 	auto cities = _cities[owner];
+	// If not select tile, return front city
 	if (!nowTile || !util::instanceof<City>(nowTile))
 		nowTile = cities.back();
 	bool discovered = false;
@@ -1025,19 +1031,19 @@ Vec2 Stage::nextCity(Owner owner, StageTile* nowTile)
 	{
 		if (discovered)
 		{
-			movePosition(city);
-			return city->getTileCoordinate();
+			moveView(city);
+			return city->getPositionAsTile();
 		}
 		if (city == nowTile)
 			discovered = true;
 	}
-	movePosition(cities.front());
-	return cities.front()->getTileCoordinate();
+	moveView(cities.front());
+	return cities.front()->getPositionAsTile();
 }
 
 /*
  * Move next unit
- * If all unit acted, return Vec2(0, 0)
+ * If all unit acted, return Vec2(-1, -1)
  */
 Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 {
@@ -1050,8 +1056,8 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 	for (auto unit : units)
 		if (discovered && unit->getState() != EntityState::acted)
 		{
-			movePosition(unit);
-			return Vec2(unit->getTag() / (int)(getMapSize().y), unit->getTag() % (int)(getMapSize().y));
+			moveView(unit);
+			return unit->getPositionAsTile();
 		}
 		else if (unit == nowUnit)
 			discovered = true;
@@ -1061,53 +1067,44 @@ Vec2 Stage::nextUnit(Owner owner, Entity* nowUnit)
 	for (auto unit : preUnits)
 		if (discovered && unit->getState() != EntityState::acted)
 		{
-			movePosition(unit);
-			return Vec2(unit->getTag() / (int)(getMapSize().y), unit->getTag() % (int)(getMapSize().y));
+			moveView(unit);
+			return unit->getPositionAsTile();
 		}
 
-	// All acted, return 0, 0
-	return Vec2(0, 0);
+	// All acted, return Vec2(-1, -1)
+	return Vec2(-1, -1);
 }
 
 /*
  * Move checking
+ * Return movable area
  */
 std::vector<StageTile*> Stage::moveCheck(Entity * entity)
 {
-	auto cor = entity->getTileCoordinate();
-	auto pos = entity->getPosition();
-
-	auto tiles = startRecursiveTileSearch(cor, entity->getMobility(), entity->getType());
-
-	return tiles;
+	return startRecursiveTileSearch(entity->getPositionAsTile(), entity->getMobility(), entity->getType());
 }
 
 /*
  * Move unit to tile provisionally
- * Return terminate tile
+ * Return route
  */
 std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * tile)
 {
-	auto root = startRecursiveTileSearchForMove(tile->getTileCoordinate(), entity->getTileCoordinate(), entity->getMobility(), entity->getType());
+	auto route = startRecursiveTileSearchByAstar(tile, entity->getPositionAsTile(), entity->getMobility(), entity->getType());
 	Vector<FiniteTimeAction*> acts;
 	auto i = 0;
-	for (auto t : root)
-	{
-		if (i > 0)
-		{
-			auto cor = t->getTileCoordinate();
-			auto pos = this->getCoordinateByTile(cor.x, cor.y);
+	for (auto t : route)
+		if (i++ > 0)
 			acts.pushBack(Sequence::create(
-				MoveTo::create(0.5f, pos + Vec2(getChipSize().x / 2, 0)),
-			NULL));
-		}
-		i++;
-	}
+				MoveTo::create(0.5f, getPositionByTile(t->getPositionAsTile()) + Vec2(getChipSize().x / 2, 0)),
+				NULL));
 	entity->runAction(Sequence::create(acts));
-	_preProvisionalPos = entity->getTileCoordinate();
-	auto point = root.back()->getTileCoordinate();
-	entity->setTag(point.x * _mapSize.y + point.y);
-	return root;
+
+	// Keep pre_position
+	_pre_provisional_cor = entity->getPositionAsTile();
+	// Move tag
+	moveUnitPositionAsTile(route.back()->getPositionAsTile(), entity, true);
+	return route;
 }
 
 /*
@@ -1115,34 +1112,44 @@ std::vector<StageTile*> Stage::provisionalMoveUnit(Entity * entity, StageTile * 
  */
 void Stage::provisionalMoveCancel(Entity * entity)
 {
-	entity->setTag(_preProvisionalPos.x * _mapSize.y + _preProvisionalPos.y);
 	entity->stopAllActions();
-	entity->setPosition(getCoordinateByTile(entity->getTileCoordinate()) +  Vec2(getChipSize().x / 2, 0));
+	moveUnitPositionAsTile(_pre_provisional_cor, entity);
 }
 
 /*
- * Move unit to tile
+ * Move unit to tile 
+ * With searching enemy
+ * And set state moved
  */
-void Stage::moveUnit(Entity * entity, std::vector<StageTile*> tiles)
+void Stage::moveUnit(Entity * entity, std::vector<StageTile*> route)
 {
-	auto shadow = getShadowLayer();
-	for (auto tile : tiles)
-	{
-		for (auto t : startRecursiveTileSearch(tile->getTileCoordinate(), entity->getSearchingAbility(), EntityType::sight))
-		{
-			auto cor = t->getTileCoordinate();
-			t->setSearched(true);
-			if (shadow->getTile(cor.x, cor.y) != nullptr)
-				shadow->removeTile(cor.x, cor.y);
-			auto unit = getUnit(cor.x, cor.y);
-			if (unit && unit->getAffiliation() != Owner::player)
-				unit->setOpacity(255);
-		}
-	}
-	auto point = tiles.back()->getTileCoordinate();
-	entity->setTag(point.x * _mapSize.y + point.y);
+	for (auto tile : route)
+		for (auto t : startRecursiveTileSearch(tile->getPositionAsTile(), entity->getSearchingAbility(), EntityType::sight))
+			discoverTile(t);
 	entity->setState(EntityState::moved);
 }
+
+
+/*
+ * Deploy unit
+ */
+void Stage::deployUnit(Entity * unit, City * city)
+{
+	unit->setTag(DEPLOY_CONST + unit->getTag());
+	unit->setVisible(false);
+	city->addDeoloyer(unit);
+}
+
+/*
+ * Dispatch unit
+ */
+void Stage::dispatchUnit(Entity * unit, City * city)
+{
+	moveUnitPositionAsTile(city->getPositionAsTile(), unit);
+	unit->setVisible(true);
+	city->removeDeployer(unit);
+}
+
 
 
 /*
@@ -1152,12 +1159,4 @@ Node * Stage::renderForAIScene()
 {
 	Node* node = Node::create();
 	return node;
-}
-
-int Stage::getUnitNumber()
-{
-	auto size = 0;
-	for (auto pair : _units)
-		size += pair.second.size();
-	return size;
 }

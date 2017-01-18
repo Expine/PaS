@@ -6,6 +6,10 @@
 #include "stage/Tile.h"
 #include "util/Util.h"
 
+/*
+ * Constructor of weapon information
+ * Parse weapon information
+ */
 WeaponInformation::WeaponInformation()
 {
 	auto lines = util::splitFile("info/weapon.csv");
@@ -38,11 +42,11 @@ WeaponInformation::WeaponInformation()
 			else if (j == 8)
 				weapon->setAntiGround(std::atoi(item.c_str()));
 			else if (j == 9)
-				type.directionRange = static_cast<DirectionRange>(std::atoi(item.c_str()));
+				type.direction_type = static_cast<DirectionType>(std::atoi(item.c_str()));
 			else if (j == 10)
-				type.FiringRange = (std::atoi(item.c_str()));
+				type.firing_range = (std::atoi(item.c_str()));
 			else if (j == 11)
-				type.secondaryEffect = (std::atoi(item.c_str()));
+				type.secondary_effect = (std::atoi(item.c_str()));
 			else if (j == 12)
 				weapon->setAccuracy(std::atoi(item.c_str()));
 			else if (j == 13)
@@ -53,39 +57,85 @@ WeaponInformation::WeaponInformation()
 	}
 }
 
+/*
+ * Get range name
+ */
 std::string WeaponInformation::getRangeName(RangeType type)
 {
-	switch (type.directionRange)
+	switch (type.direction_type)
 	{
-	case DirectionRange::liner:
-		return u8"直線";
-	case DirectionRange::crescent:
-		return u8"三方向";
-	case DirectionRange::overHalf:
-		return u8"五方向";
-	case DirectionRange::full:
-		return u8"全方位";
-	case DirectionRange::select:
-		return u8"選択";
-	default:
-		return "ERROR";
+	case DirectionType::liner:		return u8"直線";
+	case DirectionType::crescent:	return u8"三方向";
+	case DirectionType::overHalf:	return u8"五方向";
+	case DirectionType::full:		return u8"全方位";
+	case DirectionType::select:		return u8"選択";
+	default:						return "ERROR";
 	}
 }
 
+/*
+ * Constructor of weapon data
+ */
+WeaponData::WeaponData()
+	: _anti_personnel(0), _anti_wizard(0)
+	, _anti_fire(0), _anti_ice(0), _anti_thunder(0), _anti_ground(0)
+	, _accuracy(0), _consumption(0)
+{}
+
+/*
+ * Destructor of weapon data
+ */
+WeaponData::~WeaponData()
+{
+	_anti_personnel = _anti_wizard = _anti_fire = _anti_ice = _anti_thunder = _anti_ground = 0;
+	_accuracy = _consumption = 0;
+}
+
+/*
+ * Check whether this is enable to use
+ */
 bool WeaponData::isUsable(Entity * unit)
 {
+	return isUsableByConsumption(unit) && isUsableByArea(unit);
+}
+
+/*
+ * Check whether this is enable to use by consumption
+ */
+bool WeaponData::isUsableByConsumption(Entity * unit)
+{
+	return unit->getMaterial() > _consumption;
+}
+
+/*
+ * Check whether this is enable to use by searching enemy in area
+ */
+bool WeaponData::isUsableByArea(Entity * unit)
+{
 	auto stage = unit->getStage();
-	std::vector <StageTile*> tiles;
-	if (_range.directionRange == DirectionRange::liner)
-		tiles = stage->startRecursiveTileSearchForLiner(unit->getTileCoordinate(), _range.FiringRange);
-	else
-		tiles = stage->startRecursiveTileSearch(unit->getTileCoordinate(), _range.FiringRange, EntityType::counter);
+	// Get tiles in area
+	std::vector <StageTile*> tiles = _range.direction_type == DirectionType::liner ?
+			stage->startRecursiveTileSearchForLiner(unit->getPositionAsTile(), _range.firing_range)
+		:	stage->startRecursiveTileSearch(unit->getPositionAsTile(), _range.firing_range, EntityType::counter);
 	for (auto tile : tiles)
 	{
-		auto target = stage->getUnit(tile->getTileCoordinate());
-		if (target && target->getOpacity() != 0 && !OwnerInformation::getInstance()->isSameGroup(target->getAffiliation(), Owner::player))
+		auto target = stage->getUnit(tile->getPositionAsTile());
+		if (target && target->isSelectableEnemy(unit->getAffiliation()))
 			return true;
 	}
 	return false;
 }
 
+// TODO unimplement method
+/*
+ * Get animation
+ */
+ParticleSystemQuad* WeaponData::animation(cocos2d::Vec2 pos)
+{
+	auto particle = ParticleSystemQuad::create("particle/ice.plist");
+	particle->setAutoRemoveOnFinish(true);
+	particle->resetSystem();
+	particle->setPosition(pos);
+	particle->setScale(0.2f);
+	return particle;
+}

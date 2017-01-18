@@ -30,16 +30,34 @@ TileInformation::TileInformation()
 			{
 			case 1:	_name[static_cast<TerrainType>(i - 1)] = item;					break;
 			case 2: case 3: case 4:
-				_commands[static_cast<TerrainType>(i - 1)][static_cast<Command>(j - 2 + static_cast<int>(Command::CITY_START) + 1)] = item == "TRUE";
+				_commands_enable[static_cast<TerrainType>(i - 1)][static_cast<Command>(j - 2 + static_cast<int>(Command::CITY_START) + 1)] = item == "TRUE";
 			}
 		}
 	}
 }
 
 /*
- * Create tile data
+ * Constructor of tile
  */
-StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatchNode* batch, Stage* stage)
+StageTile::StageTile()
+	: _id(0), _terrain(TerrainType::none), _searched(false)
+	, _search_state(SearchState::none), _actual_cost(0), _heuristic_cost(0), _parent_node(nullptr)
+{}
+
+/*
+ * Destructor
+ */
+StageTile::~StageTile()
+{
+	_searched = false;
+	_id = _actual_cost = _heuristic_cost = 0;
+	_parent_node = nullptr;
+}
+
+/*
+ * Create tile instance by id and set base information
+ */
+StageTile * StageTile::create(const int id)
 {
 	StageTile* tile;
 	switch (id)
@@ -55,27 +73,27 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	case 12:tile = Mountain::create();	break;
 	case 13:tile = Bridge::create();	break;
 	case 14:tile = Bridge::create();	break;
-	case 16:tile = Capital::create();	
-		util::instance<Capital>(tile)->setOwner(Owner::player); 
+	case 16:tile = Capital::create();
+		util::instance<Capital>(tile)->setOwner(Owner::player);
 		util::instance<Capital>(tile)->setMaxDurability(200);
 		util::instance<Capital>(tile)->setDurability(100);
 		util::instance<Capital>(tile)->setMaxDeployer(10);
 		util::initRand();
 		break;
-	case 17:tile = City::create();		
-		util::instance<City>(tile)->setOwner(Owner::player);	
+	case 17:tile = City::create();
+		util::instance<City>(tile)->setOwner(Owner::player);
 		util::instance<City>(tile)->setMaxDurability(200);
 		util::instance<City>(tile)->setDurability(100);
 		util::instance<City>(tile)->setMaxDeployer(5);
 		break;
-	case 24:tile = Capital::create();	
-		util::instance<Capital>(tile)->setOwner(Owner::enemy);	
+	case 24:tile = Capital::create();
+		util::instance<Capital>(tile)->setOwner(Owner::enemy);
 		util::instance<Capital>(tile)->setMaxDurability(200);
 		util::instance<Capital>(tile)->setDurability(100);
 		util::instance<Capital>(tile)->setMaxDeployer(10);
 		break;
 	case 25:tile = City::create();
-		util::instance<City>(tile)->setOwner(Owner::enemy);		
+		util::instance<City>(tile)->setOwner(Owner::enemy);
 		util::instance<City>(tile)->setMaxDurability(200);
 		util::instance<City>(tile)->setDurability(100);
 		util::instance<City>(tile)->setMaxDeployer(5);
@@ -86,21 +104,36 @@ StageTile * StageTile::create(const int id, const int x, const int y, SpriteBatc
 	//Set ID
 	tile->setId(id);
 
+	return tile;
+}
+
+/*
+ * Create tile data
+ * And set batch, set position
+ */
+StageTile * StageTile::create(const int id, Vec2 cor, Stage* stage)
+{
+	// Create tile instance
+	auto tile = create(id);
+	auto batch = stage->getTileBatch();
+
 	//Set batch
-	auto wnum = (int)(batch->getTextureAtlas()->getTexture()->getContentSize().width / stage->getChipSize().x);
+	auto wnum = stage->getHorizontalChipNumber();
 	auto gap = stage->getGap();
 	auto chipSize = stage->getChipSize();
 
-	auto fix_y = (int)(stage->getMapSize().y - 1 - y);
 	tile->initWithTexture(batch->getTexture(), Rect((id % wnum) * chipSize.x, (int)(id / wnum) * chipSize.y, chipSize.x, chipSize.y));
-	tile->setPosition(stage->getCoordinateByTile(x, y));
+	tile->setPosition(stage->getPositionByTile(cor));
 	tile->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-	tile->setTag(x * stage->getMapSize().y + y);
+	tile->setTag(cor.x * stage->getMapSize().y + cor.y);
 
 	return tile;
 }
 
-cocos2d::Vec2 StageTile::getTileCoordinate()
+/*
+ * Get tile coordinate
+ */
+cocos2d::Vec2 StageTile::getPositionAsTile()
 {
 	int mapy = getStage()->getMapSize().y;
 	return cocos2d::Vec2(getTag() / mapy, getTag() % mapy);
@@ -122,17 +155,90 @@ Stage * StageTile::getStage()
 	return dynamic_cast<Stage*>(getStageLayer()->getParent());
 }
 
+/*********************************************************/
+/*
+ * Constructor for city
+ */
+City::City()
+	: _owner(Owner::player), _max_durability(0), _durability(0),_max_deployer(0)
+{}
+
+/*
+ * Destructor of city
+ */
+City::~City()
+{
+	_durability = _max_durability = _max_deployer = 0;
+}
+
+/*
+ * Add deployer to city
+ */
 void City::addDeoloyer(Entity * entity)
 {
 	_deployers.pushBack(entity);
 }
 
+/*
+ * Remove deployer from city
+ */
 void City::removeDeployer(Entity * entity)
 {
 	_deployers.eraseObject(entity);
 }
 
+/*
+ * Check whether this city can supply for unit
+ */
+bool City::isSuppliable()
+{
+	auto unit = getStage()->getUnit(getPositionAsTile());
+	return unit && unit->getAffiliation() == _owner && unit->getState() == EntityState::none;
+}
+
+/*
+ * Check whether this city can deploy unit
+ */
+bool City::isDeployable()
+{
+	auto unit = getStage()->getUnit(getPositionAsTile());
+	return unit && unit->getAffiliation() == _owner && _deployers.size() < _max_deployer;
+}
+
+/*
+ * Check whether this city can dispatch unit
+ */
+bool City::isDispatchable()
+{
+	auto unit = getStage()->getUnit(getPositionAsTile());
+	return !unit && _deployers.size() > 0;
+}
+
+/*
+ * Supply to unit
+ */
 void City::supply(Entity * entity)
 {
 	entity->setMaterial(entity->getMaxMaterial());
 }
+
+/*
+ * Get occupied damage. 
+ * Occupied when it becomes zero.
+ */
+void City::damaged(Soldier * unit)
+{
+	// Calculate damage
+	util::initRand();
+	auto damage = unit->getOccupationAbility() * util::getRand(0.8f, 1.2f);
+	auto damaged_durability = _durability - damage;
+	if (damaged_durability > 0)
+		setDurability(damaged_durability);
+	else
+	{
+		// Change city owner
+		setDurability(getMaxDurability() / 2);
+		setOwner(unit->getAffiliation());
+	}
+}
+

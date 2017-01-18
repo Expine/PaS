@@ -8,7 +8,7 @@ USING_NS_CC;
  */
 Scene* TitleScene::createScene()
 {
-	CCLOG("AIScene is created");
+	CCLOG("TitleScene is created");
 	auto scene = Scene::create();
 	auto layer = TitleScene::create();
 	scene->addChild(layer);

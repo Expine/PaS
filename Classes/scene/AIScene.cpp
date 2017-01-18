@@ -5,13 +5,45 @@
 
 USING_NS_CC;
 
+/*
+* Create scene
+*/
+Scene * AIScene::createScene(Stage* stage)
+{
+	CCLOG("AIScene is created");
+	auto scene = Scene::create();
+	auto layer = AIScene::create(stage);
+	layer->setTag(0);
+	scene->addChild(layer);
+	return scene;
+}
+
+/*
+ * Constructor
+ */
+AIScene::AIScene()
+	: _stage(nullptr), _end_function(nullptr)
+{}
+
+/*
+ * Destructor
+ */
+AIScene::~AIScene()
+{
+	_stage = nullptr;
+	_end_function = nullptr;
+}
+
+/*
+ * Initialize
+ */
 bool AIScene::init(Stage * stage)
 {
 	if (!Layer::init())
 		return false;
 
 	stage->setScale(1.0f);
-	stage->initTileSearched(Owner::enemy);
+	stage->initStage(Owner::enemy);
 	this->addChild(stage);
 
 	// Set cover listener
@@ -28,17 +60,4 @@ bool AIScene::init(Stage * stage)
 	NULL));
 
 	return true;
-}
-
-/*
- * Create scene
- */
-Scene * AIScene::createScene(Stage* stage)
-{
-	CCLOG("AIScene is created");
-	auto scene = Scene::create();
-	auto layer = AIScene::create(stage);
-	layer->setTag(0);
-	scene->addChild(layer);
-	return scene;
 }

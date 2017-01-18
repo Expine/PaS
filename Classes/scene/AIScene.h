@@ -14,14 +14,8 @@ class AIScene : public cocos2d::Layer
 private:
 	Stage* _stage;
 protected:
-	AIScene()
-		: _stage(nullptr), _endFunction(nullptr)
-	{};
-	~AIScene()
-	{
-		_stage = nullptr;
-		_endFunction = nullptr;
-	}
+	AIScene();
+	virtual ~AIScene();
 	virtual bool init(Stage* stage);
 public:
 	static cocos2d::Scene* createScene(Stage* stage);
@@ -40,7 +34,7 @@ public:
 			return nullptr;
 		}
 	}
-	CC_SYNTHESIZE(std::function<void()>, _endFunction, EndFunction);
+	CC_SYNTHESIZE(std::function<void()>, _end_function, EndFunction);
 };
 
 #endif // __AI_SCENE_H__

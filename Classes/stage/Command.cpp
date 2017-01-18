@@ -1,5 +1,6 @@
 ﻿#include "Command.h"
 #include "entity/Entity.h"
+#include "entity/Weapon.h"
 #include "stage/Tile.h"
 #include "stage/Stage.h"
 #include "ai/Owner.h"
@@ -99,6 +100,9 @@ void command::forAllCity(std::function<void(Command, int)> func)
 	forDispatch(func);
 }
 
+/*
+ * Get command name
+ */
 const std::string command::getName(Command com)
 {
 	switch (com)
@@ -152,11 +156,20 @@ const std::string command::getName(Command com)
 	}
 };
 
-bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles)
+/*
+ * Check command enable
+ */
+bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles, Entity* enemy, WeaponData* weapon, std::vector<StageTile*> area)
 {
 	// Check unit can use this command
-	if (unit && !EntityInformation::getInstance()->getCommand(unit->getType(), com))
+	if (isUnitCommand(com) && (!unit || !EntityInformation::getInstance()->getCommand(unit->getType(), com)))
 		return false;
+
+	// Check city can use this command
+	auto city = util::findElement<StageTile*>(tiles, [](StageTile* tile){return util::instanceof<City>(tile);});
+	if (isCityCommand(com) && (!city || !TileInformation::getInstance()->getCommandEnable(util::instance<City>(city)->getTerrainType(), com)))
+		return false;
+
 
 	switch (com)
 	{
@@ -166,26 +179,9 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	case Command::move:
 		return unit && unit->getAffiliation() == Owner::player && unit->getState() < EntityState::moved;
 	case Command::attack:
-	{
-		if (!unit || unit->getState() == EntityState::acted || unit->getAffiliation() != Owner::player)
-			return false;
-
-		return unit->isAttakable();
-	}
+		return unit && unit->getAffiliation() == Owner::player && unit->getState() != EntityState::acted && unit->isAttakable();
 	case Command::occupation:
-	{
-		if (!unit || unit->getState() == EntityState::acted || unit->getAffiliation() != Owner::player)
-			return false;
-
-		auto stage = unit->getStage();
-		auto pos = unit->getTileCoordinate();
-		auto tiles = stage->getTiles(pos.x, pos.y);
-		for (auto t : tiles)
-			if (t->getTerrainType() == TerrainType::city || t->getTerrainType() == TerrainType::capital)
-				if (util::instance<City>(t)->getOwner() != Owner::player)
-					return true;
-		return false;
-	}
+		return unit && unit->getAffiliation() == Owner::player && unit->getState() != EntityState::acted && unit->isOcuppyable();
 	case Command::spec:
 		return true;
 	case Command::wait:
@@ -194,41 +190,23 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	// City Command
 	case Command::city_supply:
 	{
-		City* tile = nullptr;
-		for (auto t : tiles)
-			if (t && t->getId() && util::instanceof<City>(t))
-				tile = util::instance<City>(t);
-		if (!tile)
-			return false;
-		auto stage = tile->getStage();
-		auto unit = stage->getUnit(tile->getTileCoordinate());
-		if (unit && unit->getAffiliation() == Owner::player && unit->getState() == EntityState::none)
-			return true;
-		return false;
+		auto city = util::findElement<StageTile*>(tiles, [](StageTile* tile){return util::instanceof<City>(tile);});
+		return city && util::instance<City>(city)->isSuppliable();
 	}
 	case Command::deployment:
 	{
-		City* tile = nullptr;
-		for (auto t : tiles)
-			if (t && t->getId() && util::instanceof<City>(t))
-				tile = util::instance<City>(t);
-		if (!tile)
-			return false;
-		auto stage = tile->getStage();
-		auto unit = stage->getUnit(tile->getTileCoordinate());
-		return unit && unit->getAffiliation() == Owner::player && tile->getDeployersByRef().size() < tile->getMaxDeployer();
+		auto city = util::findElement<StageTile*>(tiles, [](StageTile* tile) {return util::instanceof<City>(tile); });
+		return city && util::instance<City>(city)->isDeployable();
 	}
 	case Command::dispatch:
 	{
-		City* tile = nullptr;
-		for (auto t : tiles)
-			if (t && t->getId() && util::instanceof<City>(t))
-				tile = util::instance<City>(t);
-		return tile && !unit && tile->getDeployersByRef().size() != 0;
+		auto city = util::findElement<StageTile*>(tiles, [](StageTile* tile) {return util::instanceof<City>(tile); });
+		return city && util::instance<City>(city)->isDispatchable();
 	}
 
 	// Move Command
 	case Command::move_start:
+		return util::find(area, tiles.front());
 	case Command::move_end:
 	case Command::move_decision:
 	case Command::move_cancel:
@@ -236,6 +214,7 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 
 	// Attack Command
 	case Command::attack_target:
+		return enemy;
 	case Command::attack_change:
 	case Command::attack_end:
 	case Command::attack_start:
@@ -270,4 +249,5 @@ bool command::isEnable(Command com, Entity * unit, std::vector<StageTile*> tiles
 	default:
 		return false;
 	}
+	return false;
 }

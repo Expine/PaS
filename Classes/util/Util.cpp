@@ -495,3 +495,14 @@ double util::getRand(double min, double max)
 	std::uniform_real_distribution<double> dist(min, max);
 	return dist(_mt);
 }
+
+/*
+ * Clone sprite batch node
+ */
+SpriteBatchNode * util::cloneBatch(SpriteBatchNode * ori, int tag)
+{
+	auto cl = SpriteBatchNode::createWithTexture(ori->getTexture());
+	if (tag != INT_MIN)
+		cl->setTag(tag);
+	return cl;
+}

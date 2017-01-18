@@ -3,19 +3,26 @@
 
 #include "cocos2d.h"
 
-#include "ai/Owner.h"
-
 class Stage;
 class WeaponData;
 class UnitLayer;
 class City;
 enum class Command;
+enum class Owner;
 
+/** Max value of duability for calculating force power*/
 constexpr int UNIT_MAX_DURABILITY = 10000;
+/** Max value of material for calculating force power*/
 constexpr int UNIT_MAX_MATERIAL = 10000;
+/** Max value of mobility for calculating force power*/
 constexpr int UNIT_MAX_MOBILITY = 100;
+/** Max value of searching ability for calculating force power*/
 constexpr int UNIT_MAX_SEARCHING = 10;
+/** Max value of defence for calculating force power*/
 constexpr int UNIT_MAX_DEFENCE = 100;
+
+/** When unit is deploied, add tag to it*/
+constexpr int DEPLOY_CONST = 100000000;
 
 /*********************************************************/
 
@@ -49,27 +56,35 @@ class EntityInformation
 {
 private:
 	std::map<EntityType, std::string> _name;
-	std::map<EntityType, int> _mobility;
+	std::map<EntityType, int> _durability;
 	std::map<EntityType, int> _material;
+	std::map<EntityType, int> _mobility;
 	std::map<EntityType, int> _search;
 	std::map<EntityType, int> _defence;
-	std::map<EntityType, int> _durability;
 	std::map<EntityType, std::map<Command, bool>> _unit_commands;
 protected:
 	EntityInformation();
 public:
+	/** Get instance for singleton*/
 	static EntityInformation* getInstance()
 	{
 		static EntityInformation info;
 		return &info;
 	};
+	/** Get base name*/
 	inline const std::string& getName(EntityType type) { return _name[type]; };
-	inline bool getCommand(EntityType type, Command command) { return _unit_commands[type].count(command) == 0 || _unit_commands[type][command]; };
-	inline int getMobility(EntityType type) { return _mobility[type]; };
-	inline int getMaterial(EntityType type) { return _material[type]; };
-	inline int getSearch(EntityType type) { return _search[type]; };
-	inline int getDefence(EntityType type) { return _defence[type]; };
+	/** Get base durability*/
 	inline int getDurability(EntityType type) { return _durability[type]; };
+	/** Get base material*/
+	inline int getMaterial(EntityType type) { return _material[type]; };
+	/** Get base mobility*/
+	inline int getMobility(EntityType type) { return _mobility[type]; };
+	/** Get base search*/
+	inline int getSearch(EntityType type) { return _search[type]; };
+	/** Get base defence*/
+	inline int getDefence(EntityType type) { return _defence[type]; };
+	/** Get whether command can be used. Available by default.*/
+	inline bool getCommand(EntityType type, Command command) { return _unit_commands[type].count(command) == 0 || _unit_commands[type][command]; };
 };
 
 /*********************************************************/
@@ -81,42 +96,46 @@ class Entity : public cocos2d::Sprite
 {
 protected:
 	std::vector<WeaponData*> _weapons;
-	Entity()
-		: _department(Department::soldier), _type(EntityType::infantry), _state(EntityState::none)
-		, _usingWeapon(0), _mobility(0), _material(0), _maxMaterial(0), _searchingAbility(0), _defence(0), _durability(0), _maxDurability(0)
-		, _searched(false)
-	{};
-	~Entity()
-	{
-		_usingWeapon = _mobility = _material = _maxMaterial = _searchingAbility = _defence = _durability = _maxDurability = 0;
-	};
+	Entity();
+	virtual ~Entity();
 public:
 	CREATE_FUNC(Entity);
 	CC_SYNTHESIZE(Owner, _affiliation, Affiliation);
-	inline Entity* setAffiliationRetThis(Owner owner) { _affiliation = owner; return this; };
 	CC_SYNTHESIZE_READONLY(EntityState, _state, State);
-	CC_SYNTHESIZE(EntityType, _type, Type);
 	CC_SYNTHESIZE(Department, _department, Department);
+	CC_SYNTHESIZE(EntityType, _type, Type);
 	CC_SYNTHESIZE(std::string, _name, EntityName);
-	CC_SYNTHESIZE(int, _usingWeapon, UsingWeapon);
-	CC_SYNTHESIZE(int, _mobility, Mobility);
+	CC_SYNTHESIZE(int, _durability, Durability);
+	CC_SYNTHESIZE(int, _max_durability, MaxDurability);
 	CC_SYNTHESIZE(int, _material, Material);
-	CC_SYNTHESIZE(int, _maxMaterial, MaxMaterial);
+	CC_SYNTHESIZE(int, _max_material, MaxMaterial);
+	CC_SYNTHESIZE(int, _mobility, Mobility);
 	CC_SYNTHESIZE(int, _searchingAbility, SearchingAbility);
 	CC_SYNTHESIZE(int, _defence, Defence);
-	CC_SYNTHESIZE(int, _durability, Durability);
-	CC_SYNTHESIZE(int, _maxDurability, MaxDurability);
+	CC_SYNTHESIZE(int, _using_weapon, UsingWeapon);
 	CC_SYNTHESIZE(bool, _searched, Searched);
-	static Entity* create(EntityType type, const int x, const int y, cocos2d::SpriteBatchNode* batch, Stage* stage);
-	UnitLayer* getUnitLayer();
+	static Entity* create(const EntityType type);
+	static Entity* create(const EntityType type, const cocos2d::Vec2 cor, Stage* stage);
+	void setBasicWeaponForDebug();
 
+	UnitLayer* getUnitLayer();
 	Stage* getStage();
-	cocos2d::Vec2 getTileCoordinate();
+
+	/** Get vector of weapons by reference*/
 	inline std::vector<WeaponData*>& getWeaponsByRef() { return _weapons; };
 
+	cocos2d::Vec2 getPositionAsTile();
 	bool isAttakable();
+	bool isOcuppyable();
+	/** Check whether this unit can be selected*/
+	inline bool isSelectable() { return getOpacity() != 0; };
+	bool isSelectableEnemy(Owner owner);
 
 	void attack(Entity* enemy, WeaponData* weapon);
+	float correctDamageByDepartment(Entity* enemy, WeaponData* weapon);
+	float correctDamageByType(Entity* enemy, WeaponData* weapon);
+	float correctDamageByHit(Entity* enemy, WeaponData* weapon, const float damage);
+	void damaged(float damage);
 	void occupy(City* city);
 
 	void setState(EntityState state);
@@ -137,6 +156,7 @@ protected:
 	}
 public:
 	CREATE_FUNC(Soldier);
+	CC_SYNTHESIZE(int, _occupation_ability, OccupationAbility);
 };
 
 class Wizard : public Entity
