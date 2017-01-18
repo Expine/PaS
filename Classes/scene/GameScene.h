@@ -44,7 +44,7 @@ private:
 	void onDoubleTapByMove(bool isSameUnit);
 	void onDoubleTapByMoving();
 	void onDoubleTapByAttack(bool isSameUnit);
-	void onDoubleTapByAttacking();
+	void onDoubleTapByAttacking(Entity* target);
 protected:
 	Game();
 	virtual ~Game();

@@ -918,9 +918,6 @@ void MenuLayer::hideCityCommand()
 
 	switch (_mode)
 	{
-	case MenuMode::none:
-		func = command::forCity;
-		break;
 	case MenuMode::city_supply:
 		hideCityCommandByOne(Command::city_supply);
 		func = command::forCitySupply;
@@ -932,6 +929,10 @@ void MenuLayer::hideCityCommand()
 	case MenuMode::dispatch:
 		func = command::forDispatch;
 		hideCityCommandByOne(Command::dispatch);
+		break;
+	case MenuMode::none:
+	default:
+		func = command::forCity;
 		break;
 
 	}

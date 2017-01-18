@@ -386,7 +386,8 @@ void Game::setOccupyFunction()
  void Game::onDoubleTap(Vec2 cor, std::vector<StageTile*> tiles)
 {
 	// Check tap same unit
-	bool isSameUnit = _select_unit && _select_unit == _stage->getUnit(cor);
+	 auto target = _stage->getUnit(cor);
+	bool isSameUnit = _select_unit && _select_unit == target;
 
 	// Call on tap function, set unit and tile
 	_stage->onTap(cor, tiles);
@@ -398,7 +399,7 @@ void Game::setOccupyFunction()
 	case MenuMode::move: onDoubleTapByMove(isSameUnit);		break;
 	case MenuMode::moving:	onDoubleTapByMoving();			break;
 	case MenuMode::attack:	onDoubleTapByAttack(isSameUnit);break;
-	case MenuMode::attacking:	onDoubleTapByAttacking();	break;
+	case MenuMode::attacking:	onDoubleTapByAttacking(target);	break;
 	case MenuMode::occupy:
 		callCommand(isSameUnit ? Command::occupation_start : Command::occupation_end);
 		break;
@@ -497,7 +498,7 @@ void Game::onDoubleTapByAttack(bool isSameUnit)
 	}
 
 	//When tap on targetable unit, targeting. If tap on out of range, end process
-	if (_select_unit && util::find<StageTile*, Entity*>(_select_area, _select_unit, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
+	if (_select_enemy && util::find<StageTile*, Entity*>(_select_area, _select_enemy, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
 		callCommand(Command::attack_target);
 	else if (!util::find(_select_area, _select_tiles.front()))
 		callCommand(Command::attack_end);
@@ -506,9 +507,9 @@ void Game::onDoubleTapByAttack(bool isSameUnit)
 /*
  * On double tap function when menu mode is attacking
  */
-void Game::onDoubleTapByAttacking()
+void Game::onDoubleTapByAttacking(Entity* target)
 {
-	if (_select_unit && util::find<StageTile*, Entity*>(_select_area, _select_unit, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
+	if (target && util::find<StageTile*, Entity*>(_select_area, target, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
 		callCommand(Command::attack_start);
 	else if (!util::find(_select_area, _select_tiles.front()))
 		callCommand(Command::attack_cancel);
