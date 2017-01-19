@@ -615,8 +615,7 @@ void MenuLayer::checkUnitCommand(Entity *entity, std::vector<StageTile*> tiles, 
 	case MenuMode::moving:
 	{
 		_command_frames[Command::move]->setColor(Color3B::GRAY);
-		// TODO Attack command when moving
-		_command_frames[Command::attack]->setColor(Color3B::GRAY);
+		_command_frames[Command::attack]->setColor(command::isEnable(Command::attack, entity, tiles, enemy, weapon, area) ? Color3B::WHITE : Color3B::GRAY);
 		func = command::forMove2;
 		break;
 	}

@@ -30,6 +30,7 @@ private:
 	void setMoveFunction();
 	void setAttackFunction();
 	void setOccupyFunction();
+	void setWaitFuction();
 
 	bool callCommand(Command com);
 	void setCursor(cocos2d::Vec2 cor);

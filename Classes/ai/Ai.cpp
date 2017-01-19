@@ -64,7 +64,7 @@ PlayerAI * PlayerAI::createAI(const std::string file)
 }
 
 /*
-* Get length
+* Get route to field
 */
 std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, BattleField * field)
 {
@@ -72,7 +72,7 @@ std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, BattleField * field)
 }
 
 /*
-* Get length
+* Get route to enemy
 */
 std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, Entity * enemy)
 {
@@ -83,7 +83,7 @@ std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, Entity * enemy)
 }
 
 /*
-* Get length
+* Get route to city
 */
 std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, City * city)
 {
@@ -148,7 +148,7 @@ void PlayerAI::searchBattleField()
  */
 void PlayerAI::recursiveSearchForBattleField(Entity * unit, BattleField* field)
 {
-	for (auto tile : _stage->startRecursiveTileSearch(unit->getPositionAsTile(), unit->getMobility() * (OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), _owner) ? _search_range_of_ally : _search_range_of_enemy), unit->getType(), true))
+	for (auto tile : _stage->startRecursiveTileSearch(unit->getPositionAsTile(), unit->getMobility() * (OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), _owner) ? _search_range_of_ally : _search_range_of_enemy), unit->getType(), true, true))
 	{
 		// Add element to field 
 		if (std::find(field->_tiles.begin(), field->_tiles.end(), tile) == field->_tiles.end())
@@ -352,35 +352,24 @@ float PlayerAI::evaluateSupply(Entity * unit)
  */
 float PlayerAI::evaluateBattleFieldAdvance(Entity * unit)
 {
+	// Near fields. range is about 316 pixcel
 	auto near_fields = std::vector<BattleFieldEvaluation>();
 	auto point = 0.0f;
-//	auto max = 0.0f;
-//	auto maxEval = 0.0f;
+
+	// Add list and sort by length. And filter by length
 	for (auto field : _battle_fields)
 		near_fields.push_back(BattleFieldEvaluation(field, (field->getCenter() - unit->getPosition()).getLengthSq()));
 	std::sort(near_fields.begin(), near_fields.end());
 	while (near_fields.size() > 3 && near_fields.back()._eval > 100000.0f)
 		near_fields.pop_back();
+
 	auto max = _stage->getMapSize().x + _stage->getMapSize().y;
-	/*
-	for (auto field : _battle_fields)
-	{
-		auto diff = (field->getCenter() - unit->getPosition()).getLengthSq();
-		auto eval = _battlefield_eval[field];
-		max = (max > diff) ? max : diff;
-		maxEval = (maxEval > eval) ? maxEval : eval;
-	}
-	*/
-	//	for (auto field : _battle_fields)
 	for (auto field : near_fields)
 	{
-//		auto diff = (field->getCenter() - unit->getPosition()).getLengthSq();
 		float diff = getRoute(unit, field._pointer).size();
 		auto x = diff / max;
 		float n = log(_battlefield_eval[field._pointer]) / log(0.5);
 		auto comp = pow((1.0f - pow(x, _battlefield_distance_dependence)), n) * pow(_battlefield_eval[field._pointer], _battlefield_importance_dependence);
-//		CCLOG("(%f, %f) -> (%f, %f) = %f, %f", unit->getPositionAsTile().x, unit->getPositionAsTile().y, _stage->getPositionAsTile(field._pointer->getCenter()).x, _stage->getPositionAsTile(field._pointer->getCenter()).y, diff, field._eval);
-
 		if (comp > point)
 		{
 			point = comp;

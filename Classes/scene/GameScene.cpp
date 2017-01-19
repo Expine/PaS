@@ -87,7 +87,34 @@ bool Game::init(Stage* stage)
 	_menu->setFunction(Command::nextUnit, [this] { setCursor(_stage->nextUnit(Owner::player, _select_unit)); });
 	// For debug
 	_menu->setFunction(Command::talkStaff, [this, ai] { ai->evaluate(); });
-	_menu->setFunction(Command::save, [this] {});
+	_menu->setFunction(Command::save, [this, ai] 
+	{
+		if (_select_unit)
+		{
+			auto s = Sprite::create();
+			s->setTag(100);
+			s->setColor(Color3B::BLACK);
+			s->setTextureRect(Rect(0, 0, 100, 100));
+			s->setPosition(Director::getInstance()->getWinSize().width / 2, Director::getInstance()->getWinSize().height / 2);
+			this->addChild(s);
+			auto y = -20;
+			for (auto value : { ai->evaluateSupply(_select_unit), ai->evaluateBattleFieldAdvance(_select_unit), ai->evaluateCityAdvance(_select_unit), ai->evaluateUnitAdvance(_select_unit) })
+			{
+				auto l = Label::createWithSystemFont(StringUtils::format("%f", value), "Arial", 20);
+				l->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
+				l->setPosition(0, y = y + 20);
+				s->addChild(l);
+			}
+			for (auto tile : ai->getAdvanceBattleField(_select_unit)->_tiles)
+				_stage->blinkTile(tile, Color3B::RED);
+			_stage->blinkTile(_stage->getTile(0, ai->getAdvanceUnit(_select_unit)->getPositionAsTile()), Color3B::BLUE);
+			_stage->blinkTile(ai->getAdvanceCity(_select_unit), Color3B::BLACK);
+		}
+		else
+		{
+			this->removeChildByTag(100);
+		}
+	});
 	_menu->setFunction(Command::load, [this] {});
 	_menu->setFunction(Command::option, [this] {});
 
@@ -104,21 +131,7 @@ bool Game::init(Stage* stage)
 	_menu->setFunction(Command::spec, [this] { _menu->showSpecFrame(_select_unit);});
 
 	// Wait function
-	_menu->setFunction(Command::wait, [this] { 
-		if (_menu->getMode() != MenuMode::none)
-			return;
-		_menu->setModeWithCheckAndMoveForUnit(MenuMode::wait, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area); 
-	});
-	_menu->setFunction(Command::wait_start, [this]
-	{
-		_select_unit->setState(EntityState::acted);
-		_menu->getFunction(Command::wait_end)();
-	});
-	_menu->setFunction(Command::wait_end, [this]
-	{
-		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
-		setCursor(_select_unit->getPositionAsTile());
-	});
+	setWaitFuction();
 
 	// City supply function
 	_menu->setFunction(Command::city_supply, [this] { 
@@ -179,7 +192,7 @@ bool Game::init(Stage* stage)
 		setCursor(_select_tiles.back()->getPositionAsTile());
 	});
 
-	stage->initStage(Owner::player);
+//	stage->initStage(Owner::player);
 
     return true;
 }
@@ -222,6 +235,7 @@ void Game::setMoveFunction()
 	_menu->setFunction(Command::move_cancel, [this]
 	{
 		_stage->provisionalMoveCancel(_select_unit);
+		_move_route.clear();
 		_menu->setModeWithCheckAndMoveForUnit(MenuMode::move, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
 	});
 }
@@ -234,14 +248,24 @@ void Game::setAttackFunction()
 	_menu->setFunction(Command::attack, [this]
 	{
 		if (_menu->getMode() != MenuMode::none)
-			return;
+			if (_menu->getMode() == MenuMode::moving)
+			{
+				for (auto tile : _select_area)
+					_stage->blinkOffTile(tile);
+				_select_area.clear();
+			}
+			else
+				return;
 		_menu->showWeaponFrame(_select_unit);
 		_stage->moveView(_select_unit);
 	});
 	_menu->attack_decision = [this](WeaponData* data)
 	{
 		_select_weapon = data;
+		auto keep = _move_route;
+		_move_route.clear();
 		_menu->attack_cancel(data);
+		_move_route = keep;
 		_menu->setModeWithCheckAndMoveForUnit(MenuMode::attack, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
 		_select_area.clear();
 		// Liner check
@@ -274,6 +298,12 @@ void Game::setAttackFunction()
 	{
 		_menu->hideEnemyUnit();
 		_menu->hideWeaponFrame();
+		if (_move_route.size() != 0)
+		{
+			_menu->getFunction(Command::move_cancel)();
+			_menu->setMode(MenuMode::none);
+			_menu->getFunction(Command::move)();
+		}
 	};
 	_menu->setFunction(Command::attack_target, [this]
 	{
@@ -289,7 +319,10 @@ void Game::setAttackFunction()
 	});
 	_menu->setFunction(Command::attack_change, [this]
 	{
+		auto keep = _move_route;
+		_move_route.clear();
 		_menu->getFunction(Command::attack_end)();
+		_move_route = keep;
 		_menu->getFunction(Command::attack)();
 	});
 	_menu->setFunction(Command::attack_end, [this]
@@ -303,6 +336,12 @@ void Game::setAttackFunction()
 			_stage->blinkOffUnit(_select_enemy);
 		_select_enemy = nullptr;
 		setCursor(_select_unit->getPositionAsTile());
+		if (_move_route.size() != 0)
+		{
+			_menu->getFunction(Command::move_cancel)();
+			_menu->setMode(MenuMode::none);
+			_menu->getFunction(Command::move)();
+		}
 	});
 	_menu->setFunction(Command::attack_start, [this]
 	{
@@ -312,8 +351,10 @@ void Game::setAttackFunction()
 			if (unit && unit->isSelectableEnemy(Owner::player))
 				_select_unit->attack(unit, _select_weapon);
 		}
-		_select_unit->setState(EntityState::acted);
+		if (_move_route.size() != 0)
+			_menu->getFunction(Command::move_decision)();
 		_menu->getFunction(Command::attack_end)();
+		_select_unit->setState(EntityState::acted);
 	});
 	_menu->setFunction(Command::attack_cancel, [this]
 	{
@@ -321,7 +362,10 @@ void Game::setAttackFunction()
 			_menu->getFunction(Command::attack_end)();
 		else
 		{
+			auto keep = _move_route;
+			_move_route.clear();
 			_menu->getFunction(Command::attack_end)();
+			_move_route = keep;
 			_menu->attack_decision(_select_weapon);
 		}
 	});
@@ -345,6 +389,28 @@ void Game::setOccupyFunction()
 		_menu->getFunction(Command::occupation_end)();
 	});
 	_menu->setFunction(Command::occupation_end, [this]
+	{
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+		setCursor(_select_unit->getPositionAsTile());
+	});
+}
+
+/*
+ * Set wait function
+ */
+void Game::setWaitFuction()
+{
+	_menu->setFunction(Command::wait, [this] {
+		if (_menu->getMode() != MenuMode::none)
+			return;
+		_menu->setModeWithCheckAndMoveForUnit(MenuMode::wait, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
+	});
+	_menu->setFunction(Command::wait_start, [this]
+	{
+		_select_unit->setState(EntityState::acted);
+		_menu->getFunction(Command::wait_end)();
+	});
+	_menu->setFunction(Command::wait_end, [this]
 	{
 		_menu->setModeWithCheckAndMoveForUnit(MenuMode::none, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
 		setCursor(_select_unit->getPositionAsTile());
