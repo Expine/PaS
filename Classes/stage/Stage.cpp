@@ -234,18 +234,21 @@ void Stage::addUnitForDebug()
 			continue;
 		if (!util::find(poses, pos))
 		{
-			setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 2]);
+//			setUnit(pos.x, pos.y, static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), names[i % 2]);
 			if (i % 2)
-				getUnit(pos.x, pos.y)->setColor(Color3B::RED);
+//				getUnit(pos.x, pos.y)->setColor(Color3B::RED);
 			poses.push_back(pos);
 		}
 	}
-	for (auto city : _cities[Owner::player])
-		for (int i = 0; i < city->getMaxDeployer() - 2; i++)
-		{
-			auto unit = setUnit(city->getPositionAsTile(), static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), city->getOwner());
-			deployUnit(unit, city);
-		}
+	for(auto pair : _cities)
+		for(auto city : pair.second)
+			for (int i = 0; i < city->getMaxDeployer() - 10; i++)
+			{
+				auto unit = setUnit(city->getPositionAsTile(), static_cast<EntityType>(std::rand() % static_cast<int>(EntityType::COUNT)), city->getOwner());
+				if (!OwnerInformation::getInstance()->isSameGroup(Owner::player, unit->getAffiliation()))
+					unit->setColor(Color3B::RED);
+				deployUnit(unit, city);
+			}
 }
 
 /*
@@ -431,6 +434,28 @@ int Stage::getUnitNumber()
 	for (auto pair : _units)
 		size += pair.second.size();
 	return size;
+}
+
+/*
+ * Cut route by unit mobility
+ */
+void Stage::cutRouteByMobility(Entity * unit, std::vector<StageTile*> &route)
+{
+	auto size = 0;
+	auto cost = 0;
+	auto it = route.rbegin();
+	for(auto it : route)
+	{
+		for (auto tile : getTiles(it->getPositionAsTile()))
+			cost += EntityToTile::getInstance()->getSearchCost(tile->getTerrainType(), unit->getType());
+		if (getUnit(it->getPositionAsTile()))
+			break;
+		if (cost > unit->getMobility())
+			break;
+		size++;
+	}
+	while (route.size() > size)
+		route.pop_back();
 }
 
 /********************************************************************************/
@@ -646,11 +671,26 @@ void Stage::initStage(Owner owner)
 					unit->setOpacity(255);
 				else
 					unit->setOpacity(0);
-				unit->setState(EntityState::none);
+				if(unit->getTag() > DEPLOY_CONST)
+					unit->setState(EntityState::supplied);
+				else
+					unit->setState(EntityState::none);
 
 			}
 		}
 	}
+	for(auto pair : _units)
+		for (auto unit : pair.second)
+		{
+			if (unit->getAffiliation() == owner)
+				unit->setOpacity(255);
+			else
+				unit->setOpacity(0);
+			if (unit->getTag() > DEPLOY_CONST)
+				unit->setState(EntityState::supplied);
+			else
+				unit->setState(EntityState::none);
+		}
 
 
 	for (auto city : _cities[owner])
@@ -930,13 +970,23 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchForWeapon(Entity* execute
  * A* algolism
  * return Start -> Goal route
  */
-std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector<StageTile*>& goals, Vec2 start, int limit, EntityType type)
+std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector<StageTile*>& goals, Vec2 start, int limit, EntityType type, bool isGetOnTheWay, bool isContainTileOnUnit, bool isContainStart, float limitation)
 {
 	// Calculate center position
 	auto center = Vec2::ZERO;
 	for (auto vec : goals)
 		center += vec->getPosition();
-	center = getPositionAsTile(center / goals.size());
+	center = center / goals.size();
+
+	// Check limitation
+	auto diff = (center - start).getLengthSq();
+	// Set center tile coordinate
+	if (diff > limitation)
+		center = getPositionAsTile(start + (center - start) * sqrt(limitation / diff));
+	else
+		center = getPositionAsTile(center);
+
+
 
 	// Get base data
 	auto openList = std::priority_queue<TilePointer, std::vector<TilePointer>, std::greater<TilePointer>>();
@@ -964,12 +1014,16 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector
 				auto target = targets.front();
 				if (target->getSearchState() == SearchState::none)
 				{
+
 					auto cost = 0;
-					auto dv = center - tile->getPositionAsTile();
-					int dx = (dv.x > 0) ? dv.x : -dv.x;
-					int dy = (dv.y > 0) ? dv.y : -dv.y;
 					for (auto t : targets)
 						cost += EntityToTile::getInstance()->getSearchCost(t->getTerrainType(), type);
+					if (!isContainTileOnUnit)
+						if (getUnit(target->getPositionAsTile()))
+							cost += 100;
+					auto dv = center - tile->getPositionAsTile();
+					int dx = (dv.x > 0 ? dv.x : -dv.x) * 2;
+					int dy = (dv.y > 0 ? dv.y : -dv.y) / 2;
 					target->setActualCost(cost + tile->getActualCost());
 					target->setHeuristicCost((dx > dy) ? dx : dy);
 					target->setParentNode(tile);
@@ -988,6 +1042,39 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector
 			break;
 	}
 
+	auto result = std::vector<StageTile*>();
+	if (!isGetOnTheWay && tile->getActualCost() > limit)
+	{
+		// Initialize
+		for (auto t : closeList)
+		{
+			t->setSearchState(SearchState::none);
+			t->setActualCost(0);
+		}
+		while (!openList.empty())
+		{
+			openList.top()._pointer->setSearchState(SearchState::none);
+			openList.top()._pointer->setActualCost(0);
+			openList.pop();
+		}
+
+		return result;
+	}
+
+	while (tile)
+	{
+		result.push_back(tile);
+		tile = tile->getParentNode();
+	}
+
+	if (!isContainStart)
+		result.pop_back();
+
+	std::reverse(result.begin(), result.end());
+
+	while (!result.empty() && result.back()->getActualCost() > limit)
+		result.pop_back();
+
 	// Initialize
 	for (auto t : closeList)
 	{
@@ -1001,17 +1088,6 @@ std::vector<StageTile*> Stage::startRecursiveTileSearchByAstar(const std::vector
 		openList.pop();
 	}
 
-	auto result = std::vector<StageTile*>();
-	if (tile->getActualCost() > limit)
-		return result;
-
-	while (tile)
-	{
-		result.push_back(tile);
-		tile = tile->getParentNode();
-	}
-
-	std::reverse(result.begin(), result.end());
 	return result;
 }
 
@@ -1147,7 +1223,16 @@ void Stage::dispatchUnit(Entity * unit, City * city)
 {
 	moveUnitPositionAsTile(city->getPositionAsTile(), unit);
 	unit->setVisible(true);
+	unit->setOpacity(255);
 	city->removeDeployer(unit);
+}
+
+void Stage::dispatchUnit(Entity * unit)
+{
+	auto city = util::findElement<StageTile*>(getTiles(unit->getPositionAsTile()), [](StageTile* tile) {return util::instanceof<City>(tile); });
+
+	if (city)
+		dispatchUnit(unit, util::instance<City>(city));
 }
 
 

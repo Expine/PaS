@@ -35,8 +35,9 @@ Vec2 BattleField::getCenter()
  * Constructor
  */
 PlayerAI::PlayerAI()
-	: _mapMaxLength(-1.0f), _stage(nullptr)
-	, _search_range_of_ally(1.0f), _search_range_of_enemy(1.0f)
+	: _map_max_length(-1.0f), _stage(nullptr)
+	, _searce_range_correctly(100000.0f)
+	, _search_range_of_battlefield(1.0f)
 	, _battlefield_distance_dependence(0.1f), _battlefield_importance_dependence(0.05f)
 	, _unit_distance_dependence(0.1f), _unit_importance_dependence(0.05f)
 	, _city_distance_dependence(0.1f), _city_importance_dependence(0.05f)
@@ -68,7 +69,7 @@ PlayerAI * PlayerAI::createAI(const std::string file)
 */
 std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, BattleField * field)
 {
-	return _stage->startRecursiveTileSearchByAstar(field->_tiles, unit->getPositionAsTile(), 100, unit->getType());
+	return _stage->startRecursiveTileSearchByAstar(field->_tiles, unit->getPositionAsTile(), 100, unit->getType(), true, false, false, _searce_range_correctly);
 }
 
 /*
@@ -79,7 +80,7 @@ std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, Entity * enemy)
 	auto tile = _stage->getTiles(enemy->getPositionAsTile()).front();
 	auto tiles = std::vector<StageTile*>();
 	tiles.push_back(tile);
-	return _stage->startRecursiveTileSearchByAstar(tiles, unit->getPositionAsTile(), 100, unit->getType());
+	return _stage->startRecursiveTileSearchByAstar(tiles, unit->getPositionAsTile(), 100, unit->getType(), true, false, false, _searce_range_correctly);
 }
 
 /*
@@ -90,7 +91,7 @@ std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, City * city)
 	auto tile = _stage->getTiles(city->getPositionAsTile()).front();
 	auto tiles = std::vector<StageTile*>();
 	tiles.push_back(tile);
-	return _stage->startRecursiveTileSearchByAstar(tiles, unit->getPositionAsTile(), 100, unit->getType());
+	return _stage->startRecursiveTileSearchByAstar(tiles, unit->getPositionAsTile(), 100, unit->getType(), true, false, false, _searce_range_correctly);
 }
 
 /*
@@ -98,11 +99,11 @@ std::vector<StageTile*> PlayerAI::getRoute(Entity * unit, City * city)
  */
 float PlayerAI::getMapMaxLength()
 {
-	if (_mapMaxLength > 0.0f)
-		return _mapMaxLength;
+	if (_map_max_length > 0.0f)
+		return _map_max_length;
 
-	_mapMaxLength = Vec2(_stage->getMapSize().x * _stage->getChipSize().x, _stage->getMapSize().y * _stage->getChipSize().y).getLengthSq();
-	return _mapMaxLength;
+	_map_max_length = Vec2(_stage->getMapSize().x * _stage->getChipSize().x, _stage->getMapSize().y * _stage->getChipSize().y).getLengthSq();
+	return _map_max_length;
 }
 
 /*
@@ -127,20 +128,20 @@ void PlayerAI::searchBattleField()
 	auto units = _stage->getUnits(_owner);
 	for (auto unit : units)
 	{
-		if (!unit->getSearched())
+		if (!unit->getReserved())
 		{
 			auto field = BattleField::create();
 			for(auto tile : _stage->getTiles(unit->getPositionAsTile()))
 				field->_tiles.push_back(tile);
 			field->_units.push_back(unit);
-			unit->setSearched(true);
+			unit->setReserved(true);
 			recursiveSearchForBattleField(unit, field);
 			if (field->_units.size() > 1)
 				_battle_fields.pushBack(field);
 		}
 	}
 	for (auto unit : units)
-		unit->setSearched(false);
+		unit->setReserved(false);
 }
 
 /*
@@ -148,17 +149,17 @@ void PlayerAI::searchBattleField()
  */
 void PlayerAI::recursiveSearchForBattleField(Entity * unit, BattleField* field)
 {
-	for (auto tile : _stage->startRecursiveTileSearch(unit->getPositionAsTile(), unit->getMobility() * (OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), _owner) ? _search_range_of_ally : _search_range_of_enemy), unit->getType(), true, true))
+	for (auto tile : _stage->startRecursiveTileSearch(unit->getPositionAsTile(), unit->getMobility() * _search_range_of_battlefield, unit->getType(), true, true))
 	{
 		// Add element to field 
 		if (std::find(field->_tiles.begin(), field->_tiles.end(), tile) == field->_tiles.end())
 			field->_tiles.push_back(tile);
 		auto enemy = _stage->getUnit(tile->getPositionAsTile());
-		if (enemy && !OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), enemy->getAffiliation()))
+		if (enemy && enemy->isSelectableEnemy(unit->getAffiliation()))
 		{
 			// Set searched
 			if(enemy->getAffiliation() == _owner)
-				enemy->setSearched(true);
+				enemy->setReserved(true);
 			if (std::find(field->_units.begin(), field->_units.end(), enemy) == field->_units.end())
 			{
 				// Add element to field 
@@ -175,59 +176,194 @@ void PlayerAI::recursiveSearchForBattleField(Entity * unit, BattleField* field)
  */
 void PlayerAI::execute()
 {
-	// Search battle field
-	searchBattleField();
+	// Evaluate
+	evaluate();
 
-	// Calculate unit evaluation
-	for (auto pair : _stage->getUnits())
-		for (auto unit : pair.second)
-			_unit_eval[unit] = evaluateUnit(unit);
-
-	// Calculate city evaluation
-	for (auto pair : _stage->getCities())
-		for (auto city : pair.second)
-			_city_eval[city] = evaluateCity(city);
-
-	// Calculate battlefield situation
-	for (auto field : _battle_fields)
-		_battlefield_situation[field] = evaluateBattleFieldSituation(field);
-
-	// Calculate battlefield evaluation
-	for (auto field : _battle_fields)
-		_battlefield_eval[field] = evaluateBattleField(field);
+	_executes.push_back([this] { for (auto unit : _stage->getUnits(_owner)) unit->setReserved(false); });
 
 	//Protect city
 	for (auto city : _stage->getCities(_owner))
+		protectCity(city);
+
+	//Act on battlefield
+	for (auto field : _battle_fields)
+		_executes.push_back(std::bind(&PlayerAI::actOnButtlefield, this, field));
+//		actOnButtlefield(field);
+
+	//Act not on battlefield
+	auto units = _stage->getUnits(_owner);
+	std::sort(units.begin(), units.end(), [this](const Entity* a, const Entity* b) 
+	{ 
+		return a->getPosition() == b->getPosition() ? a->getMobility() < b->getMobility() : (a->getPosition() - getCapital(_owner)->getPosition()).getLengthSq() < (b->getPosition() - getCapital(_owner)->getPosition()).getLengthSq();
+	});
+	for (auto unit : units)
+		if (!unit->getReserved())
+			_executes.push_back(std::bind(&PlayerAI::actOnNotButtlefield, this, unit));
+//			actOnNotButtlefield(unit);
+
+}
+
+/*
+ * Protect city turn
+ */
+void PlayerAI::protectCity(City* city)
+{
+	// Search enemy
+	auto tiles = _stage->startRecursiveTileSearch(city->getPositionAsTile(), _city_guard_area, EntityType::counter, true, true);
+	auto enemies = std::vector<Entity*>();
+	for (auto tile : tiles)
 	{
-		// Search enemy
-		auto enemies = std::vector<Entity*>();
-		for (auto tile : _stage->startRecursiveTileSearch(city->getPositionAsTile(), _city_guard_area, EntityType::counter, true))
-		{
-			auto unit = _stage->getUnit(tile->getPositionAsTile());
-			if (unit && !OwnerInformation::getInstance()->isSameGroup(unit->getAffiliation(), _owner))
-				enemies.push_back(unit);
-		}
-
-		// Evaluate unit
-		auto units = std::priority_queue<UnitEvaluation, std::vector<UnitEvaluation>, std::greater<UnitEvaluation>>();
-		for (auto unit : _stage->getUnits(_owner))
-			units.push(UnitEvaluation(unit, evaluateGuard(unit, city)));
-		auto point = _city_eval[city] * _city_guard_number;
-		while (point > 0.0f)
-		{
-			auto unit = units.top()._pointer;
-			for (auto enemy : enemies)
-			{
-				auto route = _stage->startRecursiveTileSearchByAstar(_stage->getTiles(enemy->getPositionAsTile()).front(), unit->getPositionAsTile(), unit->getMobility(), unit->getType());
-				if (route.size() > 0)
-				{
-					route.pop_back();
-					_stage->moveUnit(unit, route);
-				}
-			}
-		}		
-
+		auto unit = _stage->getUnit(tile->getPositionAsTile());
+		if (unit && unit->isSelectableEnemy(_owner))
+			enemies.push_back(unit);
 	}
+
+	// Evaluate unit
+	auto units = std::priority_queue<PointerEvaluation<Entity>, std::vector<PointerEvaluation<Entity>>, std::greater<PointerEvaluation<Entity>>>();
+	for (auto unit : _stage->getUnits(_owner))
+		units.push(PointerEvaluation<Entity>(unit, evaluateGuard(unit, city)));
+
+	// Reserve unit or battle
+	auto point = _city_eval[city] * _city_guard_number;
+	while (point > 0.0f)
+	{
+		auto unit = units.top()._pointer;
+		units.pop();
+		point -= _unit_eval[unit];
+		// If unit can attack enemy, do it
+		for (auto enemy : enemies)
+		{
+			auto route = _stage->startRecursiveTileSearchByAstar(_stage->getTiles(enemy->getPositionAsTile()).front(), unit->getPositionAsTile(), unit->getMobility(), unit->getType());
+			if (route.size() > 0)
+			{
+				// Dispatch
+				if (unit->isDeployer())
+					_stage->dispatchUnit(unit, city);
+				_stage->moveUnit(unit, route);
+				_stage->moveUnitPositionAsTile(route.back()->getPositionAsTile(), unit);
+				unit->setReserved(true);
+				break;
+			}
+		}
+		// If not, reserve guard
+		if (unit->getState() != EntityState::acted)
+		{
+			_city_protect_units[city].push_back(unit);
+			unit->setReserved(true);
+		}
+	}
+}
+
+/*
+ * Act on battlefield
+ */
+void PlayerAI::actOnButtlefield(BattleField * field)
+{
+	for (auto unit : field->_units)
+	{
+		if (unit->getReserved())
+			continue;
+		float supply = evaluateSupply(unit);
+		float ad_battle = evaluateBattleFieldAdvance(unit);
+		float ad_city = evaluateCityAdvance(unit);
+		float ad_unit = evaluateUnitAdvance(unit);
+
+		if (supply > ad_battle && supply > ad_city && supply > ad_unit)
+			goToCity(unit, _supply_city[unit], true, false);
+		else if (ad_city > ad_battle && ad_city > ad_unit)
+			goToCity(unit, _advance_city[unit], false, true);
+		else if (ad_unit > ad_battle)
+			goToUnit(unit, _advance_unit[unit]);
+		else if (_advance_battlefield[unit] == field)
+			attackNearBy(unit, field);
+		else
+			goToBattleField(unit, _advance_battlefield[unit]);
+	}
+}
+
+/*
+ * Unit on not battlefield act 
+ */
+void PlayerAI::actOnNotButtlefield(Entity * unit)
+{
+	float supply = evaluateSupply(unit);
+	float ad_battle = evaluateBattleFieldAdvance(unit);
+	float ad_city = evaluateCityAdvance(unit);
+	float ad_unit = evaluateUnitAdvance(unit);
+
+	if (supply > ad_battle && supply > ad_city && supply > ad_unit)
+		goToCity(unit, _supply_city[unit], true, false);
+	else if (ad_city > ad_battle && ad_city > ad_unit)
+		goToCity(unit, _advance_city[unit], false, true);
+	else if (ad_unit > ad_battle)
+		goToUnit(unit, _advance_unit[unit]);
+	else
+		goToBattleField(unit, _advance_battlefield[unit]);
+
+}
+
+/*
+ * Unit go to battlefield
+ */
+void PlayerAI::goToBattleField(Entity * unit, BattleField * field)
+{
+	// Dispatch
+	if (unit->isDeployer())
+		_stage->dispatchUnit(unit);
+	auto route = _stage->startRecursiveTileSearchByAstar(field->_tiles, unit->getPositionAsTile(), unit->getMobility(), unit->getType(), true);
+	_stage->moveUnit(unit, route);
+	_stage->moveUnitPositionAsTile(route.back()->getPositionAsTile(), unit);
+	unit->setReserved(true);
+}
+
+/*
+ * Unit go to city
+ */
+void PlayerAI::goToCity(Entity * unit, City * city, bool isSupply, bool isOccupy)
+{
+	// Dispatch
+	if (unit->isDeployer())
+		_stage->dispatchUnit(unit);
+	auto route = isSupply ? _stage->startRecursiveTileSearchByAstar(_stage->getTiles(city->getPositionAsTile()).front(), unit->getPositionAsTile(), unit->getMobility(), unit->getType(), true) : _advance_city_route[unit];
+	_stage->cutRouteByMobility(unit, route);
+	if (route.size() > 1)
+	{
+		Vector<FiniteTimeAction*> acts;
+		auto i = 0;
+		for (auto t : route)
+			if (i++ > 0)
+				acts.pushBack(Sequence::create(
+					MoveTo::create(0.5f, _stage->getPositionByTile(t->getPositionAsTile()) + Vec2(_stage->getChipSize().x / 2, 0)),
+					NULL));
+		unit->runAction(Sequence::create(acts));
+		_stage->moveUnitPositionAsTile(route.back()->getPositionAsTile(), unit, true);
+		/**/
+		_stage->moveUnit(unit, route);
+		_stage->moveView(unit);
+		unit->setReserved(true);
+	}
+}
+
+/*
+ * Unit go to unit
+ */
+void PlayerAI::goToUnit(Entity * unit, Entity * target)
+{
+	// Dispatch
+	if (unit->isDeployer())
+		_stage->dispatchUnit(unit);
+	auto route = _stage->startRecursiveTileSearchByAstar(_stage->getTiles(target->getPositionAsTile()).front(), unit->getPositionAsTile(), unit->getMobility(), unit->getType(), true);
+	_stage->moveUnit(unit, route);
+	_stage->moveUnitPositionAsTile(route.back()->getPositionAsTile(), unit);
+	unit->setReserved(true);
+}
+
+/*
+ * Unit attack near enemy
+ */
+//TODO UNIMPLEMENT
+void PlayerAI::attackNearBy(Entity * unit, BattleField * field)
+{
 }
 
 /*
@@ -256,29 +392,6 @@ void PlayerAI::evaluate()
 	for (auto field : _battle_fields)
 		_battlefield_eval[field] = evaluateBattleField(field);
 
-	// Calculate point
-	for (auto unit : _stage->getUnits(_owner))
-	{
-		float supply = evaluateSupply(unit);
-		float ad_battle = evaluateBattleFieldAdvance(unit);
-		float ad_city = evaluateCityAdvance(unit);
-		float ad_unit = evaluateUnitAdvance(unit);
-
-		CCLOG("%s(%f, %f) -> (Supply)%f : (Battle)%f[%p] : (City)%f[%p] : (Unit)%f[%p]", unit->getName().c_str(), unit->getPositionAsTile().x, unit->getPositionAsTile().y, supply, ad_battle,_advance_battlefield[unit], ad_city, _advance_city[unit], ad_unit, _advance_unit[unit]);
-	}
-
-	// Evaluate each battlefield
-	/*
-	for (auto pair : util::sortMap<BattleField*, float>(_battlefield_eval))
-	{
-		auto field = pair.first;
-		for (auto unit : field->_units)
-		{
-
-		}
-	}
-	*/
-
 	/*
 	for (auto pair : _unit_eval)
 	{
@@ -288,6 +401,7 @@ void PlayerAI::evaluate()
 		_stage->addChild(label);
 	}
 	*/
+	/*
 	for (auto pair : _city_eval)
 	{
 		auto label = Label::createWithSystemFont(StringUtils::format("%f", pair.second), "Arial", 10);
@@ -310,6 +424,7 @@ void PlayerAI::evaluate()
 		_stage->addChild(label);
 		count++;
 	}
+	*/
 }
 
 /*
@@ -324,6 +439,7 @@ void PlayerAI::evaluate()
  *			: If force and resources are both full, supply point is zero.
  *			: If distance is zero, supply point is zero.
  */
+//TODO RE-THINKIN
 float PlayerAI::evaluateSupply(Entity * unit)
 {
 	auto chipSize = _stage->getChipSize();
@@ -333,7 +449,11 @@ float PlayerAI::evaluateSupply(Entity * unit)
 	for (auto city : _stage->getCities(_owner))
 	{
 		auto diff = (city->getPosition() - unit->getPosition() + Vec2(chipSize.x / 2, 0)).getLengthSq();
-		distance = (distance > diff) ? diff : distance;
+		if (diff > distance)
+		{
+			distance = diff;
+			_supply_city[unit] = city;
+		}
 	}
 	distance /= getMapMaxLength();
 	distance = pow(distance, 0.05f * _supply_distance_dependence);
@@ -353,27 +473,28 @@ float PlayerAI::evaluateSupply(Entity * unit)
 float PlayerAI::evaluateBattleFieldAdvance(Entity * unit)
 {
 	// Near fields. range is about 316 pixcel
-	auto near_fields = std::vector<BattleFieldEvaluation>();
+	auto near_fields = std::vector<PointerEvaluation<BattleField>>();
 	auto point = 0.0f;
 
 	// Add list and sort by length. And filter by length
 	for (auto field : _battle_fields)
-		near_fields.push_back(BattleFieldEvaluation(field, (field->getCenter() - unit->getPosition()).getLengthSq()));
+		near_fields.push_back(PointerEvaluation<BattleField>(field, (field->getCenter() - unit->getPosition()).getLengthSq()));
 	std::sort(near_fields.begin(), near_fields.end());
-	while (near_fields.size() > 3 && near_fields.back()._eval > 100000.0f)
+	while (near_fields.size() > 3 && (near_fields.size() > 5 ||  near_fields.back()._eval > _searce_range_correctly))
 		near_fields.pop_back();
 
 	auto max = _stage->getMapSize().x + _stage->getMapSize().y;
 	for (auto field : near_fields)
 	{
-		float diff = getRoute(unit, field._pointer).size();
-		auto x = diff / max;
+		auto route = getRoute(unit, field._pointer);
+		auto x = route.size() / max;
 		float n = log(_battlefield_eval[field._pointer]) / log(0.5);
 		auto comp = pow((1.0f - pow(x, _battlefield_distance_dependence)), n) * pow(_battlefield_eval[field._pointer], _battlefield_importance_dependence);
 		if (comp > point)
 		{
 			point = comp;
 			_advance_battlefield[unit] = field._pointer;
+			_advance_battlefield_route[unit] = route;
 		}
 	}
 	return point;
@@ -390,33 +511,33 @@ float PlayerAI::evaluateBattleFieldAdvance(Entity * unit)
  */
 float PlayerAI::evaluateUnitAdvance(Entity * unit)
 {
+	// Near units. range is about 316 pixcel
+	auto near_units = std::vector<PointerEvaluation<Entity>>();
 	auto point = 0.0f;
-	auto max = 0.0f;
-	auto maxEval = 0.0f;
-	for (auto pair : _stage->getUnits())
-		for (auto enemy : pair.second)
-			if (!OwnerInformation::getInstance()->isSameGroup(enemy->getAffiliation(), _owner))
-			{
-				auto diff = (enemy->getPosition() - unit->getPosition()).getLengthSq();
-				auto eval = _unit_eval[enemy];
-				max = (max > diff) ? max : diff;
-				maxEval = (maxEval > eval) ? maxEval : eval;
-			}
-	for (auto pair : _stage->getUnits())
-		for (auto enemy : pair.second)
-			if (!OwnerInformation::getInstance()->isSameGroup(enemy->getAffiliation(), _owner))
-			{
-				auto diff = (enemy->getPosition() - unit->getPosition()).getLengthSq();
-				auto x = diff / max;
-				float n = log(_unit_eval[enemy]) / log(0.5);
-				auto comp = pow((1.0f - pow(x, _unit_distance_dependence)), n) * pow(_unit_eval[enemy] / maxEval, _unit_importance_dependence);
 
-				if (comp > point)
-				{
-					point = comp;
-					_advance_unit[unit] = enemy;
-				}
-			}
+	// Add list and sort by length. And filter by length
+	for (auto pair : _stage->getUnits())
+		for(auto enemy : pair.second)
+			if (enemy->isSelectableEnemy(_owner))
+				near_units.push_back(PointerEvaluation<Entity>(enemy, (enemy->getPosition() - unit->getPosition()).getLengthSq()));
+	std::sort(near_units.begin(), near_units.end());
+	while (near_units.size() > 1 && (near_units.size() > 3 || near_units.back()._eval > _searce_range_correctly))
+		near_units.pop_back();
+
+	auto max = _stage->getMapSize().x + _stage->getMapSize().y;
+	for (auto enemy : near_units)
+	{
+		auto route = getRoute(unit, enemy._pointer);
+		auto x = route.size() / max;
+		float n = log(_unit_eval[enemy._pointer]) / log(0.5);
+		auto comp = pow((1.0f - pow(x, _unit_distance_dependence)), n) * pow(_unit_eval[enemy._pointer], _unit_importance_dependence);
+		if (comp > point)
+		{
+			point = comp;
+			_advance_unit[unit] = enemy._pointer;
+			_advance_unit_route[unit] = route;
+		}
+	}
 	return point;
 }
 
@@ -431,33 +552,35 @@ float PlayerAI::evaluateUnitAdvance(Entity * unit)
  */
 float PlayerAI::evaluateCityAdvance(Entity * unit)
 {
+	// Near cities. range is about 316 pixcel
+	auto near_cities = std::vector<PointerEvaluation<City>>();
 	auto point = 0.0f;
-	auto max = 0.0f;
-	auto maxEval = 0.0f;
-	for (auto pair : _stage->getCities())
-		for (auto city : pair.second)
-			if (!OwnerInformation::getInstance()->isSameGroup(city->getOwner(), _owner))
-			{
-				auto diff = (city->getPosition() - unit->getPosition()).getLengthSq();
-				auto eval = _city_eval[city];
-				max = (max > diff) ? max : diff;
-				maxEval = (maxEval > eval) ? maxEval : eval;
-			}
-	for (auto pair : _stage->getCities())
-		for (auto city : pair.second)
-			if (!OwnerInformation::getInstance()->isSameGroup(city->getOwner(), _owner))
-			{
-				auto diff = (city->getPosition() - unit->getPosition()).getLengthSq();
-				auto x = diff / max;
-				float n = log(_city_eval[city]) / log(0.5);
-				auto comp = pow((1.0f - pow(x, _city_distance_dependence)), n) * pow(_city_eval[city] / maxEval, _city_importance_dependence);
 
-				if (comp > point)
-				{
-					point = comp;
-					_advance_city[unit] = city;
-				}
-			}
+	// Add list and sort by length. And filter by length
+	for (auto pair : _stage->getCities())
+		for (auto city : pair.second)
+			if (!OwnerInformation::getInstance()->isSameGroup(city->getOwner(), _owner))
+				near_cities.push_back(PointerEvaluation<City>(city, (city->getPosition() - unit->getPosition()).getLengthSq()));
+	std::sort(near_cities.begin(), near_cities.end());
+	while (near_cities.size() > 1 && (near_cities.size() > 3 || near_cities.back()._eval > _searce_range_correctly))
+		near_cities.pop_back();
+
+	auto max = _stage->getMapSize().x + _stage->getMapSize().y;
+	for (auto city : near_cities)
+	{
+		auto route = getRoute(unit, city._pointer);
+		auto x = route.size() / max;
+		float n = log(_city_eval[city._pointer]) / log(0.5);
+		auto comp = pow((1.0f - pow(x, _city_distance_dependence)), n) * pow(_city_eval[city._pointer], _city_importance_dependence);
+
+		if (comp > point)
+		{
+			point = comp;
+			_advance_city[unit] = city._pointer;
+			_advance_city_route[unit] = route;
+		}
+	}
+
 	return point;
 }
 
@@ -470,7 +593,9 @@ float PlayerAI::evaluateCityAdvance(Entity * unit)
  */
 float PlayerAI::evaluateGuard(Entity * unit, City* city)
 {
-	return 0.0f;
+	auto distance = (unit->getPosition() - city->getPosition()).getLengthSq();
+
+	return 1.0f - distance / getMapMaxLength();
 }
 
 /*

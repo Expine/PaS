@@ -44,7 +44,7 @@ enum class EntityType
 /** Unit state*/
 enum class EntityState
 {
-	none, supplied, moved, acted
+	none, supplied, moved, acted,
 };
 
 /*********************************************************/
@@ -113,7 +113,7 @@ public:
 	CC_SYNTHESIZE(int, _searchingAbility, SearchingAbility);
 	CC_SYNTHESIZE(int, _defence, Defence);
 	CC_SYNTHESIZE(int, _using_weapon, UsingWeapon);
-	CC_SYNTHESIZE(bool, _searched, Searched);
+	CC_SYNTHESIZE(bool, _reserved, Reserved);
 	static Entity* create(const EntityType type);
 	static Entity* create(const EntityType type, const cocos2d::Vec2 cor, Stage* stage);
 	void setBasicWeaponForDebug();
@@ -128,8 +128,9 @@ public:
 	bool isAttakable();
 	bool isOcuppyable();
 	/** Check whether this unit can be selected*/
-	inline bool isSelectable() { return getOpacity() != 0; };
+	inline bool isSelectable() { return getOpacity() != 0 && isVisible(); };
 	bool isSelectableEnemy(Owner owner);
+	inline bool isDeployer() { return getTag() > DEPLOY_CONST; };
 
 	void attack(Entity* enemy, WeaponData* weapon);
 	float correctDamageByDepartment(Entity* enemy, WeaponData* weapon);

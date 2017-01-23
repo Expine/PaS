@@ -127,6 +127,7 @@ public:
 	inline std::vector<Entity*>& getUnits(Owner owner) { return _units[owner]; }
 	inline std::map<Owner, std::vector<Entity*>>& getUnits() { return _units; }
 	int getUnitNumber();
+	void cutRouteByMobility(Entity* unit, std::vector<StageTile*> &route);
 
 	/** Function to operate tile **/
 	/** Get tile by x, y, layer number*/
@@ -166,12 +167,12 @@ public:
 	std::vector<StageTile*> startRecursiveTileSearchForLiner(cocos2d::Vec2 point, int remainCost);
 	std::vector<StageTile*> recursiveTileSearchForLiner(cocos2d::Vec2 intrusion, cocos2d::Vec2 point, int remainCost);
 	std::vector<StageTile*> startRecursiveTileSearchForWeapon(Entity* executer, Entity* enemy, WeaponData* weapon);
-	std::vector<StageTile*> startRecursiveTileSearchByAstar(const std::vector<StageTile*>& goals, cocos2d::Vec2 start, int limit, EntityType type);
-	inline std::vector<StageTile*> startRecursiveTileSearchByAstar(StageTile* goal, cocos2d::Vec2 start, int limit, EntityType type)
+	std::vector<StageTile*> startRecursiveTileSearchByAstar(const std::vector<StageTile*>& goals, cocos2d::Vec2 start, int limit, EntityType type, bool isGetOnTheWay = false, bool isContainTileOnUnit = false, bool isContainStart = true, float limitation = FLT_MAX);
+	inline std::vector<StageTile*> startRecursiveTileSearchByAstar(StageTile* goal, cocos2d::Vec2 start, int limit, EntityType type, bool isGetOnTheWay = false, bool isContainTileOnUnit = false, bool isContainStart = true, float limitation = FLT_MAX)
 	{
 		auto v = std::vector<StageTile*>();
 		v.push_back(goal);
-		return startRecursiveTileSearchByAstar(v, start, limit, type);
+		return startRecursiveTileSearchByAstar(v, start, limit, type, isGetOnTheWay, isContainTileOnUnit, isContainStart, limitation);
 	};
 
 	/** Function to implement command **/
@@ -185,6 +186,7 @@ public:
 
 	void deployUnit(Entity* unit, City* city);
 	void dispatchUnit(Entity* unit, City* city);
+	void dispatchUnit(Entity* unit);
 
 	cocos2d::Node* renderForAIScene();
 

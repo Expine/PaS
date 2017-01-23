@@ -86,34 +86,10 @@ bool Game::init(Stage* stage)
 	// TODO IF MenuMode is not none, command change
 	_menu->setFunction(Command::nextUnit, [this] { setCursor(_stage->nextUnit(Owner::player, _select_unit)); });
 	// For debug
-	_menu->setFunction(Command::talkStaff, [this, ai] { ai->evaluate(); });
+	_menu->setFunction(Command::talkStaff, [this, ai] { ai->execute(); });
 	_menu->setFunction(Command::save, [this, ai] 
 	{
-		if (_select_unit)
-		{
-			auto s = Sprite::create();
-			s->setTag(100);
-			s->setColor(Color3B::BLACK);
-			s->setTextureRect(Rect(0, 0, 100, 100));
-			s->setPosition(Director::getInstance()->getWinSize().width / 2, Director::getInstance()->getWinSize().height / 2);
-			this->addChild(s);
-			auto y = -20;
-			for (auto value : { ai->evaluateSupply(_select_unit), ai->evaluateBattleFieldAdvance(_select_unit), ai->evaluateCityAdvance(_select_unit), ai->evaluateUnitAdvance(_select_unit) })
-			{
-				auto l = Label::createWithSystemFont(StringUtils::format("%f", value), "Arial", 20);
-				l->setAnchorPoint(Vec2::ANCHOR_BOTTOM_LEFT);
-				l->setPosition(0, y = y + 20);
-				s->addChild(l);
-			}
-			for (auto tile : ai->getAdvanceBattleField(_select_unit)->_tiles)
-				_stage->blinkTile(tile, Color3B::RED);
-			_stage->blinkTile(_stage->getTile(0, ai->getAdvanceUnit(_select_unit)->getPositionAsTile()), Color3B::BLUE);
-			_stage->blinkTile(ai->getAdvanceCity(_select_unit), Color3B::BLACK);
-		}
-		else
-		{
-			this->removeChildByTag(100);
-		}
+		ai->nextExecute();
 	});
 	_menu->setFunction(Command::load, [this] {});
 	_menu->setFunction(Command::option, [this] {});

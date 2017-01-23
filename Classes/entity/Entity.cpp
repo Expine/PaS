@@ -47,7 +47,7 @@ EntityInformation::EntityInformation()
 Entity::Entity()
 	: _department(Department::soldier), _type(EntityType::infantry), _state(EntityState::none)
 	, _using_weapon(0), _mobility(0), _material(0), _max_material(0), _searchingAbility(0), _defence(0), _durability(0), _max_durability(0)
-	, _searched(false)
+	, _reserved(false)
 {
 }
 

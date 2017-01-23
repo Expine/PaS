@@ -25,75 +25,53 @@ public:
 	cocos2d::Vec2 getCenter();
 };
 
-class BattleFieldEvaluation
+template<typename T>
+class PointerEvaluation
 {
 public:
-	BattleFieldEvaluation(BattleField* field, float eval) { _pointer = field; _eval = eval; };
-	BattleField* _pointer;
+	PointerEvaluation(T* field, float eval) { _pointer = field; _eval = eval; };
+	T* _pointer;
 	float _eval;
-	inline bool operator < (const BattleFieldEvaluation& comp) const
+	inline bool operator < (const PointerEvaluation<T>& comp) const
 	{
 		return _eval < comp._eval;
 	};
-	inline bool operator > (const BattleFieldEvaluation& comp) const
+	inline bool operator > (const PointerEvaluation<T>& comp) const
 	{
 		return _eval > comp._eval;
 	};
 };
-
-class CityEvaluation
-{
-public:
-	CityEvaluation(City* city, float eval) { _pointer = city; _eval = eval; };
-	City* _pointer;
-	float _eval;
-	inline bool operator < (const CityEvaluation& comp) const
-	{
-		return _eval < comp._eval;
-	};
-	inline bool operator > (const CityEvaluation& comp) const
-	{
-		return _eval > comp._eval;
-	};
-};
-
-class UnitEvaluation
-{
-public:
-	UnitEvaluation(Entity* unit, float eval) { _pointer = unit; _eval = eval; };
-	Entity* _pointer;
-	float _eval;
-	inline bool operator < (const UnitEvaluation& comp) const
-	{
-		return _eval < comp._eval;
-	};
-	inline bool operator > (const UnitEvaluation& comp) const
-	{
-		return _eval > comp._eval;
-	};
-};
-
 
 class PlayerAI : public cocos2d::Ref
 {
 private:
 	Stage* _stage;
 	cocos2d::Vector<BattleField*> _battle_fields;
-	float _mapMaxLength;
+	float _map_max_length;
 	std::map<Owner, City*> _capital;
 	std::map<Entity*, float> _unit_eval;
 	std::map<City*, float> _city_eval;
 	std::map<BattleField*, float> _battlefield_situation;
 	std::map<BattleField*, float> _battlefield_eval;
+	std::map<Entity*, City*> _supply_city;
 	std::map<Entity*, BattleField*> _advance_battlefield;
+	std::map<Entity*, std::vector<StageTile*>> _advance_battlefield_route;
 	std::map<Entity*, City*> _advance_city;
+	std::map<Entity*, std::vector<StageTile*>> _advance_city_route;
 	std::map<Entity*, Entity*> _advance_unit;
+	std::map<Entity*, std::vector<StageTile*>> _advance_unit_route;
+
+	std::map<City*, std::vector<Entity*>> _city_protect_units;
+
+	std::vector<std::function<void()>> _executes;
+
 public:
 	BattleField* getAdvanceBattleField(Entity* unit) { return _advance_battlefield[unit]; };
 	City* getAdvanceCity(Entity* unit) { return _advance_city[unit]; };
 	Entity* getAdvanceUnit(Entity* unit) { return _advance_unit[unit]; };
 	float getCityEval(City* city) { return _city_eval[city]; };
 	float getBattleFieldEval(BattleField* field) { return _battlefield_eval[field]; };
+	int getExecutesNumber() { return _executes.size(); };
 protected:
 	PlayerAI();
 	~PlayerAI()
@@ -103,11 +81,11 @@ public:
 	CREATE_FUNC(PlayerAI);
 	CC_SYNTHESIZE(Owner, _owner, Owner);
 
+	/** [0, Åá] search range correclty area. Default value is 100000.0f.*/
+	CC_SYNTHESIZE(float, _searce_range_correctly, SearceRangeCorrectly);
 	/** Battlefield Decision */
 	/** [0, Åá] ally search coefficient. Default value is 1.0f. It means movable area equals battlefields*/
-	CC_SYNTHESIZE(float, _search_range_of_ally, SearchRangeOfAlly);
-	/** [0, Åá] enemy search coefficient. Default value is 1.0f. It means movable area equals battlefields*/
-	CC_SYNTHESIZE(float, _search_range_of_enemy, SearchRangeOfEnemy);
+	CC_SYNTHESIZE(float, _search_range_of_battlefield, SearchRangeOfBattlefield);
 
 	/** Supply Evaluation */
 	/** [0, 1] residual force coefficient. Default value is 1.0f.*/
@@ -208,10 +186,20 @@ public:
 	std::vector<StageTile*> getRoute(Entity* unit, City* city);
 	float getMapMaxLength();
 	City* getCapital(Owner owner);
+	inline void nextExecute() { _executes.back()(); _executes.pop_back(); };
+
 	void initialize(Stage* stage, Owner owner) { _stage = stage; _owner = owner; };
 	void searchBattleField();
 	void recursiveSearchForBattleField(Entity* unit, BattleField* field);
+
 	void execute();
+	void protectCity(City* city);
+	void actOnButtlefield(BattleField* field);
+	void actOnNotButtlefield(Entity* unit);
+	void goToBattleField(Entity* unit, BattleField* field);
+	void goToCity(Entity* unit, City* city, bool isSupply, bool isOccupy);
+	void goToUnit(Entity* unit, Entity* target);
+	void attackNearBy(Entity* unit, BattleField* field);
 	void evaluate();
 	float evaluateSupply(Entity* unit);
 	float evaluateBattleFieldAdvance(Entity* unit);
@@ -224,6 +212,8 @@ public:
 	float evaluateCityGuard(City* city);
 	float evaluateUnit(Entity* unit);
 	float evaluateUnitSpec(Entity* unit);
+private:
+
 };
 
 #endif // __AI_H__

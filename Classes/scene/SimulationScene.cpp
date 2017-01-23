@@ -81,15 +81,16 @@ void SimulationScene::nextTurn(bool init)
 	_players.pop();
 	_players.push(owner);
 
+	/*
 	if (owner == Owner::player)
 	{
 		auto scene = Game::createScene(_stage);
 		util::instance<Game>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
-	else
+	else*/
 	{
-		auto scene = AIScene::createScene(_stage);
+		auto scene = AIScene::createScene(_stage, owner);
 		util::instance<AIScene>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
