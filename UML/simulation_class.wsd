@@ -1,0 +1,18 @@
+@startuml
+
+class TitleScene {
+	#init() : bool
+	+createScene() : Scene*
+}
+
+class SimulationScene {
+	-_stage : Stage*
+	-_players : queue<Owner>
+	-_game_scene : Scene*
+	-_ai_scene : Scene*
+	#init() : bool
+}
+
+TitleScene -- SimulationScene
+
+@enduml

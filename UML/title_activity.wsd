@@ -1,0 +1,10 @@
+@startuml
+
+(*) --> "onTouchBagan"
+
+if "Touch" then
+	->[touch] "Transition to SimulationScene"
+else
+	--> (*)
+
+@enduml

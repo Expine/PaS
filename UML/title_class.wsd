@@ -1,0 +1,14 @@
+@startuml
+
+class TitleScene {
+	+createScene() : Scene*
+	#init() : bool
+}
+
+class SimulationScene {
+
+}
+
+TitleScene -- SimulationScene
+
+@enduml

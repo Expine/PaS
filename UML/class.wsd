@@ -1,0 +1,34 @@
+@startuml
+
+class ScriptsToUDB {
+	srcDir : stirng
+	dstDir : string
+	targetFile : string
+	index : int
+	storyIndex : int
+	sentence : string
+	+ScriptsToUDB(srcDir,dstDir)
+	-ScriptToUDB(targetFile, index)
+	-SentenceToUDB(sentence, index)
+	-ConvertOrder(order, index)
+	-ConvertTag(tag, index)
+}
+
+class CallStory {
+	storyIndex : int
+	+CallStory(storyIndex)
+	-TransitionToStory()
+}
+
+class ExecuteStory {
+	storyIndex : int
+	+ExecuteStory(storyIndex)
+	+Update(delta)
+	-ExecuteEvent()
+}
+
+
+ExecuteStory -- CallStory
+
+
+@enduml
