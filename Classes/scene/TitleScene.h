@@ -2,19 +2,15 @@
 #define __TITLE_SCENE_H__
 
 #include "cocos2d.h"
+#include "util/BasedScene.h"
 
 /*
- * SLG Game scene
- * For AI
+ * Title Scene
  */
-class TitleScene : public cocos2d::Layer
+class TitleScene final : public NarUtils::BasedScene<TitleScene>
 {
-protected:
-	TitleScene() {};
-	virtual bool init();
 public:
-	CREATE_FUNC(TitleScene);
-	static cocos2d::Scene* createScene();
+	virtual bool init();
 };
 
 #endif // __TITLE_SCENE_H__

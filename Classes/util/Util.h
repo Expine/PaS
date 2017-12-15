@@ -153,7 +153,7 @@ namespace util
 	std::vector<std::pair<V, T>> sortMap(const std::map<V, T>& map, bool isGreater = true)
 	{
 		std::vector<std::pair<V, T>> arr;
-		
+
 		for (std::pair<V, T> pair : map)
 			arr.push_back(pair);
 

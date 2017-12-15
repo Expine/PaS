@@ -12,7 +12,6 @@ std::string util::loadText(const std::string &file)
 	return FileUtils::getInstance()->getStringFromFile(file);
 }
 
-
 /*
 * Input is splited by delimiter
 */

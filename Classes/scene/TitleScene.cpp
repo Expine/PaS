@@ -4,27 +4,15 @@
 USING_NS_CC;
 
 /*
- * Create Scene
+ * Initialize
  */
-Scene* TitleScene::createScene()
-{
-	CCLOG("TitleScene is created");
-	auto scene = Scene::create();
-	auto layer = TitleScene::create();
-	scene->addChild(layer);
-	return scene;
-}
-
-/*
-* Initialize
-*/
 bool TitleScene::init()
 {
 	if (!Layer::init())
 		return false;
 
 	auto winSize = Director::getInstance()->getWinSize();
-	
+
 	// Logo
 	auto logo = Sprite::create("image/logo.png");
 	logo->setPosition(winSize.width / 2, winSize.height / 2 + 100);
