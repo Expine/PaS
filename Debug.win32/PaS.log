@@ -1,0 +1,12 @@
+﻿  AppDelegate.cpp
+  SimulationScene.cpp
+  TitleScene.cpp
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\base\ccutf8.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\AppDelegate.cpp)
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\base\ccutf8.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\scene\TitleScene.cpp)
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\base\ccutf8.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\scene\SimulationScene.cpp)
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\platform\ccsaxparser.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\scene\SimulationScene.cpp)
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\platform\ccsaxparser.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\AppDelegate.cpp)
+c:\users\yuu\documents\cocos\pas\cocos2d\cocos\platform\ccsaxparser.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。 (ソース ファイルをコンパイルしています ..\Classes\scene\TitleScene.cpp)
+  PaS.vcxproj -> C:\Users\yuu\Documents\Cocos\PaS\proj.win32\Debug.win32\PaS.exe
+  PaS.vcxproj -> C:\Users\yuu\Documents\Cocos\PaS\proj.win32\Debug.win32\PaS.pdb (Full PDB)
+  0 個のファイルをコピーしました

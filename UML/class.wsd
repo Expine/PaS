@@ -1,34 +1,1149 @@
 @startuml
 
-class ScriptsToUDB {
-	srcDir : stirng
-	dstDir : string
-	targetFile : string
-	index : int
-	storyIndex : int
-	sentence : string
-	+ScriptsToUDB(srcDir,dstDir)
-	-ScriptToUDB(targetFile, index)
-	-SentenceToUDB(sentence, index)
-	-ConvertOrder(order, index)
-	-ConvertTag(tag, index)
+class AppDelegate {
+	+initGLContextAttrs()
+	+applicationDidFinishLaunching()
+	+applicationDidEnterBackground()
+	+applicationWillEnterForeground()
 }
 
-class CallStory {
-	storyIndex : int
-	+CallStory(storyIndex)
-	-TransitionToStory()
+abstract IBasedScene {
+	+init() : bool
+	+create(Args) : IBasedScene
+	+createScene(Args) : Scene*
 }
 
-class ExecuteStory {
-	storyIndex : int
-	+ExecuteStory(storyIndex)
-	+Update(delta)
-	-ExecuteEvent()
+class TitleScene {
+	+init() : bool
+}
+
+class TurnFactory {
+	+{static}getTurn(Owner, Stage*) : ITurnLayer*
+}
+
+class SimulationScene {
+	-_stage : Stage*
+	-_players : queue<Owner>
+	+_game_scene : Scene*
+	+_ai_scene : Scene*
+	+init() : bool
+	+nextTurn(bool)
+	+addPlayer(Owner)
+}
+
+abstract ITurnLayer {
+	#_nextTurn : function<void>
+	+{abstract}initTurn()
+	+setNextTurn(function<void()>)
+}
+
+class PlayerTurn {
+	-_stage : Stage*
+	-_menu : MenuLayer*
+	-_select_tiles : vector<StageTile*>
+	-_select_area : vector<StageTile*>
+	-_move_route : vector<StageTile*>
+	-_select_unit : Entity*
+	-_select_enemy : Entity*
+	-_select_weapon : WeaponData*
+	#init() : bool
+	+setMoveFunction()
+	+setAttackFunction()
+	+setOccupyFunction()
+	+setWaitFunction()
+	+callCommand(Command)
+	+setCursor(vec2)
+	+setSelectTiles(vector<StageTile*>)
+	+setSelectUnit(Entity*)
+	+onTap(Vec2,vector<StageTile*>)
+	+onLongTapBegan(Vec2, vector<StageTile*>)
+	+onDoubleTap(Vec2, vector<StageTile*>)
+	+onDoubleTapByNone()
+	+onDoubleTapByMove(bool)
+	+onDoubleTapByMoving()
+	+onDoubleTapByAttack(bool)
+	+onDoubleTapByAttacking(Entity*)
+	+createScene(Stage*) : Scene*
+	+create(Stage*) : PlayerTurn*
+}
+
+class AITurn {
+	-_stage : Stage
+	+_ai : PlayerAI*
+	#init() : bool
+	+createScene(Stage*, Owner) : Scene*
+	+create(Stage*, Owner) : AITurn*
+}
+
+class Stage {
+	-_cities : map<Owner, vector<City*>>
+	-_units : map<Owner, vector<Entity*>>
+	-selector : Sprite*
+	-_pre_provisional_cor : Vec2
+	+_map_size : Vec2
+	+_chip_size : Vec2
+	+_gap : int
+	+_background : string
+	+_bgm : string
+	+ _tile_file : string
+	+_tile_batch SpriteBatchNode*
+	+_unit_batch SpriteBatchNode*
+	#init() : bool
+	+onTap : function<void Vec2,vector<StageTile*>>
+	+onDoubleTap : function<void Vec2, vector<StageTile*>>
+	+onLongTapBegan : function<void Vec2, vector<StageTile*>>
+	+onLongTapEnd : function<void Vec2, vector<StageTile*>>
+	+onSwipeCheck : function<bool Vec2, Vec2, float>
+	+onFlickCheck : function<bool Vec2, Vec2, float>
+	+parseStage() : Stage*
+	+addUnitForDebug()
+	+create() : Stage*
+	+getStageLayer(int) : StageLayer*
+	+getUnitLayer() : UnitLayer*
+	+getShadowLayer() : StageLayer*
+	+getHorizontalChipNumber() : int
+	+getVerticalChipNumber() : int
+	+getActualMapWidth() : float
+	+getActualMapHeight() : float
+	+adjustRatio(int) : float
+	+adjustArea() : Vec2
+	+getPositionAsTile(int, int) : Vec2
+	+getPositionByTile(int, int) : Vec2
+	+getPositionByTile(Vec2) : Vec2
+	+getCities(Owner) : vector<City*>&
+	+getCities() : map<Owner, vector<City*>>&
+	+getUnits(Owner) : vector<Unit*>&
+	+getUnits() : map<Owner, vector<Unit*>>&
+	+getUnitNumber() : int
+	+curRouteByMobility(Entity* unit, vector<StageTile*>)
+	+getTile(int, int, int) : StageTile*
+	+getTile(int, Vec2) : StageTile*
+	+getTiles(int, int) : vector<StageTile*>
+	+getTiles(Vec2) : vector<StageTile*>
+	+selectTile(int, int)
+	+blinkTile(StageTile*, Color3B)
+	+blinkChange(StageTile*, Color3B)
+	+blinkOffTile(StageTile*)
+	+moveView(int, int)
+	+moveView(Vec2)
+	+moveView(Entity*)
+	+moveView(StageTile*)
+	+initStage(Owner)
+	+discoverTile(StageTile*)
+	+startRecursiveTileSearch(Vec2, int, EntityType, bool, bool) : vector<StageTile*>
+	+recursieTileSearch(queue<function<StageTile*(EntityType, bool, bool)>>, Vec2, Vec2, int, EntityType, bool. bool) : StageTile*
+	+startRecursiveTileSearchForLiner(Vec2, int) : vector<StageTile*>
+	+recursiveTileSearchForLiner(Vec2, Vec2, int) : vector<StageTile*>
+	+startRecursiveTileSearchForWeapon(Entity*, Entity*, WeaponData*) : vector<StageTile*>
+	+startRecursiveTileSearchByAstar(vector<StageTile*>, Vec2, int, EntityType, bool, bool, bool, float) : vector<StageTile*>
+	+startRecursiveTileSearchByAstar(StageTile*, Vec2, int, EntityType, bool, bool, bool, float) : vector<StageTile*>
+	+nextCity(Owner, StageTile*) : Vec2
+	+nextUnit(Owner, Entity*) : Vec2
+	+moveCheck(Entity*) : vector<StageTile*>
+	+provisionalMoveUnit(Entity*, StageTile*) : vector<StageTile*>
+	+provisionalMoveCancel(Entity*)
+	+moveUnit(Entity*, vector<StageTile*>)
+	+deployUnit(Entity*, City*)
+	+dispatchUnit(Entity*, City*)
+	+dispatchUnit(Entity*)
+	+renderForAIScene() : Node*
+}
+
+class StageLayer {
+	+_map_size : Vec2
+	+_batch : SpriteBatchNode*
+	+create() : StageLayer*
+	+getStage() : Stage*
+	+setTile(Vec2, int) : StageTile*
+	+setTile(int, int, int) : StageTile*
+	+getTile(int, int) : StageTile*
+	+getTile(Vec2) : StageTile*
+	+removeTile(int, int)
+	+removeTile(Vec2) : StageTile*
+}
+
+class UnitLayer {
+	+_map_size : Vec2
+	+_batch : SpriteBatchNode*
+	+create() : UnitLayer*
+	+getStage() : Stage*
+	+setUnit(Vec2, EntityType) : Entity*
+	+setUnit(int, int, EntityType) : Entity*
+	+setUnit(Vec2, Entity*)
+	+setUnit(int, int, Entity*)
+	+getUnit(int, int) : Entity*
+	+removeUnit(int, int) : Entity*
+	+removeUnit(Vec2) : Entity*
+}
+
+enum TerrainType {
+	none
+	prairie
+	woods
+	mountain
+	river
+	ocean
+	road
+	bridge
+	capital
+	city
+	territory
+	COUNT
+}
+
+enum SearchState {
+	none
+	open
+	closed
+}
+
+class TileInformation {
+	-_name : map<TerrainType, string>
+	-_commands_enable : map<TerrainType, map<Command, bool>>
+	+getInstance() : TileInformation*
+	+getName(TerrainType) : string
+	+getCommandEnable(TerrainType, Command) : bool
+}
+
+abstract StageTile {
+	+_id : int
+	+_terrain : TerrainType
+	+_searched : bool
+	+_search_state : SearchState
+	+_acrual_cost : int
+	+_heuristic_cost : int
+	+_parent_node : StageTile*
+	+{static}create(int) : StageTile*
+	+{static}create(int, Vec2, Stage*) : StageTile*
+	+getPositionAsTile() : Vec2
+	+getStageLayer() : StageLayer*
+	+getStage() : Stage*
+}
+
+class TilePointer {
+	+_pointer : StageTile*
+	+TilePointer(StageTile*) : TilePointer*	
+}
+
+class None {
+	#init() : bool
+	+create() : None*
+}
+
+class Prairie {
+	#init() : bool
+	+create() : Prairie*
+}
+
+class Prairie {
+	#init() : bool
+	+create() : Prairie*
+}
+
+class Woods {
+	#init() : bool
+	+create() : Woods*
+}
+
+class Mountain {
+	#init() : bool
+	+create() : Mountain*
+}
+
+class Ocean {
+	#init() : bool
+	+create() : Ocean*
+}
+
+class River {
+	#init() : bool
+	+create() : River*
+}
+
+class Road {
+	#init() : bool
+	+create() : Road*
+}
+
+class Bridge {
+	#init() : bool
+	+create() : Bridge*
+}
+
+class City {
+	+_owner : Owner
+	+_durability : int
+	+_max_durability : int
+	+_max_deployer : int
+	+_deployers : Vector<Entity*>
+	#init() : bool
+	+create() : City*
+	+addDeployer(Entity*)
+	+removeDeploer(Entity*)
+	+getDeployer(int) : Entity*
+	+getDeployersByRef() : Vector<Entity*>&
+	+isSuppliable() : bool
+	+isDeployable() : bool
+	+isDispatchable() : bool
+	+supply(Entity*)
+	+damaged(Soldier*)
+}
+
+class Capital {
+	#init() : bool
+	+create() : Capital*
+}
+
+class Territory {
+	#init() : bool
+	+create() : Territory*
+}
+
+enum MenuMode {
+	none
+	city_supply
+	deploy
+	dispatch
+	dispatching
+	move
+	moving
+	attack
+	attacking
+	occupy
+	wait
+}
+
+enum FrameType {
+	unit
+	map
+	menu
+	info
+}
+
+class MenuLayer {
+	-_unit_frame : Node*
+	-_enemy_unit_frame : Node*
+	-_map_frame : Node*
+	-_menu_frame : Node*
+	-_info_frame : Sprite*
+	-_unit_labels : vector<Label*>
+	-_map_labels : vector<Label*>
+	-_menu_lables : vector<Label*>
+	-_on_frame : map<FrameType, bool>
+	-_is_hided : map<FrameType, bool>
+	-_command_frames : map<Command, Node*>
+	-_command_functions : map<Command,function<void>>
+	-_is_showed_city_command : bool
+	-_is_showed_unit_command : bool
+	+_mode : MenuMode
+	+_stage : Stage*
+	+_select_weapon : int
+	+_select_deployer : Entity*
+	+attack_decision : function<void WeaponData*>
+	+attack_cancel : function<void WeaponData*>
+	-setEachFrame(Vec2, int, int, int, int, int, vector<string>, vector<Label*>&) : Node*
+	-setCommand(string&, int, int, int, int) : Node*
+	-setFrameListner(Node*, vector<Label*>&, FrameType, int)
+	-showFrame(Node*, vector<Label*>&, FrameType, int)
+	-hideFrame(Node*, vector<Label*>&, FrameType, int)
+	-setCommandListener(Node*, function<void()>&, bool)
+	-isHidableBySwipe(FrameType, Vec2)
+	-isShowdableBySwipe(FrameType, Vec2)
+	-showUnitCommandByOne(int, int, Command)
+	-hideUnitCommandByOne(Command)
+	-showCityCommandByOne(int, int, Command)
+	-hideCityCommandByOne(Command)
+	#init() : bool
+	+setFunction(Command, function<void()>)
+	+getFunction(Command) : function<void()>
+	+setModeWithCheckAndMoveForUnit(MenuMode, Entity*, vector<StageTile*>, Entity*, WeaponData*, vector<StageTile*>)
+	+setModeWithCheckAndMoveForCity(MenuMode, Entity*, vector<StageTile*>, Entity*, WeaponData*, vector<StageTile*>)
+	+setTileInformation(vector<StageTile*>, Entity*)
+	+setCityDurability(City*)
+	+setUnitInformation(vector<StageTile*>, Entity*, Node*)
+	+setUnitInformation(vector<StageTile*>, Entity*)
+	+setUnitAbility(Entity*, Node*)
+	+setCoordinateInformation(Vec2)
+	+setUnitToTileInformation(vector<StageTile*>, Entity*)
+	+checkUnitCommand(Entity*, vector<StageTile*>, Entity*, Entity*, WeaponData*, vector<StageTile*>)
+	+moveUnitCommand()
+	+hideUnitCommand()
+	+checkCityCommand(Entity*, vector<StageTile*>, Entity*, Entity*, WeaponData*, vector<StageTile*>)
+	+moveCityCommand()
+	+hideCityCommand()
+	+isCityMenuModeAble() : bool
+	+isUnitMenuModeAble() : bool
+	+checkAction(vec2, FrameType, Node*) : bool
+	+checkAllAction(Vec2) : bool
+	+isRunningAction() : bool
+	+showEnemyUnit(Entity*)
+	+hideEnemyUnit()
+	+showWeaponFrame(Entity*)
+	+showWeapon(Node*, Entity*, Color3B, bool)
+	+renderWeapon(Node*, Entity*, WeaponData*, int, Color3B, bool)
+	+hideWeaponFrame()
+	+showSpecFrame(Entity*)
+	+showDeployers(City*) : SingleTouchListener*
+	+renderDeployer(Node*, Entity*, int)
+	+hideDeployers()
+	+deploy(City*)
+	+dispatch(City*)
+}
+
+enum DirectionType {
+	liner
+	crescent
+	overHalf
+	full
+	select
+}
+
+class RangeType {
+	+direction_type : DirectionType
+	+firing_range : int
+	+secondary_effect : int
 }
 
 
-ExecuteStory -- CallStory
+class WeaponData {
+	+_recovery : int
+	+_anti_personal : int
+	+_anti_wizard : int
+	+_anti_fire : int
+	+_anti_ice : int
+	+_anti_thunder : int
+	+_anti_ground : int
+	+_range : RangeType
+	+_accuracy : int
+	+_consumption : int
+	#init() : bool
+	+isUsable(Entity*)
+	+isUsableByConsumption(Entity*)
+	+isUsableByArea(Entity*)
+	+animation(Vec2) : ParticleSystemQuad*
+	+getMaxAttack() : int
+}
 
+class WeaponInformation {
+	-_weapons : Map<string, WeaponData*>
+	+{static}getInstance() : WeaponInformation*
+	+getWeapon(string) : WeaponData*
+	+getRangeName(RangeType) : RangeType
+}
+
+class EntityToTile {
+	-_search_cost : map<TerrainType, map<EntityType, int>>
+	-_effect : map<TerrainType, map<EntityType, int>>
+	+{static}getInstance() : EntityToTile*
+	+getSearchCost(TerrainType, EntityType) : int
+	+getEffect(TerrainType, EntityType) : int
+}
+
+enum Department {
+	soldier
+	wizard
+}
+
+enum EntityType {
+	infantry
+	heavy
+	spy
+	fire
+	ice
+	thunder
+	ground
+	king
+	weapon
+	relief
+	guardian
+	dark
+	light
+	COUNT
+	sight
+	counter
+	}
+
+enum EntityState {
+	none
+	supplied
+	moved
+	acted
+}
+
+class EntityInformation {
+	-_name : map<EntityType, string>
+	-_durability : map<EntityType, int>
+	-_material : map<EntityType, int>
+	-_mobility : map<EntityType, int>
+	-_search : map<EntityType, int>
+	-_defence : map<EntityType, int>
+	-_unit_commands : map<EntityType, map<Command, bool>>
+	+{static}getInstance() : EntityInformation*
+	+getName(EntityType) : string
+	+getDurability(EntityType) : int
+	+getMaterial(EntityType) : int
+	+getMobility(EntityType) : int
+	+getSearch(EntityType) : int
+	+getDefence(EntityType) : int
+	+getCommand(EntityType, Command) : bool
+}
+
+class Entity {
+	-_state : EntityState
+	#_weapons : vector<WeaponData*>
+	+_affiliation : Owner
+	+_department : Department
+	+_type : EntityType
+	+_name : string
+	+_durability : int
+	+_max_durability : int
+	+_material : int
+	+_max_material : int
+	+_mobility : int
+	+_max_mobility : int
+	+_searchingAbility : int
+	+_defence : int
+	+_using_weapon : int
+	+_reserved : bool
+	+{static}create(EntityType) : Entity*
+	+{static}create(EntityType, Vec2, Stage*) : Entity*
+	+getEntityState() : EntityState
+	+setBasicWeaponForDebug()
+	+getUnitLayer() : UnitLayer*
+	+getStage() : Stage*
+	+getWeaponsByRef() : vector<WeaponData*>&
+	+getPositionAsTile() : Vec2
+	+isAttackable() : bool
+	+isOcuppyable() : bool
+	+isSelectable() : bool
+	+isSelectableEnemty(Owner) : bool
+	+isDeployer() : bool
+	+attack(Entity*, WeaponData*)
+	+correctDamageByDepartment(Entity*, WeaponData*)
+	+correctDamageByType(Entity*, WeaponData*)
+	+correctDamageByHit(Entity*, WeaponData*, float)
+	+damage(float)
+	+occupy(City*)
+	+setState(EntityState)
+
+}
+
+class Soldier {
+	+_occupation_ability
+	#init() : bool
+	+create() : Soldier*
+}
+
+class Wizard {
+	#init() : bool
+	+create() : Wizard*
+}
+
+class Infantry {
+	#init() : bool
+	+create() : Infantry*
+}
+
+class Heavy {
+	#init() : bool
+	+create() : Heavy*
+}
+
+class Spy {
+	#init() : bool
+	+create() : Spy*
+}
+
+class Fire {
+	#init() : bool
+	+create() : Fire*
+}
+
+class Ice {
+	#init() : bool
+	+create() : Ice*
+}
+
+class Thunder {
+	#init() : bool
+	+create() : Thunder*
+}
+
+class Ground {
+	#init() : bool
+	+create() : Ground*
+}
+
+class King {
+	#init() : bool
+	+create() : King*
+}
+
+class Weapon {
+	#init() : bool
+	+create() : Weapon*
+}
+
+class Relief {
+	#init() : bool
+	+create() : Relief*
+}
+
+class Guardian {
+	#init() : bool
+	+create() : Guardian*
+}
+
+class Dark {
+	#init() : bool
+	+create() : Dark*
+}
+
+class Light {
+	#init() : bool
+	+create() : Light*
+}
+
+class BattleField {
+	-_center : Vec2
+	+_tiles : vector<StageTile*>
+	+_units : vector<Entity*>
+	+_color : Color3B
+	#init() : bool
+	+create() : BattleField*
+	+getCenter() : Vec2
+}
+
+class PointerEvaluation<T> {
+	+_pointer : T*
+	+_eval : float
+}
+
+class PlayerAI {
+	-_stage : Stage*
+	-_battle_fields : vector<BattleField*>
+	-_map_max_length : float
+	-_capital : map<Owner, City*>
+	-_unit_eval : map<Entity*, float>
+	-_city_eval : map<City*, float>
+	-_battlefield_situation : map<BattleField*, float>
+	-_battlefield_eval : map<BattleField*, float>
+	-_supply_city : map<Entity*, City*>
+	-_advance_battlefield : map<Entity*, BattleField*>
+	-_advance_battlefield_route : map<Entity*, vector<StageTile*>>
+	-_advance_city : map<Entity*, City*>
+	-_advance_city_route : map<Entity*, vector<StageTile*>>
+	-_advance_unit : map<Entity*, Entity*>
+	-_advance_unit_route : map<Entity*, vector<StageTile*>>
+	-_city_protect_units : map<City*, vector<Entity*>>
+	-_executes : vector<function<void>>
+	+_owner : Owner
+	+_searce_range_correctly : float
+	+_search_range_of_battlefield : float
+	+_residual_force_dependence : float
+	+_residual_resource_dependence : float
+	+_supply_distance_dependence : float
+	+_supply_evaluation_level : float
+	+_battlefield_distance_dependence : float
+	+_battlefield_importance_dependence : float
+	+_battlefield_evaluation_level : flaat
+	+_city_distance_dependence : float
+	+_city_importance_dependence : float
+	+_city_evaluation_level : float
+	+_unit_distance_dependence : float
+	+_unit_importance_dependence : float
+	+_unit_evaluation_level : float
+	+_city_guard_number : float
+	+_city_guard_area : float
+	+_large_battle_priority : float
+	+_overwhelming_priority : float
+	+_battlefield_number_mid : float
+	+_battlefield_number_axis : float
+	+_battlefield_number_coefficient : float
+	+_battlefield_situation_coefficient : float
+	+_tenacity : float
+	+_annihilation : float
+	+_battlefield_to_city_coefficient : float
+	+_battlefield_importance_priority : float
+	+_city_deploy_coefficient : float
+	+_city_weakness_coefficient : float
+	+_city_deployer_coefficient : float
+	+_city_deployer_gradient_coefficient : float
+	+_city_deployer_min : float
+	+_city_to_battlefield_coefficient : float
+	+_city_supply_line_coefficient : float
+	+_city_to_capital_coefficient : float
+	+_unit_weakness_coefficient : float
+	+_unit_spec_coefficient : float
+	+_unit_durability_coefficient : float
+	+_unit_material_coefficient : float
+	+_unit_mobility_coefficient : float
+	+_unit_searching_coefficient : float
+	+_unit_defence_coefficient : float
+	+_unit_attack_coefficient : float
+	+_unit_type_coefficient : map<EntityType, float>
+	#init() : bool
+	+getAdvanceBattleField(Entity*) : BattleField*
+	+getAdvanceCity(Entity*) : City*
+	+getAdvanceUnit(Entity*) : Entity*
+	+getCityEval(City*) : float
+	+getBattleFieldEval(BattleField*) : float
+	+getExecutesNumer() : int
+	+{static}create() : PlayerAI*
+	+{static}createAI(string) : PlayerAI*
+	+getRoute(Entity*, BattleField*) : vector<StageTile*>
+	+getRoute(Entity*, Entity*) : vector<StageTile*>
+	+getRoute(Entity*, City*) : vector<StageTile*>
+	+getMapMaxLength() : float
+	+getCapital(Owner) : City*
+	+nextExecute()
+	+initialize(Stage*, Owner)
+	+searchBattleField()
+	+recursiveSearchForBattleField(Entity*, BattleField*)
+	+execute()
+	+protectCity()
+	+actOnButtleField(BattleField*)
+	+actOnNotButtleField(Entity*)
+	+goToBattleField(Entity*, BattleField*)
+	+goToCity(Entity*, City*, bool, bool)
+	+goToUnit(Entity*, Entity*)
+	+attackNearBy(Entity*, BattleField*)
+	+evaluate()
+	+evaluateSupply(Entity*) : float
+	+evaluateBattleFieldAdvance(Entity*) : float
+	+evaluateUnitAdvance(Entity*) : float
+	+evaluateCitydvance(Entity*) : float
+	+evaluateGuard(Entity*, City*) : float
+	+evaluateBattleField(BattleField*) : float
+	+evaluateBattleFieldSituation(BattleField*) : float
+	+evaluateCity(City*) : float
+	+evaluateCityGuard(City*) : float
+	+evaluateUnit(Entity*) : float
+	+evaluateUnitSpec(Entity*) : float
+}
+
+enum Owner {
+	player
+	enemy
+}
+
+class OwnerInformation {
+	-_group : map<Owner, string>
+	-_colors : map<Owner, Color3B>
+	+{static}getInstance() : OwnerInformation*
+	+getColor(Owner) : Color3B
+	+setGroup(Owner, string)
+	+getGroup(Owner) : string
+	+isSameGroup(Owner, Owner) : bool
+}
+
+enum Command {
+	MENU_START
+	endPhase
+	nextUnit
+	mextCity
+	talkStaff
+	save
+	load
+	option
+	MENU_END
+	UNIT_START
+	supply
+	move
+	attack
+	occupation
+	spec
+	wait
+	UNIT_END
+	MOVE_START
+	move_start
+	move_end
+	MOVE_END
+	MOVE_2_START
+	move_decision
+	move_cancel
+	MOVE_2_END
+	ATTACK_START
+	attack_target
+	attack_change
+	attack_end
+	ATTACK_END
+	ATTACK_2_START
+	attack_start
+	attack_cancel
+	ATTACK_2_END
+	OCCUPATION_START
+	occupation_start
+	occupation_end
+	OCCUPATION_END
+	WAIT_START
+	wait_start
+	wait_end
+	WAIT_END
+	CITY_START
+	city_supply
+	deployment
+	dispatch
+	CITY_END
+	CITY_SUPPLY_START
+	city_supply_start
+	city_supply_end
+	CITY_SUPPLY_END
+	DEPLOY_START
+	deploy_start
+	deploy_end
+	DEPLOY_END
+	DISPATCH_START
+	dispatch_start
+	dispatch_cancel
+	DISPATCH_END
+}
+
+class NameSpaceCommand {
+	+castCommand(int)
+	+forMenu(function<void(Command, int)>)
+	+forMove(function<void(Command, int)>)
+	+forMove2(function<void(Command, int)>)
+	+forAttack(function<void(Command, int)>)
+	+forAttack2(function<void(Command, int)>)
+	+forOccupation(function<void(Command, int)>)
+	+forWait(function<void(Command, int)>)
+	+forCity(function<void(Command, int)>)
+	+forCitySupply(function<void(Command, int)>)
+	+forDeploy(function<void(Command, int)>)
+	+forDispatch(function<void(Command, int)>)
+	+forAllUnit(function<void(Command, int)>)
+	+forAllCity(function<void(Command, int)>)
+	+forAll(function<void(Command, int)>)
+	+getName(Command) : string
+	+isUnitCommand(Command) : bool
+	+isCityCommand(Command) : bool
+	+isEnable(Command, Entity*, vector<StageTile*>, Entity*, WeaponData*, vector<StageTile*>)
+}
+
+namespace AsyncTask {
+	class Task {
+		-end : atomic<int>
+		-result : bool
+		-task : bind<function<bool Args...>, Args...>
+		-callback : function<void bool>
+		+Task(function<bool, Args...>, function<vpid(bool)>&, Args&&...)
+		+update(float)
+		+run()
+	}
+}
+
+class AsyncTask {
+	+AsyncTask<F, ...Args>(F, function<void(bool)>, Args&&...)	
+}
+
+namespace MultiTouchListener {
+	enum State {
+		check
+		tap
+		swipe
+		multi
+		longtap
+	}
+}
+
+class MultiTouchListener {
+	-_numberOfTouch : int
+	-_startPos : vector<Vec2>
+	-_startTime : vector<timeval>
+	-_movePos : vector<Vec2>
+	-_moveTime : vector<timeval>
+	-_multiTIme : timeval
+	-_multiPos : Vec2
+	-_multiDiff : float
+	-_state : std::vector<State>
+	-_tap_action : Sequence*
+	+_longTapThreshold : float
+	+_doubleTapThreshold : float
+	+_swipeThreshold : float
+	+_flickThreshold : float
+	+onTouchBegan : function<void Vec2>
+	+onTap : function<void Vec2>
+	+onLongTapBegan : function<void Vec2>
+	+onLongTapEnd : function<void Vec2>
+	+onDoubleTap : function<void Vec2>
+	+onSwipe : function<void Vec2, Vec2, float>
+	+onFlick : function<void Vec2, Vec2, float>
+	+pinchIn : function<void Vec2, float>
+	+pinchOut : function<void Vec2, float>
+	+onSwipeCheck : function<void Vec2, Vec2, float>
+	+onFlickCheck : function<void Vec2, Vec2, float>
+	#init() : bool
+	#update(float)
+	+create() : MultiTouchListener*
+}
+
+namespace SingleTouchListener {
+	enum State {
+		check
+		tap
+		swipe
+		multi
+		longtap
+	}
+}
+
+
+class SingleTouchListener {
+	-_startPos : Vec2
+	-_startTime : timeval
+	-_movePos : Vec2
+	-_moveTime : timeval
+	-_state : State
+	-_tap_action : Sequence*
+	+_reserve_touch : Touch*
+	+_reserve_event : Event*
+	+_longTapThreshold : float
+	+_doubleTapThreshold : float
+	+_swipeThreshold : float
+	+_flickThreshold : float
+	+onTouchBeganChecking : function<void Touch*, Event*>
+	+onTap : function<void Touch*, Event*>
+	+onLongTapBegan : function<void Vec2>
+	+onLongTapEnd : function<void Touch*, Event*>
+	+onDoubleTap : function<void Tocuh*, Event*>
+	+onSwipe : function<void Vec2, Vec2, float>
+	+onFlick : function<void Vec2, Vec2, float>
+	+onTouchEndedChecking : function<void Touch*, Event*>
+	#init() : bool
+	#update(float)
+	+{static}create() : SingleTouchListener*
+}
+
+class MultiMouseListener {
+	+_touchListener : MultiTouchListener*
+	+_scrollMagnification : float
+	+{static}create(MultiTouchListener*)
+	+init(MultiTouchListener*) : bool
+}
+
+
+class Util {
+	+loadText(string) : string
+	+splitString(string, char) : vector<string>
+	+splitFile(string) : vector<string>
+	+isTouchInEvent(Vec2, Node*, int, int, int, int) : bool
+	+isTouchInEvent(Touch*, Event*, int, int, int, int) : bool
+	+isTouchInEvent(Vec2, Node*) : bool
+	+isTouchInEvent(Vec2, Event*) : bool
+	+isTouchInEvent(Touch*, Event*) : bool
+	+getCoordinateInScreen(Vec2, Node*)
+	+instanceof<Of, What>(What) : bool
+	+instance<Of, What>(What) : Of*
+	+createCutSkin(string, int, int, int, int) : Node*
+	+createCutSkinAndAnimation(string, int, int, int, int, int, int, float, init) : Node*
+	+getHexUp(Vec2) : Vec2
+	+getHexUpRight(Vec2) : Vec2
+	+getHexUpLeft(Vec2) : Vec2
+	+getHexDpwm(Vec2) : Vec2
+	+getHexDown(Vec2) : Vec2
+	+getHexDownRight(Vec2) : Vec2
+	+getHexDownLeft(Vec2) : Vec2
+	+getVecRight(Vec2) : Vec2
+	+getVecLeft(Vec2) : Vec2
+	+getPosRight(Vec2, Vec2) : Vec2
+	+getPosLeft(Vec2, Vec2) : Vec2
+	+getDirection(Vec2, Vec2) : Vec2
+	+find<V>(vector<V>&, V) : bool
+	+find<V, T>(vector<V>&, T, function<bool(V, T)>) : bool
+	+findElement<V, T>(vector<V>&, function<bool(V, T)>) : V
+	+collect<V, T>(vector<V>&, function<bool(V, T)>) : vector<V>
+	+sortMap<V, T>(map<V, T>&, bool) : vector<pair<V, T>>
+	+inirRand()
+	+getRand(int, int)
+	+getRand(double, double)
+	+cloneBatch(SpriteBatchNode*, int) : SpriteBatchNode*
+}
+
+AppDelegate --> TitleScene
+
+IBasedScene <|-- TitleScene
+IBasedScene <|-- SimulationScene
+
+TitleScene -> SimulationScene
+
+TurnFactory --> Owner
+TurnFactory --> Stage
+TurnFactory --> PlayerTurn
+TurnFactory --> AITurn
+
+SimulationScene --> PlayerTurn
+SimulationScene --> AITurn
+SimulationScene --> Stage
+SimulationScene --> Owner
+
+ITurnLayer <|-- PlayerTurn
+ITurnLayer <|-- AITurn
+
+PlayerTurn --> Stage
+PlayerTurn --> MenuLayer
+PlayerTurn --> MenuMode
+PlayerTurn --> StageTile
+PlayerTurn --> City
+PlayerTurn --> Entity
+PlayerTurn --> EntityType
+PlayerTurn --> EntityState
+PlayerTurn --> WeaponData
+PlayerTurn --> DirectionType
+PlayerTurn --> Command
+PlayerTurn --> NameSpaceCommand
+PlayerTurn --> Owner
+PlayerTurn --> OwnerInformation
+
+AITurn --> Stage
+AITurn --> PlayerAI
+AITurn --> Owner
+
+StageLayer --> Stage
+StageLayer --> StageTile
+
+UnitLayer --> Stage
+UnitLayer --> Entity
+UnitLayer --> EntityType
+
+Stage --> StageLayer
+Stage --> UnitLayer
+Stage --> DirectionType
+Stage --> TerrainType
+Stage --> StageTile
+Stage --> TilePointer
+Stage --> City
+Stage --> Entity
+Stage --> EntityType
+Stage --> EntityState
+Stage --> EntityToTile
+Stage --> Owner
+Stage --> OwnerInformation
+Stage --> WeaponData
+
+StageTile --> Stage
+StageTile --> StageLayer
+StageTile --> TerrainType
+StageTile --> SearchState
+
+StageTile <|-- None
+StageTile <|-- Prairie
+StageTile <|-- Woods
+StageTile <|-- Mountain
+StageTile <|-- Ocean
+StageTile <|-- River
+StageTile <|-- Road
+StageTile <|-- Bridge
+StageTile <|-- City
+StageTile <|-- Territory
+
+City --> Owner
+City --> Entity
+City --> EntityState
+City --> Soldier
+
+City <|-- Capital
+
+TileInformation --> Command
+TileInformation --> TerrainType
+
+MenuLayer --> MenuMode
+MenuLayer --> FrameType
+MenuLayer --> Command
+MenuLayer --> NameSpaceCommand
+MenuLayer --> Stage
+MenuLayer --> StageTile
+MenuLayer --> City
+MenuLayer --> Entity
+MenuLayer --> EntityToTile
+MenuLayer --> TileInformation
+MenuLayer --> WeaponData
+MenuLayer --> WeaponInformation
+MenuLayer --> Owner
+MenuLayer --> OwnerInformation
+
+WeaponData --> DirectionType
+WeaponData --> RangeType
+WeaponData --> Stage
+WeaponData --> Entity
+WeaponData --> EntityType
+
+WeaponInformation --> WeaponData
+WeaponInformation --> RangeType
+WeaponInformation --> DirectionType
+
+Entity --> EntityType
+Entity --> EntityState
+Entity --> StageTile
+Entity --> City
+Entity --> WeaponData
+Entity --> Department
+Entity --> EntityType
+Entity --> Stage
+Entity --> UnitLayer
+Entity --> Owner
+Entity --> OwnerInformation
+Entity --> EntityInformation
+Entity --> WeaponInformation
+Entity --> Command
+
+Entity <|-- Soldier
+Entity <|-- Wizard
+
+Soldier <|-- Infantry
+Soldier <|-- Heavy
+Soldier <|-- Spy
+
+Wizard <|-- Fire
+Wizard <|-- Ice
+Wizard <|-- Thunder
+Wizard <|-- Ground
+Wizard <|-- King
+Wizard <|-- Weapon
+Wizard <|-- Relief
+Wizard <|-- Guardian
+Wizard <|-- Dark
+Wizard <|-- Light
+
+EntityToTile --> TerrainType
+EntityToTile --> EntityType
+
+EntityInformation --> EntityType
+EntityInformation --> Command
+
+BattleField --> StageTile
+BattleField --> Entity
+
+PlayerAI --> BattleField
+PlayerAI --> PointerEvaluation
+PlayerAI --> Stage
+PlayerAI --> Entity
+PlayerAI --> EntityType
+PlayerAI --> EntityState
+PlayerAI --> StageTile
+PlayerAI --> City
+PlayerAI --> Capital
+PlayerAI --> Owner
+PlayerAI --> OwnerInformation
+PlayerAI --> WeaponData
+
+OwnerInformation --> Owner
+
+NameSpaceCommand --> Command
+NameSpaceCommand --> Entity
+NameSpaceCommand --> EntityState
+NameSpaceCommand --> EntityInformation
+NameSpaceCommand --> StageTile
+NameSpaceCommand --> City
+NameSpaceCommand --> TileInformation
+NameSpaceCommand --> WeaponData
+
+AsyncTask --> AsyncTask.Task
+
+MultiTouchListener --> MultiTouchListener.State
+
+SingleTouchListener --> SingleTouchListener.State
+
+MultiMouseListener --> MultiTouchListener
 
 @enduml

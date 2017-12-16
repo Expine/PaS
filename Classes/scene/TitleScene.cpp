@@ -22,7 +22,7 @@ bool TitleScene::init()
 	auto lis = EventListenerTouchOneByOne::create();
 	lis->onTouchBegan = [](Touch *touch, Event *event)
 	{
-		Director::getInstance()->replaceScene(SimulationScene::createScene());
+		Director::getInstance()->replaceScene(NarUtils::IBasedScene<SimulationScene>::createScene());
 		return true;
 	};
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(lis, this);

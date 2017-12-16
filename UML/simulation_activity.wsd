@@ -1,0 +1,14 @@
+@startuml
+
+(*) --> "init"
+
+"init" -> "loop"
+
+if "nextTurn" then
+	->[call] "Change Turn"
+else
+	-->[not] "loop"
+
+"Change Turn" --> "loop"
+
+@enduml

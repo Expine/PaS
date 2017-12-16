@@ -151,7 +151,7 @@ void PlayerAI::recursiveSearchForBattleField(Entity * unit, BattleField* field)
 {
 	for (auto tile : _stage->startRecursiveTileSearch(unit->getPositionAsTile(), unit->getMobility() * _search_range_of_battlefield, unit->getType(), true, true))
 	{
-		// Add element to field 
+		// Add element to field
 		if (std::find(field->_tiles.begin(), field->_tiles.end(), tile) == field->_tiles.end())
 			field->_tiles.push_back(tile);
 		auto enemy = _stage->getUnit(tile->getPositionAsTile());
@@ -162,7 +162,7 @@ void PlayerAI::recursiveSearchForBattleField(Entity * unit, BattleField* field)
 				enemy->setReserved(true);
 			if (std::find(field->_units.begin(), field->_units.end(), enemy) == field->_units.end())
 			{
-				// Add element to field 
+				// Add element to field
 				field->_units.push_back(enemy);
 				// Recursive search
 				recursiveSearchForBattleField(enemy, field);
@@ -192,8 +192,8 @@ void PlayerAI::execute()
 
 	//Act not on battlefield
 	auto units = _stage->getUnits(_owner);
-	std::sort(units.begin(), units.end(), [this](const Entity* a, const Entity* b) 
-	{ 
+	std::sort(units.begin(), units.end(), [this](const Entity* a, const Entity* b)
+	{
 		return a->getPosition() == b->getPosition() ? a->getMobility() < b->getMobility() : (a->getPosition() - getCapital(_owner)->getPosition()).getLengthSq() < (b->getPosition() - getCapital(_owner)->getPosition()).getLengthSq();
 	});
 	for (auto unit : units)
@@ -282,7 +282,7 @@ void PlayerAI::actOnButtlefield(BattleField * field)
 }
 
 /*
- * Unit on not battlefield act 
+ * Unit on not battlefield act
  */
 void PlayerAI::actOnNotButtlefield(Entity * unit)
 {
@@ -602,7 +602,7 @@ float PlayerAI::evaluateGuard(Entity * unit, City* city)
  * Evaluate battlefield importance
  * [0, 1]
  * Target	: each battlefield
- * Variable	: all unit number, enemy number, ally number, 
+ * Variable	: all unit number, enemy number, ally number,
  *			: all unit importance, enemy unit importance, ally unit importance
  *			: battlefield situation, battlefield situation transition grade
  *			: distance to city and it's importance, distance to other battlefield and it's importance
@@ -653,7 +653,7 @@ float PlayerAI::evaluateBattleField(BattleField * field)
 
 /*
  * Evaluate battlefield situation
- * [-1, 1] positive is good, nagative is bad 
+ * [-1, 1] positive is good, nagative is bad
  * Target : each battlefield
  * Variable : unit number and spec, enemy ones vs ally ones
  *			: unit balance of anemy or ally

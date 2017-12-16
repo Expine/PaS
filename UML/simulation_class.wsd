@@ -1,8 +1,6 @@
 @startuml
 
 class TitleScene {
-	#init() : bool
-	+createScene() : Scene*
 }
 
 class SimulationScene {
@@ -13,6 +11,30 @@ class SimulationScene {
 	#init() : bool
 }
 
-TitleScene -- SimulationScene
+class GameLayer {
+
+}
+
+class AILayer {
+
+}
+
+class Stage {
+	-_cities : map<Owner, vector<City*>>
+	-_units : map<Owner, vector<Entity*>>
+	-selector : Sprite*
+	-_pre_provisional_cor : Vec2
+	+onTap : function<void(Vec2,vector<StageTile*>)>
+	+onDoubleTap : function<void(Vec2, vector<StageTile*>)>
+	+onLongTapBegan : function<void(Vec2, vector<StageTile*>)>
+	+onLongTapEnd : function<void(Vec2, vector<StageTile*>)>
+	+onSwipeCheck : function<bool(Vec2, Vec2, float)>
+	+onFlickCheck : function<bool(Vec2, Vec2, float)>
+}
+
+TitleScene - SimulationScene
+
+SimulationScene -- GameLayer
+SimulationScene -- AILayer
 
 @enduml

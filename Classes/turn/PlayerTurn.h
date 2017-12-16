@@ -1,7 +1,7 @@
-﻿#ifndef __GAME_SCENE_H__
-#define __GAME_SCENE_H__
+﻿#ifndef __GAME_LAYER_H__
+#define __GAME_LAYER_H__
 
-#include "cocos2d.h"
+#include "TurnLayer.h"
 
 class Entity;
 class StageTile;
@@ -12,10 +12,10 @@ enum class MenuMode;
 enum class Command;
 
 /*
- * SLG Game scene
+ * SLG Game layer
  * For player turn
  */
-class Game: public cocos2d::Layer
+class PlayerTurn: public ITurnLayer
 {
 private:
 	Stage* _stage;
@@ -47,14 +47,15 @@ private:
 	void onDoubleTapByAttack(bool isSameUnit);
 	void onDoubleTapByAttacking(Entity* target);
 protected:
-	Game();
-	virtual ~Game();
+	PlayerTurn();
+	virtual ~PlayerTurn();
 	virtual bool init(Stage* stage);
 public:
+	virtual void initTurn() {};
 	static cocos2d::Scene* createScene(Stage* stage);
-	static Game* create(Stage* stage)
+	static PlayerTurn* create(Stage* stage)
 	{
-		Game *pRet = new(std::nothrow) Game();
+		PlayerTurn *pRet = new(std::nothrow) PlayerTurn();
 		if (pRet && pRet->init(stage))
 		{
 			pRet->autorelease();
@@ -67,7 +68,6 @@ public:
 			return nullptr;
 		}
 	}
-	CC_SYNTHESIZE(std::function<void()>, _end_function, EndFunction);
 };
 
-#endif // __GAME_SCENE_H__
+#endif // __GAMEE_LAYER_H__

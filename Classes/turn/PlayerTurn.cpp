@@ -1,4 +1,4 @@
-﻿#include "GameScene.h"
+﻿#include "PlayerTurn.h"
 
 #include "ai/Owner.h"
 #include "ai/Ai.h"
@@ -15,11 +15,11 @@ USING_NS_CC;
 /*
  * Create scene
  */
-Scene* Game::createScene(Stage* stage)
+Scene* PlayerTurn::createScene(Stage* stage)
 {
 	CCLOG("GameScene Create");
 	auto scene = Scene::create();
-    auto layer = Game::create(stage);
+    auto layer = PlayerTurn::create(stage);
 	layer->setTag(0);
     scene->addChild(layer);
     return scene;
@@ -28,22 +28,20 @@ Scene* Game::createScene(Stage* stage)
 /*
  * Constructor
  */
-Game::Game()
+PlayerTurn::PlayerTurn()
 	: _stage(nullptr), _menu(nullptr)
 	, _select_unit(nullptr), _select_enemy(nullptr), _select_weapon(nullptr)
-	, _end_function(nullptr)
 {}
 
 /*
  * Destructor
  */
-Game::~Game()
+PlayerTurn::~PlayerTurn()
 {
 	_stage = nullptr;
 	_menu = nullptr;
 	_select_unit = _select_enemy = nullptr;
 	_select_weapon = nullptr;
-	_end_function = nullptr;
 }
 
 
@@ -51,7 +49,7 @@ Game::~Game()
  * Initialize
  * Set stage and menu listener
  */
-bool Game::init(Stage* stage)
+bool PlayerTurn::init(Stage* stage)
 {
     if ( !Layer::init() )
         return false;
@@ -72,22 +70,22 @@ bool Game::init(Stage* stage)
 
 
 	// Set stgae listener
-	stage->onTap = std::bind(&Game::onTap, this, std::placeholders::_1, std::placeholders::_2);
-	stage->onLongTapBegan = std::bind(&Game::onLongTapBagan, this, std::placeholders::_1, std::placeholders::_2);
-	stage->onDoubleTap = std::bind(&Game::onDoubleTap, this, std::placeholders::_1, std::placeholders::_2);
+	stage->onTap = std::bind(&PlayerTurn::onTap, this, std::placeholders::_1, std::placeholders::_2);
+	stage->onLongTapBegan = std::bind(&PlayerTurn::onLongTapBagan, this, std::placeholders::_1, std::placeholders::_2);
+	stage->onDoubleTap = std::bind(&PlayerTurn::onDoubleTap, this, std::placeholders::_1, std::placeholders::_2);
 	// If menu action, swipe is disable
 	stage->onSwipeCheck = [this](Vec2 v, Vec2 diff, float time) { return _menu->checkAllAction(diff); };
 	// If menu action, swipe is disable
 	stage->onFlickCheck = [this](Vec2 v, Vec2 diff, float time) { return _menu->checkAllAction(diff); };
 
 	//Set menu listener
-	_menu->setFunction(Command::endPhase, [this] { _end_function(); });
+	_menu->setFunction(Command::endPhase, [this] { _nextTurn(); });
 	_menu->setFunction(Command::nextCity, [this] { if(!_select_tiles.empty())	setCursor(_stage->nextCity(Owner::player, _select_tiles.front())); });
 	// TODO IF MenuMode is not none, command change
 	_menu->setFunction(Command::nextUnit, [this] { setCursor(_stage->nextUnit(Owner::player, _select_unit)); });
 	// For debug
 	_menu->setFunction(Command::talkStaff, [this, ai] { ai->execute(); });
-	_menu->setFunction(Command::save, [this, ai] 
+	_menu->setFunction(Command::save, [this, ai]
 	{
 		ai->nextExecute();
 	});
@@ -110,7 +108,7 @@ bool Game::init(Stage* stage)
 	setWaitFuction();
 
 	// City supply function
-	_menu->setFunction(Command::city_supply, [this] { 
+	_menu->setFunction(Command::city_supply, [this] {
 		if (_menu->getMode() != MenuMode::none)
 			return;
 		_menu->setModeWithCheckAndMoveForCity(MenuMode::city_supply, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area);
@@ -177,7 +175,7 @@ bool Game::init(Stage* stage)
 /*
  * Set move function
  */
-void Game::setMoveFunction()
+void PlayerTurn::setMoveFunction()
 {
 	_menu->setFunction(Command::move, [this]
 	{
@@ -219,7 +217,7 @@ void Game::setMoveFunction()
 /*
  * Set attack function
  */
-void Game::setAttackFunction()
+void PlayerTurn::setAttackFunction()
 {
 	_menu->setFunction(Command::attack, [this]
 	{
@@ -350,7 +348,7 @@ void Game::setAttackFunction()
 /*
  * Set occupy function
  */
-void Game::setOccupyFunction()
+void PlayerTurn::setOccupyFunction()
 {
 	_menu->setFunction(Command::occupation, [this]
 	{
@@ -374,7 +372,7 @@ void Game::setOccupyFunction()
 /*
  * Set wait function
  */
-void Game::setWaitFuction()
+void PlayerTurn::setWaitFuction()
 {
 	_menu->setFunction(Command::wait, [this] {
 		if (_menu->getMode() != MenuMode::none)
@@ -397,7 +395,7 @@ void Game::setWaitFuction()
  * On tap function
  * Move cursor
  */
- void Game::onTap(cocos2d::Vec2 cor, std::vector<StageTile*> tiles)
+ void PlayerTurn::onTap(cocos2d::Vec2 cor, std::vector<StageTile*> tiles)
 {
 	// If running menu action, do nothing
 	if (_menu->isRunningAction())
@@ -410,7 +408,7 @@ void Game::setWaitFuction()
  * On long tap beganfunction
  * Show spec
  */
- void Game::onLongTapBagan(Vec2 cor, std::vector<StageTile*> tiles)
+ void PlayerTurn::onLongTapBagan(Vec2 cor, std::vector<StageTile*> tiles)
 {
 	auto unit = _stage->getUnit(cor);
 	if (unit)
@@ -425,7 +423,7 @@ void Game::setWaitFuction()
 /*
  * On double tap function
  */
- void Game::onDoubleTap(Vec2 cor, std::vector<StageTile*> tiles)
+ void PlayerTurn::onDoubleTap(Vec2 cor, std::vector<StageTile*> tiles)
 {
 	// Check tap same unit
 	 auto target = _stage->getUnit(cor);
@@ -460,7 +458,7 @@ void Game::setWaitFuction()
 /*
  * On double tap function when menu mode is none
  */
-void Game::onDoubleTapByNone()
+void PlayerTurn::onDoubleTapByNone()
 {
 	// When not select unit and select city, dispatch
 	if (!_select_unit && util::findElement<StageTile*>(_select_tiles, [](StageTile* tile){return util::instanceof<City>(tile);}))
@@ -489,12 +487,12 @@ void Game::onDoubleTapByNone()
 /*
  * On double tap function when menu mode is move
  */
-void Game::onDoubleTapByMove(bool isSameUnit)
+void PlayerTurn::onDoubleTapByMove(bool isSameUnit)
 {
 	// When tap on same unit, change process
 	if (isSameUnit)
 	{
-		
+
 		callCommand(Command::move_end);
 		if (callCommand(Command::attack))			return;
 		else if (callCommand(Command::occupation))	return;
@@ -512,7 +510,7 @@ void Game::onDoubleTapByMove(bool isSameUnit)
 /*
  * On double tap function when menu mode is moving
  */
-void Game::onDoubleTapByMoving()
+void PlayerTurn::onDoubleTapByMoving()
 {
 	// If double tap on end tile, end process
 	if (util::find(_select_tiles, _move_route.back()))
@@ -528,7 +526,7 @@ void Game::onDoubleTapByMoving()
 /*
  * On double tap function when menu mode is attack
  */
-void Game::onDoubleTapByAttack(bool isSameUnit)
+void PlayerTurn::onDoubleTapByAttack(bool isSameUnit)
 {
 	// When tap on same unit, change process
 	if (isSameUnit)
@@ -549,7 +547,7 @@ void Game::onDoubleTapByAttack(bool isSameUnit)
 /*
  * On double tap function when menu mode is attacking
  */
-void Game::onDoubleTapByAttacking(Entity* target)
+void PlayerTurn::onDoubleTapByAttacking(Entity* target)
 {
 	if (target && util::find<StageTile*, Entity*>(_select_area, target, [](StageTile* tile, Entity *unit) { return tile->getPositionAsTile() == unit->getPositionAsTile(); }))
 		callCommand(Command::attack_start);
@@ -560,7 +558,7 @@ void Game::onDoubleTapByAttacking(Entity* target)
 /*
  * Call command function with check
  */
-bool Game::callCommand(Command com)
+bool PlayerTurn::callCommand(Command com)
 {
 	if (!command::isEnable(com, _select_unit, _select_tiles, _select_enemy, _select_weapon, _select_area))
 		return false;
@@ -572,7 +570,7 @@ bool Game::callCommand(Command com)
 /*
  * Set cursol position
  */
-void Game::setCursor(Vec2 cor)
+void PlayerTurn::setCursor(Vec2 cor)
 {
 	// Check whether out of range
 	if (cor.x < 0 || cor.y < 0 || cor.x > _stage->getMapSize().x - 1 || cor.y > _stage->getMapSize().y - 1)
@@ -597,7 +595,7 @@ void Game::setCursor(Vec2 cor)
  * Set select tile
  * And set tile information
  */
-void Game::setSelectTiles(std::vector<StageTile*> tiles)
+void PlayerTurn::setSelectTiles(std::vector<StageTile*> tiles)
 {
 	switch (_menu->getMode())
 	{
@@ -623,7 +621,7 @@ void Game::setSelectTiles(std::vector<StageTile*> tiles)
  * And set unit information
  */
 //TODO BLINCK PROCESS
-void Game::setSelectUnit(Entity * unit)
+void PlayerTurn::setSelectUnit(Entity * unit)
 {
 	// If same unit, do nothing
 	if (unit && unit == _select_unit)

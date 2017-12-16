@@ -1,6 +1,6 @@
 #include "SimulationScene.h"
-#include "GameScene.h"
-#include "AIScene.h"
+#include "turn/PlayerTurn.h"
+#include "turn/AITurn.h"
 
 #include "ai/Owner.h"
 #include "stage/Stage.h"
@@ -8,25 +8,19 @@
 
 USING_NS_CC;
 
-/*
- * Create Scene
- */
-Scene * SimulationScene::createScene()
+ITurnLayer* TurnFactory::getTurn(Owner owner, Stage* stage)
 {
-	CCLOG("SimulationScene is created");
-	auto scene = Scene::create();
-	auto layer = SimulationScene::create();
-	scene->addChild(layer);
-	return scene;
+	switch (owner)
+	{
+	case Owner::player:
+		return PlayerTurn::create(stage);
+	case Owner::enemy:
+		return AITurn::create(stage);
+	}
+	CCASSERT(false, "Owner is not defined");
+	return nullptr;
 }
 
-/*
- * Constructor
- */
-SimulationScene::SimulationScene()
-	: _stage(nullptr)
-	, _game_scene(nullptr), _ai_scene(nullptr)
-{}
 
 /*
  * Destructor
@@ -81,17 +75,17 @@ void SimulationScene::nextTurn(bool init)
 	_players.pop();
 	_players.push(owner);
 
-	/*
 	if (owner == Owner::player)
 	{
-		auto scene = Game::createScene(_stage);
-		util::instance<Game>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
+		auto scene = PlayerTurn::createScene(_stage);
+		util::instance<PlayerTurn>(scene->getChildByTag(0))->setNextTurn(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
-	else*/
+	else
 	{
-		auto scene = AIScene::createScene(_stage, owner);
-		util::instance<AIScene>(scene->getChildByTag(0))->setEndFunction(std::bind(&SimulationScene::nextTurn, this, false));
+		auto scene = AITurn::createScene(_stage, owner);
+		util::instance<AITurn>(scene->getChildByTag(0))->setNextTurn(std::bind(&SimulationScene::nextTurn, this, false));
 		Director::getInstance()->pushScene(scene);
 	}
 }
+

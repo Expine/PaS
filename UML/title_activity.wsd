@@ -1,10 +1,12 @@
 @startuml
 
-(*) --> "onTouchBagan"
+(*) --> "init"
 
-if "Touch" then
+"init" -> "loop"
+
+if "TouchCheck" then
 	->[touch] "Transition to SimulationScene"
 else
-	--> (*)
+	-->[no] "loop"
 
 @enduml

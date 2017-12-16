@@ -43,15 +43,13 @@ namespace NarUtils
 	 * Should keep constructor public
 	 */
 	template<class SceneName>
-	class BasedScene : public cocos2d::Layer, create_func<SceneName>
+	class IBasedScene : public cocos2d::Layer, create_func<SceneName>
 	{
-	protected:
-		virtual ~BasedScene() {};
 	public:
 		/*
 		 * Initialize
 		 */
-		virtual bool init() { return true; };
+		virtual bool init() = 0;
 		using create_func<SceneName>::create;
 		using create_func<SceneName>::createScene;
 	};

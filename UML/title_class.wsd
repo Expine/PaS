@@ -1,14 +1,22 @@
 @startuml
 
+class IBasedScene {
+	+init() : bool
+	+create(Args) : IBasedScene
+	+createScene(Args) : Scene*
+}
+
 class TitleScene {
-	+createScene() : Scene*
-	#init() : bool
+	+init() : bool
 }
 
 class SimulationScene {
 
 }
 
-TitleScene -- SimulationScene
+IBasedScene -- TitleScene
+IBasedScene -- SimulationScene
+
+TitleScene -> SimulationScene
 
 @enduml

@@ -22,7 +22,7 @@ constexpr int CITY_DEPLOY_MAX = 50;
 /** Terrain type */
 enum class TerrainType
 {
-	none, 
+	none,
 	prairie, woods, mountain, river, ocean,
 	road, bridge, capital, city, territory,
 

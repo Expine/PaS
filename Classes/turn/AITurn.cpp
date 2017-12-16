@@ -1,4 +1,4 @@
-#include "AIScene.h"
+#include "AITurn.h"
 
 #include "ai/Owner.h"
 #include "stage/Stage.h"
@@ -8,11 +8,11 @@ USING_NS_CC;
 /*
 * Create scene
 */
-Scene * AIScene::createScene(Stage* stage, Owner owner)
+Scene * AITurn::createScene(Stage* stage, Owner owner)
 {
-	CCLOG("AIScene is created");
+	CCLOG("AITurn is created");
 	auto scene = Scene::create();
-	auto layer = AIScene::create(stage, owner);
+	auto layer = AITurn::create(stage, owner);
 	layer->setTag(0);
 	scene->addChild(layer);
 	return scene;
@@ -21,24 +21,23 @@ Scene * AIScene::createScene(Stage* stage, Owner owner)
 /*
  * Constructor
  */
-AIScene::AIScene()
-	: _stage(nullptr), _end_function(nullptr), _ai(nullptr)
+AITurn::AITurn()
+	: _stage(nullptr), _ai(nullptr)
 {}
 
 /*
  * Destructor
  */
-AIScene::~AIScene()
+AITurn::~AITurn()
 {
 	_stage = nullptr;
-	_end_function = nullptr;
 	CC_SAFE_RELEASE_NULL(_ai);
 }
 
 /*
  * Initialize
  */
-bool AIScene::init(Stage * stage, Owner owner)
+bool AITurn::init(Stage * stage, Owner owner)
 {
 	if (!Layer::init())
 		return false;
@@ -66,7 +65,7 @@ bool AIScene::init(Stage * stage, Owner owner)
 	}
 	acts.pushBack(DelayTime::create(3.0f));
 	acts.pushBack(CallFunc::create([this, stage] {
-		getEndFunction()();
+		_nextTurn();
 	}));
 
 	runAction(Sequence::create(acts));
