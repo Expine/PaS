@@ -118,7 +118,6 @@ public:
 	static Entity* create(const EntityType type, const cocos2d::Vec2 cor, Stage* stage);
 	void setBasicWeaponForDebug();
 
-	UnitLayer* getUnitLayer();
 	Stage* getStage();
 
 	/** Get vector of weapons by reference*/
@@ -140,6 +139,13 @@ public:
 	void occupy(City* city);
 
 	void setState(EntityState state);
+};
+
+/*********************************************************/
+
+class Unit : public Entity
+{
+
 };
 
 /*********************************************************/

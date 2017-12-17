@@ -200,22 +200,13 @@ Entity::~Entity()
 	 }
  }
 
- /*
-  * Get unit layer
-  * However, This function is impossible if this unit is not placed on the screen.
-  */
-UnitLayer * Entity::getUnitLayer()
-{
-	return util::instance<UnitLayer>(getParent()->getParent());
-}
-
 /*
  * Get stage
  * However, This function is impossible if this unit is not placed on the screen.
  */
 Stage * Entity::getStage()
 {
-	return util::instance<Stage>(getUnitLayer()->getParent());
+	return util::instance<Stage>(getParent()->getParent()->getParent());
 }
 
 /*
@@ -278,7 +269,7 @@ void Entity::attack(Entity * enemy, WeaponData* weapon)
 
 	// Decrease material
 	_material -= weapon->getConsumption();
-	
+
 	// Animation
 	getStage()->addChild(weapon->animation(enemy->getPosition()));
 }

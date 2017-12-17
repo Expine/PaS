@@ -15,7 +15,7 @@ ITurnLayer* TurnFactory::getTurn(Owner owner, Stage* stage)
 	case Owner::player:
 		return PlayerTurn::create(stage);
 	case Owner::enemy:
-		return AITurn::create(stage);
+		return AITurn::create(stage, owner);
 	}
 	CCASSERT(false, "Owner is not defined");
 	return nullptr;
